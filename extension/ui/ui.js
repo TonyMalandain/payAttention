@@ -27,9 +27,16 @@ export class Ui {
         this._pulseOn = false;
         this._unredirectDisabled = false;
         this._takeover = new Takeover();
-        this._indicator = new Indicator({ dispatch, openPreferences });
-        Main.panel.addToStatusArea('payattention', this._indicator, 0, 'right');
-        Main.layoutManager.connectObject('monitors-changed', () => this._onMonitorsChanged(), this);
+        this._indicator = null;
+        try {
+            this._indicator = new Indicator({ dispatch, openPreferences });
+            Main.panel.addToStatusArea('payattention', this._indicator, 0, 'right');
+            Main.layoutManager.connectObject('monitors-changed', () => this._onMonitorsChanged(), this);
+        } catch (e) {
+            // Nothing half-built stays in the panel.
+            this.destroy();
+            throw e;
+        }
     }
 
     /**

@@ -26,14 +26,21 @@ export class Card {
             reactive: true,
             orientation: Clutter.Orientation.VERTICAL,
         });
-        this._content = new AlertContent(alert, dispatch, 'card');
-        this._root.add_child(this._content.actor);
-        // Taken once: the card stays on the monitor it appeared on.
-        this._monitorIndex = global.display.get_current_monitor();
-        // Chrome stays above normal and full-screen windows and gets an input region.
-        Main.layoutManager.addChrome(this._root);
-        this._root.connect('notify::size', () => this._place());
-        this._place();
+        this._content = null;
+        try {
+            this._content = new AlertContent(alert, dispatch, 'card');
+            this._root.add_child(this._content.actor);
+            // Taken once: the card stays on the monitor it appeared on.
+            this._monitorIndex = global.display.get_current_monitor();
+            // Chrome stays above normal and full-screen windows and gets an input region.
+            Main.layoutManager.addChrome(this._root);
+            this._root.connect('notify::size', () => this._place());
+            this._place();
+        } catch (e) {
+            // Never leave a reactive chrome actor behind that nothing owns.
+            this.destroy();
+            throw e;
+        }
     }
 
     get key() {

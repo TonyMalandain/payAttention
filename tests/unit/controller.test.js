@@ -284,10 +284,10 @@ describe('controller: overrides', () => {
     test('7. setVerdict writes the occurrence key, or the series key, and passes null through', () => {
         const h = setup();
         h.deliverAt(T0 - 2 * HOUR);
-        h.dispatch({ type: 'setVerdict', key: KEY, verdict: 'ignore', scope: 'occ' });
         h.dispatch({ type: 'setVerdict', key: KEY, verdict: 'must', scope: 'series' });
+        h.dispatch({ type: 'setVerdict', key: KEY, verdict: 'ignore', scope: 'occ' });
         h.dispatch({ type: 'setVerdict', key: KEY, verdict: null, scope: 'occ' });
-        assert.deepEqual(h.store.verdictCalls, [[KEY, 'ignore'], [seriesKey(MEETING), 'must'], [KEY, null]]);
+        assert.deepEqual(h.store.verdictCalls, [[seriesKey(MEETING), 'must'], [KEY, 'ignore'], [KEY, null]]);
     });
 
     test('7. the next render shows the overridden verdict', () => {
@@ -296,6 +296,43 @@ describe('controller: overrides', () => {
         const v = h.dispatch({ type: 'setVerdict', key: KEY, verdict: 'ignore', scope: 'occ' });
         assert.equal(v.menu.meetings[0].isMust, false);
         assert.equal(v.menu.meetings[0].overridden, true);
+    });
+
+    describe('a whole-series verdict also covers this occurrence (PRD §3)', () => {
+        const SERIES = meeting({ uid: 'weekly-1', recurring: true, recurrenceId: T0 });
+        const SKEY = occurrenceKey(SERIES);
+        const SERIES_SNAP = snapshot([SERIES], [WORK]);
+
+        test('occurrence must + "Not important: whole series" at the takeover: ignorable, takeover gone', () => {
+            const h = setup();
+            h.deliverAt(T0 - 2 * HOUR, SERIES_SNAP);
+            h.dispatch({ type: 'setVerdict', key: SKEY, verdict: 'must', scope: 'occ' });
+            assert.equal(h.at(T0 - 30_000).alert.presentation, 'takeover');
+
+            const v = h.dispatch({ type: 'setVerdict', key: SKEY, verdict: 'ignore', scope: 'series' });
+            assert.equal(v.alert, null);
+            assert.equal(v.menu.meetings[0].isMust, false);
+            assert.equal(h.store.overrides.verdict[SKEY], undefined);
+            assert.equal(h.store.overrides.verdict[seriesKey(SERIES)], 'ignore');
+        });
+
+        test('occurrence ignore + "Must attend: whole series": must-attend again', () => {
+            const h = setup();
+            h.deliverAt(T0 - 2 * HOUR, SERIES_SNAP);
+            h.dispatch({ type: 'setVerdict', key: SKEY, verdict: 'ignore', scope: 'occ' });
+            const v = h.dispatch({ type: 'setVerdict', key: SKEY, verdict: 'must', scope: 'series' });
+            assert.equal(v.menu.meetings[0].isMust, true);
+            assert.equal(h.store.overrides.verdict[SKEY], undefined);
+            assert.equal(h.store.overrides.verdict[seriesKey(SERIES)], 'must');
+        });
+
+        test('clearing the series verdict leaves the occurrence override alone', () => {
+            const h = setup();
+            h.deliverAt(T0 - 2 * HOUR, SERIES_SNAP);
+            h.dispatch({ type: 'setVerdict', key: SKEY, verdict: 'ignore', scope: 'occ' });
+            h.dispatch({ type: 'setVerdict', key: SKEY, verdict: null, scope: 'series' });
+            assert.equal(h.store.overrides.verdict[SKEY], 'ignore');
+        });
     });
 
     test('setVerdict on an unknown key does nothing', () => {

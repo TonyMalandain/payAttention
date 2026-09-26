@@ -9,6 +9,7 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { AlertContent } from './alertContent.js';
+import { takeoverSize } from './takeoverSize.js';
 
 export class Takeover {
     /** Connects nothing and creates no actors. */
@@ -109,10 +110,11 @@ export class Takeover {
     }
 
     _buildPanels() {
-        Main.layoutManager.monitors.forEach((_monitor, i) => {
+        Main.layoutManager.monitors.forEach((monitor, i) => {
             const panel = new St.BoxLayout({
                 name: `payattention-takeover-monitor-${i}`,
-                style_class: 'payattention-takeover-panel',
+                // Smaller text on small monitors keeps every button on screen.
+                style_class: `payattention-takeover-panel payattention-takeover-${takeoverSize(monitor)}`,
                 orientation: Clutter.Orientation.VERTICAL,
             });
             // The panel fills its monitor (a CENTER align would shrink it to its

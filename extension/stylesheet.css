@@ -1,16 +1,19 @@
 /* payAttention's own cards and takeover (ADR-0004). Never reuse shell notification classes. */
 .payattention-card { border-radius: 18px; padding: 20px 24px; spacing: 10px; color: #ffffff;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.55); transition-duration: 500ms; }
-.payattention-card-step1 { width: 380px; background-color: #17324d; border: 2px solid #5fa8e8; }
-.payattention-card-step2 { width: 460px; background-color: #4a3000; border: 3px solid #ffb020; }
-.payattention-card-step3 { width: 640px; background-color: #5c0a0a; border: 4px solid #ff3b30; }
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55); }
+.payattention-card-step1 { max-width: 380px; background-color: #17324d; border: 2px solid #5fa8e8; }
+.payattention-card-step2 { max-width: 460px; background-color: #4a3000; border: 3px solid #ffb020; }
+.payattention-card-step3 { max-width: 640px; background-color: #5c0a0a; border: 4px solid #ff3b30; }
 .payattention-card-step3.payattention-pulse-on { border-color: #ffd0cc; background-color: #7a1010; }
 .payattention-headline { font-size: 11pt; font-weight: bold; letter-spacing: 1px; color: rgba(255,255,255,0.8); }
 .payattention-card-step1 .payattention-title { font-size: 15pt; font-weight: bold; }
 .payattention-card-step2 .payattention-title { font-size: 18pt; font-weight: bold; }
 .payattention-card-step3 .payattention-title { font-size: 26pt; font-weight: 800; }
+/* Two lines at most; alertContent.js ellipsizes the rest. */
+.payattention-title { max-height: 2.6em; }
 .payattention-time, .payattention-reason, .payattention-also { font-size: 11pt; }
 .payattention-actions { spacing: 10px; }
+.payattention-action-rows { padding-top: 12px; }
 .payattention-button { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-size: 13pt;
   font-weight: bold; color: #ffffff; background-color: rgba(255,255,255,0.16); }
 .payattention-button:hover, .payattention-button:focus { background-color: rgba(255,255,255,0.30); }
@@ -26,7 +29,18 @@
 .payattention-caption { font-size: 16pt; color: rgba(255,255,255,0.85); }
 .payattention-takeover-panel .payattention-time, .payattention-takeover-panel .payattention-reason { font-size: 16pt; }
 .payattention-takeover-panel .payattention-button { min-height: 64px; min-width: 200px; font-size: 18pt; padding: 16px 32px; }
+/* Short or narrow monitors (ui/takeoverSize.js): sized so every button fits on 960x540. */
+.payattention-takeover-compact { padding: 24px; spacing: 10px; }
+.payattention-takeover-compact .payattention-headline { font-size: 14pt; }
+.payattention-takeover-compact .payattention-title { font-size: 22pt; }
+.payattention-takeover-compact .payattention-countdown { font-size: 60pt; }
+.payattention-takeover-compact .payattention-caption,
+.payattention-takeover-compact .payattention-time,
+.payattention-takeover-compact .payattention-reason { font-size: 12pt; }
+.payattention-takeover-compact .payattention-button { min-height: 44px; min-width: 140px; font-size: 13pt; padding: 10px 20px; }
 .payattention-indicator-highlight { background-color: rgba(255,176,32,0.35); border-radius: 99px; }
 .payattention-indicator-box.payattention-pulse-on { background-color: rgba(255,59,48,0.65); }
 .payattention-warning { color: #ffb020; }
+/* Room between the countdown text and the right end of the highlighted pill. */
+#payattention-indicator-label { padding-right: 8px; }
 .payattention-row-detail { font-size: 9pt; color: rgba(255,255,255,0.6); padding-left: 12px; }

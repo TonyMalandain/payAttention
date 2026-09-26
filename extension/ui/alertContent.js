@@ -2,6 +2,7 @@
 // Draws what the view says and reports clicks; decides nothing.
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 // A click already under way when the alert appears must not choose an action.
@@ -45,7 +46,9 @@ export class AlertContent {
 
         this._headline = label('payattention-headline', alert.headline);
         this._title = label('payattention-title', alert.title);
+        // At most two lines (the stylesheet's max-height); the rest is ellipsized.
         this._title.clutter_text.line_wrap = true;
+        this._title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this._actor.add_child(this._headline);
         this._actor.add_child(this._title);
         if (takeover) {
@@ -61,7 +64,10 @@ export class AlertContent {
 
         this._travelBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         this._alsoBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
-        this._actionsBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'payattention-actions' });
+        this._actionsBox = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'payattention-actions payattention-action-rows',
+        });
         this._actor.add_child(this._travelBox);
         this._actor.add_child(this._alsoBox);
         this._actor.add_child(this._actionsBox);

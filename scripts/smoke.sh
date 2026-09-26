@@ -29,7 +29,8 @@ mkdir -p "$T/data/gnome-shell/extensions" "$T/config/glib-2.0/settings" "$T/conf
 XDG_DATA_HOME="$T/data" gnome-extensions install --force "$ROOT/dist/$UUID.shell-extension.zip"
 
 # 3. The fixture calendar: one must-attend online meeting 2-3 h ahead, so no
-#    real step fires during the run.
+#    real step fires during the run, and one all-day event, which is always in
+#    today's menu (whatever the hour) and never alerts, for the menu check.
 cat > "$T/config/evolution/sources/smoke-cal.source" <<'EOF'
 [Data Source]
 DisplayName=Smoke
@@ -55,6 +56,11 @@ printf '%s\r\n' \
     'ORGANIZER:mailto:owner@smoke.test' \
     'ATTENDEE;PARTSTAT=ACCEPTED:mailto:owner@smoke.test' \
     'ATTENDEE;PARTSTAT=ACCEPTED:mailto:guest@external.test' \
+    'END:VEVENT' \
+    'BEGIN:VEVENT' \
+    'UID:smoke-allday@smoke.test' 'DTSTAMP:20260101T000000Z' \
+    "DTSTART;VALUE=DATE:$(date +%Y%m%d)" "DTEND;VALUE=DATE:$(date -d tomorrow +%Y%m%d)" \
+    'SUMMARY:Smoke all-day check' \
     'END:VEVENT' 'END:VCALENDAR' \
     > "$T/data/evolution/calendar/smoke-cal/calendar.ics"
 
@@ -75,7 +81,7 @@ env -i PATH="$PATH" HOME="$HOME" USER="$USER" LOGNAME="${LOGNAME:-$USER}" LANG=C
     XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_CACHE_HOME="$T/cache" \
     GSETTINGS_BACKEND=keyfile GIO_USE_VFS=local PAYATTENTION_SMOKE_HOME="$T" \
     timeout 300 dbus-run-session -- gnome-shell --headless \
-        --virtual-monitor 1280x720 --virtual-monitor 1024x768 \
+        --virtual-monitor 960x540 --virtual-monitor 1024x768 \
         --wayland-display "pa-smoke-$$" \
         --automation-script "$ROOT/tests/smoke/alert-ladder.js" > "$T/shell.log" 2>&1 || true
 
@@ -83,9 +89,18 @@ grep 'PAYATTENTION-' "$T/shell.log" || true
 
 fail=0
 grep -q '^PAYATTENTION-SMOKE PASS' "$T/shell.log" || fail=1
-if grep -E -e 'JS ERROR' -e 'JS WARNING.*payattention' \
+# "already disposed" anywhere: its stack trace often names only shell files (a menu
+# item destroyed during its own activate() did).
+if grep -E -e 'JS ERROR' -e 'JS WARNING.*payattention' -e 'has been already disposed' \
         -e 'payattention: (tick-failed|destroy-failed|grab-failed|protocol-mismatch|helper-spawn-failed)' \
         -e 'payattention-helper: (registry-failed|helper-failed)' "$T/shell.log"; then
+    fail=1
+fi
+# Any other Gjs-CRITICAL whose line or stack trace (up to the next blank line) names our files.
+if awk '/Gjs-CRITICAL/ { inblock = 1; block = "" }
+        inblock { block = block $0 "\n" }
+        inblock && /^$/ { if (block ~ /payattention/) { printf "%s", block; found = 1 } inblock = 0 }
+        END { if (inblock && block ~ /payattention/) { printf "%s", block; found = 1 } exit !found }' "$T/shell.log"; then
     fail=1
 fi
 if [ "$fail" -ne 0 ]; then

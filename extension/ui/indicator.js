@@ -1,5 +1,6 @@
 // The top-bar countdown and the menu of today's meetings (PRD §5).
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
@@ -26,6 +27,8 @@ class Indicator extends PanelMenu.Button {
         this.name = 'payattention-indicator';
         this._dispatch = dispatch;
         this._signature = null;
+        this._pendingRows = null;
+        this._rebuildId = 0;
 
         this._box = new St.BoxLayout({ style_class: 'payattention-indicator-box' });
         this._box.add_child(new St.Icon({ icon_name: 'alarm-symbolic', style_class: 'system-status-icon' }));
@@ -78,9 +81,32 @@ class Indicator extends PanelMenu.Button {
         if (menu.signature === this._signature)
             return;
         this._signature = menu.signature;
+        // Deferred: this may run inside a menu item's own activate(), and the
+        // menu still uses the item after its handlers return (close-on-activate).
+        this._pendingRows = menu.meetings;
+        if (!this._rebuildId) {
+            this._rebuildId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                this._rebuildId = 0;
+                this._rebuildRows();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+    }
+
+    _rebuildRows() {
+        const rows = this._pendingRows;
+        this._pendingRows = null;
         this._meetings.removeAll();
-        for (const row of menu.meetings)
+        for (const row of rows)
             this._meetings.addMenuItem(this._rowItem(row));
+    }
+
+    _onDestroy() {
+        if (this._rebuildId) {
+            GLib.Source.remove(this._rebuildId);
+            this._rebuildId = 0;
+        }
+        super._onDestroy();
     }
 
     _rowItem(row) {

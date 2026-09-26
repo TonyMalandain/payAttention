@@ -331,7 +331,15 @@ export class Controller {
         const j = this._judgedByKey.get(action.key);
         if (!j)
             return;
-        this._store.setVerdictOverride(action.scope === 'series' ? j.seriesKey : action.key, action.verdict);
+        if (action.scope === 'series') {
+            this._store.setVerdictOverride(j.seriesKey, action.verdict);
+            // A whole-series verdict covers this occurrence too (PRD §3); judge reads the
+            // occurrence override first, so one left in place would win.
+            if (action.verdict !== null && this._overrides.verdict[action.key] !== undefined)
+                this._store.setVerdictOverride(action.key, null);
+        } else {
+            this._store.setVerdictOverride(action.key, action.verdict);
+        }
         this._overrides = this._store.readOverrides();
         this._judgeDirty = true;
     }

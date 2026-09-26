@@ -80,7 +80,7 @@ export class CalendarFeed {
             this._restartSourceId = 0;
         }
         this._cancellable?.cancel();
-        // SIGTERM without waiting (interfaces.md §1); the helper also exits on stdin EOF.
+        // force_exit sends SIGKILL, without waiting; the helper also exits on stdin EOF.
         this._proc?.force_exit();
         this._proc = null;
         this._reader = null;

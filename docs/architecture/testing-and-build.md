@@ -99,7 +99,7 @@ printf '[org/gnome/shell]\nenabled-extensions=["payattention@tonymalandain.githu
 XDG_CONFIG_HOME=$T/config XDG_DATA_HOME=$T/data XDG_CACHE_HOME=$T/cache \
 GSETTINGS_BACKEND=keyfile \
   dbus-run-session -- gnome-shell --headless \
-    --virtual-monitor 1280x720 --virtual-monitor 1024x768 \
+    --virtual-monitor 960x540 --virtual-monitor 1024x768 \
     --wayland-display pa-smoke \
     --automation-script tests/smoke/<script>.js  > $T/shell.log 2>&1
 ```
@@ -108,21 +108,32 @@ The automation script is an ES module exporting `async function run()` and
 `function finish()` (the shell's `ui/scripting.js` harness; `Scripting.sleep(ms)`
 waits). The shell exits when `run()` resolves. The script prints one
 `PAYATTENTION-SMOKE PASS` or `PAYATTENTION-SMOKE FAIL <reason>` line; the wrapper
-greps for it and also fails on any `JS ERROR` line or stack mentioning the UUID.
+greps for it and also fails on any `JS ERROR` line, any "has been already
+disposed" line (its stack trace may name only shell files), and any
+`Gjs-CRITICAL` whose line or stack trace mentions payattention.
 
 What the smoke script checks:
 
 1. `Main.extensionManager.lookup(uuid).state` is ACTIVE (1) and `error` is empty.
-2. The indicator is in the panel and shows the one fixture meeting that
+2. The indicator is in the panel and shows the fixture meeting that
    `scripts/smoke.sh` writes into the isolated EDS (`Smoke client review`, 2–3 h
    ahead), so the helper, `judge` and `plan` all ran on fixture data only.
    Do Not Disturb is set (`show-banners=false`) for the whole run.
+   The fixture also has an all-day event (`Smoke all-day check`): it is in
+   today's menu at any hour and never alerts. The script opens the menu, clicks
+   that event's Must attend switch, and checks the override was stored and the
+   menu closed; then "Back to automatic" clears it.
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
    Escape does nothing, and the check proves the key event reached the takeover,
-   so a lost key cannot pass it.
+   so a lost key cannot pass it. Every action button lies inside its own monitor
+   (one monitor is 960x540).
 4. Clicks acknowledge on the **second** monitor with a virtual pointer; checks the
-   overlays are gone and no grab of ours remains.
+   overlays are gone and no grab of ours remains. Then it draws the worst-case
+   alert (150-character title, Join, whole series, three "also" lines) through
+   the installed `ui/` modules as a takeover and as each card: every button on
+   screen, the title at most two lines and ellipsized. Then a `Ui` and a `Card`
+   whose construction fails leave nothing on the stage.
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
 6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.
@@ -195,7 +206,12 @@ meetings still alert, and it clears within seconds of the network returning (D-0
   pointer lost its x (landed at x=0); once, a motion stopped at the edge of
   monitor 0 instead of reaching monitor 1. Re-send the motion until
   `global.get_pointer()` is at the target before clicking, and confirm a key
-  event arrived before asserting that it had no effect.
+  event arrived before asserting that it had no effect. Those stray first
+  motions also closed an open popup menu (the grab went to the Activities
+  button; 3 of 5 runs of the menu check failed), so `alert-ladder.js` uses one
+  virtual pointer for the whole run, parked at the middle of the primary monitor
+  before any menu opens, and clicks only once the target is what the stage picks
+  at that point.
 - **`connectObject` does not exist under plain `gjs`.** The shell's
   `misc/signalTracker.js` adds `connectObject`/`disconnectObject` to GObject, so a
   plain-gjs check of a `shell/` module that uses them (store, environment) must

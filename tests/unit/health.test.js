@@ -159,6 +159,32 @@ describe('health: dataHealth', () => {
         assert.deepEqual(dataHealth({ ...every5min([WORK, a, b], now), now }).calendars, ['Shared']);
     });
 
+    describe('grace after enable for a reconnecting calendar', () => {
+        // Locked 20 min ago: the saved provider clock is old; data arrives 10 s after enable.
+        const seeds = { dataAt: EN - 20 * MIN, providerAt: EN - 20 * MIN };
+        const at = (sources, now) => dataHealth({
+            snapshot: snapshot([], sources), acceptedAt: EN + 10_000,
+            syncedAt: recordSync(new Map(), snapshot([], sources), EN + 10_000), seeds, enabledAt: EN, now,
+        });
+
+        for (const connection of ['connecting', 'offline']) {
+            test(`${connection}: not shown during the first 60 s`, () => {
+                assert.deepEqual(at([WORK, src({ uid: 'p', name: 'Personal', connection })], EN + 59_999),
+                    { state: 'ok', since: null, calendars: [] });
+            });
+
+            test(`${connection}: the normal rule at 60 s`, () => {
+                assert.deepEqual(at([WORK, src({ uid: 'p', name: 'Personal', connection })], EN + 60_000),
+                    { state: 'stale', since: EN - 20 * MIN, calendars: ['Personal'] });
+            });
+        }
+
+        test('another connection state still shows during the first 60 s', () => {
+            assert.deepEqual(at([WORK, src({ uid: 'p', name: 'Personal', connection: 'ssl-failed' })], EN + 30_000),
+                { state: 'stale', since: EN - 20 * MIN, calendars: ['Personal'] });
+        });
+    });
+
     test('no snapshot yet after the grace, but not expired, is waiting', () => {
         assert.equal(dataHealth({ ...base, seeds: NO_SEEDS, now: EN + 2 * MIN }).state, 'waiting');
     });

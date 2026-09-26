@@ -7,6 +7,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
 
 const UUID = 'payattention@tonymalandain.github.io';
@@ -89,32 +90,73 @@ function helperPids(home) {
 
 const now = () => GLib.get_monotonic_time();
 
-/** Clicks the centre of actor with a virtual pointer; returns what was under it, for diagnostics. */
-async function clickActor(actor) {
+function findAll(actor, pred, out = []) {
+    if (pred(actor))
+        out.push(actor);
+    for (const child of actor.get_children())
+        findAll(child, pred, out);
+    return out;
+}
+
+let virtualPointer = null;
+
+/**
+ * One virtual pointer for the whole run, first moved to the middle of the primary
+ * monitor. Measured in headless 50.4: a new virtual pointer's first motions can
+ * land elsewhere (x lost, or stopped at a monitor edge); over the panel or the hot
+ * corner that closed an open menu. So nothing is opened before this has run.
+ */
+async function pointerDevice(name) {
+    if (virtualPointer)
+        return virtualPointer;
     const seat = Clutter.get_default_backend().get_default_seat();
-    const pointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
+    const device = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
     await Scripting.sleep(100);
-    const [x, y] = actor.get_transformed_position();
-    const [w, h] = actor.get_transformed_size();
-    const tx = Math.round(x + w / 2), ty = Math.round(y + h / 2);
-    // Measured in headless 50.4: a new virtual pointer's first motions can lose x or
-    // stop at a monitor edge, so move until the pointer is really there.
-    const arrived = await waitFor(() => {
+    const m = Main.layoutManager.primaryMonitor;
+    const sx = m.x + Math.round(m.width / 2), sy = m.y + Math.round(m.height / 2);
+    const parked = await waitFor(() => {
         const [px, py] = global.get_pointer();
-        if (px === tx && py === ty)
+        if (px === sx && py === sy)
+            return true;
+        device.notify_absolute_motion(now(), sx, sy);
+        return false;
+    }, 3000, 100);
+    check(parked, name, `the virtual pointer never reached ${sx},${sy} (at ${global.get_pointer().slice(0, 2)})`);
+    virtualPointer = device;
+    return device;
+}
+
+/** Clicks the centre of actor with the virtual pointer; returns what was under it, for diagnostics. */
+async function clickActor(actor, name) {
+    const pointer = await pointerDevice(name);
+    const target = () => {
+        const [x, y] = actor.get_transformed_position();
+        const [w, h] = actor.get_transformed_size();
+        return [Math.round(x + w / 2), Math.round(y + h / 2)];
+    };
+    // Motions can still be lost or stop at a monitor edge, so move until the pointer
+    // is there and the actor is what is picked there.
+    let tx, ty, under;
+    const arrived = await waitFor(() => {
+        [tx, ty] = target();
+        const [px, py] = global.get_pointer();
+        under = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, tx, ty);
+        if (px === tx && py === ty && actor.contains(under))
             return true;
         pointer.notify_absolute_motion(now(), tx, ty);
         return false;
     }, 3000, 100);
-    check(arrived, '6-ack', `the pointer never reached ${tx},${ty} (at ${global.get_pointer().slice(0, 2)})`);
-    const under = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, tx, ty);
+    const chain = [];
+    for (let a = under; a && chain.length < 8; a = a.get_parent())
+        chain.push(a.name || a.constructor.name);
+    check(arrived, name, `the pointer never reached the actor at ${tx},${ty} (at ${global.get_pointer().slice(0, 2)}, under ${chain.join('<')})`);
     const hover = actor.hover;
     const [px, py] = global.get_pointer();
     pointer.notify_button(now(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.PRESSED);
     await Scripting.sleep(50);
     const pressed = actor.pressed;
     pointer.notify_button(now(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.RELEASED);
-    return `under=${under?.name ?? under} reactive=${actor.reactive} hover=${hover} pressed=${pressed} pointer=${px},${py} at ${tx},${ty}`;
+    return `under=${chain.join('<')} reactive=${actor.reactive} hover=${hover} pressed=${pressed} pointer=${px},${py} at ${tx},${ty}`;
 }
 
 async function pressKey(keyval) {
@@ -155,6 +197,173 @@ async function checkDisabled(name, home) {
     await mustWait(() => helperPids(home).length === 0, 3000, name, 'the helper is still running');
 }
 
+const verdictOverrides = settings => settings.get_value('verdict-overrides').recursiveUnpack();
+
+/** Opens the menu and the all-day fixture's submenu; returns the submenu item. */
+async function openFixtureRow(name, indicator) {
+    indicator.menu.open(false);
+    const row = await mustWait(() => findAll(indicator.menu.actor, a => a instanceof PopupMenu.PopupSubMenuMenuItem &&
+        a.label.text.endsWith('Smoke all-day check'))[0], 3000, name, 'no menu row for the all-day fixture');
+    row.setSubmenuShown(true);
+    await mustWait(() => row.menu.actor.mapped, 3000, name, 'the meeting submenu did not open');
+    await Scripting.sleep(300);
+    return row;
+}
+
+/** The verdict switch in the menu: toggling it must not destroy the item during its own activation. */
+async function checkMenuVerdict(name, ext) {
+    const indicator = Main.panel.statusArea.payattention;
+    const settings = ext.stateObj.getSettings();
+    await pointerDevice(name);
+    check(Object.keys(verdictOverrides(settings)).length === 0, name, 'overrides stored before the check');
+
+    let row = await openFixtureRow(name, indicator);
+    const must = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupSwitchMenuItem)[0];
+    check(must?.state === false, name, `the must-attend switch is not off (${must?.state})`);
+    let clicked;
+    try {
+        clicked = await clickActor(must, name);
+    } catch (e) {
+        if (e instanceof CheckFailed)
+            e.message += `; menu open=${indicator.menu.isOpen} mapped=${indicator.menu.actor.mapped} sub open=${row.menu.isOpen} item mapped=${must.mapped} overview=${Main.overview.visible} startingUp=${Main.layoutManager._startingUp} grab=${global.stage.get_grab_actor()?.constructor.name}`;
+        throw e;
+    }
+    await mustWait(() => Object.values(verdictOverrides(settings)).includes('must'), 3000, name,
+        `the switch stored no must override (${clicked})`);
+    await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the switch was activated');
+
+    row = await openFixtureRow(name, indicator);
+    const back = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
+        a.label?.text === 'Back to automatic')[0];
+    check(back, name, 'no "Back to automatic" after the override');
+    await clickActor(back, name);
+    await mustWait(() => Object.keys(verdictOverrides(settings)).length === 0, 3000, name, 'Back to automatic left an override');
+    await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after Back to automatic');
+    await mustWait(() => stageFind('payattention-indicator-label')?.text.startsWith(FIXTURE_TITLE), 3000, name,
+        'the indicator did not return to the fixture meeting');
+}
+
+/** Every action button of the takeover lies inside its own monitor. */
+function buttonsOnScreen(panels, monitors) {
+    const outside = [];
+    panels.forEach((panel, i) => {
+        const m = monitors[i];
+        const buttons = findAll(panel, a => a.name?.startsWith('payattention-action-'));
+        if (buttons.length === 0)
+            outside.push(`${i}: no buttons`);
+        for (const b of buttons) {
+            const [x, y] = b.get_transformed_position();
+            const [w, h] = b.get_transformed_size();
+            if (!b.mapped || x < m.x || y < m.y || x + w > m.x + m.width || y + h > m.y + m.height)
+                outside.push(`${i}: ${b.name} at ${x},${y} ${w}x${h} (monitor ${m.x},${m.y} ${m.width}x${m.height})`);
+        }
+    });
+    return outside;
+}
+
+/** Each title shows at most two lines, and the long one is ellipsized. */
+function titleProblems(root) {
+    return findAll(root, a => a.has_style_class_name?.('payattention-title')).flatMap(t => {
+        const layout = t.clutter_text.get_layout();
+        const [w, h] = t.clutter_text.get_size();
+        return layout.get_line_count() <= 2 && layout.is_ellipsized() ? []
+            : [`${layout.get_line_count()} lines, ellipsized=${layout.is_ellipsized()}, ${w}x${h}`];
+    });
+}
+
+/** Buttons of root that are not wholly inside one monitor. */
+function buttonsOffMonitors(root) {
+    return findAll(root, a => a.name?.startsWith('payattention-action-')).flatMap(b => {
+        const [x, y] = b.get_transformed_position();
+        const [w, h] = b.get_transformed_size();
+        const inside = Main.layoutManager.monitors.some(m =>
+            x >= m.x && y >= m.y && x + w <= m.x + m.width && y + h <= m.y + m.height);
+        return b.mapped && inside ? [] : [`${b.name} at ${x},${y} ${w}x${h} mapped=${b.mapped}`];
+    });
+}
+
+/** The widest and tallest alert: a 150-character title, Join, whole series and three "also" lines. */
+const WORST_ALERT = Object.freeze({
+    key: 'occ:smoke-worst|0', isTest: false, step: 4, presentation: 'takeover',
+    headline: 'Your meeting is starting',
+    title: 'Quarterly business review with the regional partners, the finance team and the external auditors about the budget plan for next year, part two (draft)',
+    timeLine: 'Starts at 10:00 AM · in less than a minute', countdown: '0:30', countdownCaption: 'until it starts',
+    reason: "Why: important: 'client'", travel: null,
+    also: ['also: Design sync at 10:00 AM', 'also: Hiring panel at 10:00 AM', 'also: Vendor call at 10:00 AM'],
+    canJoin: true, offerSeries: true,
+});
+
+/** WORST_ALERT, drawn by the installed UI modules as a takeover and as each card. */
+async function checkWorstCase(name, home) {
+    const base = `file://${home}/data/gnome-shell/extensions/${UUID}/ui`;
+    const { Takeover } = await import(`${base}/takeover.js`);
+    const { Card } = await import(`${base}/card.js`);
+    const alert = WORST_ALERT;
+    check(alert.title.length === 150, name, `the title is ${alert.title.length} characters`);
+
+    const takeover = new Takeover();
+    try {
+        takeover.show(alert, () => {});
+        const root = stageFind('payattention-takeover');
+        check(root, name, 'the takeover did not appear');
+        const panels = Main.layoutManager.monitors.map((_m, i) => findByName(root, `payattention-takeover-monitor-${i}`));
+        await mustWait(() => buttonsOnScreen(panels, Main.layoutManager.monitors).length === 0, 2000, name,
+            `a takeover button is off its monitor (${buttonsOnScreen(panels, Main.layoutManager.monitors).join('; ')})`);
+        check(findByName(root, 'payattention-action-ignore-series'), name, 'no whole-series button');
+        await mustWait(() => titleProblems(root).length === 0, 2000, name, `takeover title: ${titleProblems(root).join('; ')}`);
+    } finally {
+        takeover.hide();
+    }
+
+    for (const step of [1, 2, 3]) {
+        const travel = step <= 2 ? { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min', choices: [10, 15, 20, 30, 45, 60, 90] } : null;
+        const card = new Card({ ...alert, step, presentation: 'card', travel }, () => {});
+        try {
+            await mustWait(() => card.actor.mapped && buttonsOffMonitors(card.actor).length === 0, 2000, name,
+                `a step-${step} card button is off screen (${buttonsOffMonitors(card.actor).join('; ')})`);
+            await mustWait(() => titleProblems(card.actor).length === 0, 2000, name,
+                `step-${step} card title: ${titleProblems(card.actor).join('; ')}`);
+        } finally {
+            card.destroy();
+        }
+    }
+}
+
+/** A constructor that fails leaves nothing of ours on the stage. */
+async function checkFailedConstruction(name, home) {
+    const base = `file://${home}/data/gnome-shell/extensions/${UUID}/ui`;
+    const { Ui } = await import(`${base}/ui.js`);
+    const { Card } = await import(`${base}/card.js`);
+    const menus = () => findAll(global.stage, a => a.name === 'payattention-menu').length;
+    check(menus() === 1, name, `${menus()} menus before the check`);
+
+    // The status-area role is taken by the running extension, so a second Ui fails.
+    let error = null;
+    try {
+        new Ui({ dispatch: () => {}, openPreferences: () => {} });
+    } catch (e) {
+        error = e;
+    }
+    check(error, name, 'a second Ui did not fail');
+    check(menus() === 1, name, `${menus()} menus after a failed Ui (${error})`);
+
+    // A failure after addChrome: placing the card throws.
+    const layout = Main.layoutManager;
+    layout.getWorkAreaForMonitor = () => {
+        throw new Error('smoke: injected work-area failure');
+    };
+    error = null;
+    try {
+        new Card({ ...WORST_ALERT, step: 1, presentation: 'card' }, () => {});
+    } catch (e) {
+        error = e;
+    } finally {
+        delete layout.getWorkAreaForMonitor;
+    }
+    check(error?.message === 'smoke: injected work-area failure', name, `the card did not fail as injected (${error})`);
+    check(!stageFind('payattention-card'), name, 'the card of a failed construction is still on the stage');
+}
+
 async function runLadder() {
     // 0. Isolation: never the owner's config or data.
     const home = GLib.getenv('PAYATTENTION_SMOKE_HOME') ?? '';
@@ -171,6 +380,7 @@ async function runLadder() {
 
     // 2. Feed → judge → indicator, from the fixture only.
     await checkIndicator('2-indicator', home);
+    await checkMenuVerdict('2-menu-verdict', ext);
 
     // 3. The test ladder, step by step.
     ext.stateObj.runTestAlert();
@@ -200,6 +410,8 @@ async function runLadder() {
     });
     await mustWait(() => geometry().every(g => g.ok), 2000, '4-takeover',
         `a panel does not cover its monitor (${geometry().map(g => g.text).join('; ')})`);
+    await mustWait(() => buttonsOnScreen(panels, monitors).length === 0, 2000, '4-takeover',
+        `a button is off its monitor (${buttonsOnScreen(panels, monitors).join('; ')})`);
     check(global.stage.get_grab_actor() === takeover, '4-takeover', 'the grab actor is not the takeover');
     check(ourModalEntries().length === 1, '4-takeover', `${ourModalEntries().length} modal entries of ours`);
     check(!stageFind('payattention-card'), '4-takeover', 'a card is still up');
@@ -228,11 +440,17 @@ async function runLadder() {
         await Scripting.sleep(armedIn);
     const ack = findByName(panels[1], 'payattention-action-ack');
     check(ack, '6-ack', 'no ack button on monitor 1');
-    const clicked = await clickActor(ack);
+    const clicked = await clickActor(ack, '6-ack');
     await mustWait(() => !stageFind('payattention-takeover') && !stageFind('payattention-card') &&
         ourModalEntries().length === 0 && !grabIsOurs(), 2000, '6-ack', `the takeover or our grab remains (${clicked})`);
     await Scripting.sleep(3000);
     check(!stageFind('payattention-takeover') && !stageFind('payattention-card'), '6-ack', 'an alert came back');
+
+    // 6b. The worst-case alert keeps every button on screen and the title to two lines.
+    await checkWorstCase('6b-worst-case', home);
+
+    // 6c. A UI constructor that fails cleans up after itself.
+    await checkFailedConstruction('6c-failed-construction', home);
 
     // 7. Disable: nothing of ours remains.
     await checkDisabled('7-disable', home);

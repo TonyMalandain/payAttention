@@ -4,8 +4,14 @@
 
 /** Data or a calendar older than this is stale (D-010). */
 export const STALE_AFTER_MS = 15 * 60 * 1000;
-/** No warning flashes while the first snapshot is on its way after enabling. */
+/**
+ * No warning flashes while the first snapshot is on its way after enabling, nor
+ * for a calendar still reconnecting (connecting or offline) in that time.
+ */
 export const STARTUP_GRACE_MS = 60 * 1000;
+
+/** Connection states whose staleness is not shown during the startup grace. */
+const RECONNECTING = new Set(['connecting', 'offline']);
 
 /** @typedef {import('../core/types.js').Snapshot} Snapshot */
 /** @typedef {import('../core/types.js').SourceInfo} SourceInfo */
@@ -81,7 +87,10 @@ export function dataHealth(p) {
 
     const { dataClock, sourceClock, relevant } = clocks(p);
     const dataExpired = now - dataClock >= STALE_AFTER_MS;
-    const staleSources = relevant.filter(s => now - sourceClock(s) >= STALE_AFTER_MS);
+    // Right after enable (an unlock) a calendar still reconnecting only carries the saved clock.
+    const inGrace = now - enabledAt < STARTUP_GRACE_MS;
+    const staleSources = relevant.filter(s => now - sourceClock(s) >= STALE_AFTER_MS &&
+        !(inGrace && RECONNECTING.has(s.connection)));
 
     // Without fresh data every calendar is affected, so the line stays generic.
     if (dataExpired)
