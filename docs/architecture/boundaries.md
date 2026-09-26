@@ -18,7 +18,8 @@ extension/              the pack source: exactly what ships in the zip
   shell/                in-shell services: calendar feed, store, controller, environment
   ui/                   actors: indicator + menu, card, takeover, sound
 tests/
-  unit/                 node --test suites for extension/core
+  unit/                 node --test suites for extension/core and the gi-free shell modules
+  helper/               node --test suites that run the helper against an isolated EDS
   fixtures/             synthetic snapshots (never real calendar data)
   smoke/                headless gnome-shell automation script(s)
 scripts/                build, install, smoke wrappers
@@ -36,14 +37,26 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | Directory | May import | Must not import |
 |---|---|---|
 | `core/` | other `core/` modules only | anything `gi://`, anything `resource://`, any Node built-in. No clock reads, timers, or I/O: time is a parameter. |
-| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GLib), the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, St/Clutter/Meta/Shell, the rest of `core/` |
-| `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, `ui/` internals |
-| `ui/` | `gi://` St/Clutter/Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...`, display helpers from `core/` (formatting only) | `helper/`, the store, GSettings, ECal/EDataServer/ICalGLib, Gtk/Gdk/Adw |
-| `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw |
+| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, St/Clutter/Meta/Shell, the rest of `core/` |
+| `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, `ui/` internals, the `system` built-in |
+| `ui/` | `gi://` St/Clutter/Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, the store, GSettings, ECal/EDataServer/ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
+| `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
 | `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib; `core/` (for defaults such as built-in word lists) | Clutter, Meta, St, Shell, `shell/`, `ui/`, `helper/` |
 
 These are enforced with ESLint `no-restricted-imports` per directory, so a breach
 fails lint rather than review.
+
+- **`GioUnix` in the helper (allowed 2026-09-26).** Since GLib 2.80 the Unix
+  stream classes live in `GioUnix`; the old `Gio.Unix*Stream` names still work
+  but print a `Gjs-WARNING` on every use (measured, GLib 2.88.3). The helper
+  needs stdin and stdout as streams, so it imports `GioUnix`. No other directory
+  needs it.
+- **The `system` built-in is the helper's only.** `System.exit` inside the shell
+  process would end the desktop session, so `shell/`, `ui/`, `extension.js` and
+  `prefs.js` must not import it.
+- **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
+  in `tests/unit/` only if it has no `gi://` and no `resource://` imports; its
+  GNOME parts are injected (`interfaces.md` §3).
 
 ## What each part must not know
 
@@ -77,3 +90,4 @@ fails lint rather than review.
 | Settings keys | prefs.js and the store (for values set from the menu) | store, prefs.js |
 | Verdict overrides, mode overrides, travel times | store (on controller request) | store, prefs.js may clear |
 | Alert state | store (on controller request, via core `reduce`) | controller |
+| Persisted health clocks (`health-*` keys) | store (on controller request, in `disable()`) | controller, at `enable()` |

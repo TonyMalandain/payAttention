@@ -79,3 +79,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** Offline, the saved copy looks healthy but misses newly booked meetings. That is the same false "you are fine" that D-010 exists to prevent.
 **Costs accepted:** Working offline for long periods shows a steady warning.
 **Source:** the product manager, closing a senior-engineer finding (PG-1b plan).
+
+### D-014 — The stale-calendar warning is judged per calendar and names the calendar — 2026-09-26
+**Decision:** We chose to show the warning when any one online calendar has not been reachable for 15 minutes, and to name that calendar in the menu line.
+**Why:** One failing account hides that account's meetings, so warning is the safe direction. Naming the calendar tells the owner what to fix or hide.
+**Costs accepted:** A calendar that always fails keeps the warning on until the owner fixes or hides it. A provider that is reachable but answers with errors is not detected.
+**Source:** the product manager, closing an architect finding.

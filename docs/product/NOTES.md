@@ -62,3 +62,9 @@ Append only. Newest at the bottom.
 - **Fact:** A stale-provider warning is required even while meetings are served from the saved copy (D-013). The architect owns how.
 - **Source:** senior engineer finding, PG-1b plan.
 - **Touches:** decisions.md, solution.md R-16
+
+## 2026-09-26 — Architect D-013 reading taken
+- **Kind:** decision
+- **Fact:** Per-calendar staleness accepted and closed as D-014, with the calendar named in the menu. Removed from the inbox.
+- **Source:** docs/inbox.md, architect.
+- **Touches:** decisions.md D-014

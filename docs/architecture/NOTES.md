@@ -106,3 +106,87 @@ Append only. Newest at the bottom.
 - **Why:** This run was told not to edit product documents; the glossary is shared and the product manager may copy them across.
 - **Source:** task instruction.
 - **Touches:** overview.md
+
+## 2026-09-26 — In-person ordering question closed by D-008
+- **Kind:** decision
+- **Fact:** In-person defaults are 10/5/2/0 min before leave-by; `data.md` and `overview.md` updated.
+- **Why:** D-008 closed the ordering finding logged earlier today; core clamps offsets anyway.
+- **Source:** `docs/product/decisions.md` D-008; inbox (PG-1a, PG-1c plans).
+- **Touches:** data.md, overview.md
+
+## 2026-09-26 — Guests: organiser and groups count (supersedes "Guests exclude rooms and resources" wording on groups)
+- **Kind:** decision
+- **Fact:** Guests are people other than the owner: individual, group and unknown attendees plus the organiser; rooms and resources are not.
+- **Why:** D-011 says "people"; a group is people, and counting more guests errs toward warning (D-004).
+- **Source:** inbox (PG-1a plan); D-011.
+- **Touches:** interfaces.md §2
+
+## 2026-09-26 — Settings: `extra-owner-addresses` and integer ranges
+- **Kind:** data
+- **Fact:** Added key `extra-owner-addresses` (`as`, `[]`) and recorded the PG-1c ranges for every integer key.
+- **Why:** D-009 names extra owner addresses; ranges keep bad values out of core. Additive, so no ADR (interfaces.md §5).
+- **Source:** inbox (PG-1a, PG-1c plans).
+- **Touches:** data.md
+
+## 2026-09-26 — No `ownerAddresses` protocol field for aliases
+- **Kind:** interface
+- **Fact:** The protocol keeps one `ownerEmail` per source; aliases go in `extra-owner-addresses`.
+- **Why:** On the author's machine the 2 enabled mail identities have 0 aliases and exactly the same 2 addresses as the calendars' `cal-email-address`, so reading mail identities would add nothing today. D-009 accepts the cost. Revisit if an owner reports an unmatched alias.
+- **Source:** read-only gjs probe, counts only, 2026-09-26.
+- **Touches:** interfaces.md §1
+
+## 2026-09-26 — Controller ↔ UI reshaped; gi-free shell modules tested under Node
+- **Kind:** interface
+- **Fact:** Accepted PG-1c's `dispatch(action)`, controller-recorded heads-up, `View` from `shell/view.js`, `core/display.js`, and injected GNOME factories.
+- **Why:** Keeps every "what to show" decision out of `ui/` and testable without a shell. Internal contract, so no ADR.
+- **Source:** inbox (PG-1c plan).
+- **Touches:** interfaces.md §2–3, boundaries.md
+
+## 2026-09-26 — GioUnix allowed in the helper; `system` helper-only
+- **Kind:** boundary
+- **Fact:** `helper/` may import `gi://GioUnix` and gjs's `system`; `shell/`, `ui/`, `extension.js`, `prefs.js` must not import `system`.
+- **Why:** GLib ≥ 2.80 moved the Unix streams to GioUnix and the old names warn on every use (measured, GLib 2.88.3). `System.exit` in the shell process would end the session.
+- **Source:** inbox (PG-1b plan).
+- **Touches:** boundaries.md
+
+## 2026-09-26 — `ECal.Client.refresh` only schedules
+- **Kind:** constraint
+- **Fact:** `refresh` + `refresh_finish` returned `true` in 0–1 ms on all 7 CalDAV sources; all showed `online` true and `connection-status` CONNECTED.
+- **Why:** The planned `sync-failed` status can never report an offline provider, so it cannot drive D-013.
+- **Source:** read-only gjs probe, 2026-09-26.
+- **Touches:** ADR-0001 evidence 6, constraints.md, interfaces.md addendum
+
+## 2026-09-26 — D-013 mechanism: link state per source, judged in the shell
+- **Kind:** interface
+- **Fact:** Sources gain optional `remote` and `connection`; the shell keeps a per-source "last seen online and connected" clock and warns when the oldest is 15 min old.
+- **Why:** EDS exposes no last-sync time; link state is the only read-only signal. Optional fields keep protocol v1 (the validator accepts unknown properties). Per-source (oldest), not newest, because one failing account hides that account's meetings; sent to product to confirm.
+- **Source:** probe above; `extension/core/protocol.js` (unknown properties accepted).
+- **Touches:** interfaces.md addendum 2026-09-26
+
+## 2026-09-26 — Health clocks persist across lock
+- **Kind:** decision
+- **Fact:** `health-data-at` and `health-provider-at` are written on `disable()` and seed the clocks at `enable()`; 60 s grace before the first snapshot.
+- **Why:** `disable()` runs on every lock (ADR-0005); in-memory clocks would give an offline owner 15 min of false "all fine" after every unlock, which defeats D-010/D-013. One write per lock, never per tick.
+- **Source:** inbox (PG-1c plan asked "confirm, or persist").
+- **Touches:** data.md, interfaces.md addendum
+
+## 2026-09-26 — Residual gap: provider errors while connected
+- **Kind:** debt
+- **Fact:** A provider that is reachable but fails the sync (server error) is not detected by the D-013 rule.
+- **Why:** No read-only EDS API reports sync outcome. Repaid only if EDS exposes a last-sync time or a sync-error signal to clients.
+- **Source:** assumed (not reproduced).
+- **Touches:** interfaces.md addendum
+
+## 2026-09-26 — Test and build facts folded in
+- **Kind:** stack
+- **Fact:** Folded into `testing-and-build.md`: quoted `node --test` globs (Node 24.11), helper entry `main.js`, isolated EDS has 2 built-in sources, private `dbus-daemon`, smoke additions, `install:local`, the exit rule, EDS/libical traps. gjs lacks `URL`/`structuredClone` added to `constraints.md`.
+- **Why:** Each was measured by the senior engineers and costs hours to rediscover.
+- **Source:** inbox (PG-1a, PG-1b, PG-1c plans).
+- **Touches:** testing-and-build.md, constraints.md
+
+## 2026-09-26 — Inbox emptied (for-architecture)
+- **Kind:** question
+- **Fact:** All 12 `for-architecture` entries of 2026-09-26 taken and removed from `docs/inbox.md`; one `for-product` entry left there on D-013's per-calendar reading.
+- **Why:** The inbox is not a log.
+- **Source:** this session.
+- **Touches:** —

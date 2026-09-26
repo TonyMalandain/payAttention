@@ -20,26 +20,31 @@ our own on disk, and calendar content is never stored by us at all.
 
 ### Settings the owner edits (prefs.js)
 
-| Key | Type | Default | Meaning (PRD section) |
-|---|---|---|---|
-| `online-headsup-minutes` | `i` | 30 | Heads-up, minutes before start (§3, D-006) |
-| `online-nudge-minutes` | `i` | 10 | Nudge, minutes before deadline |
-| `online-insist-minutes` | `i` | 3 | Insist, minutes before deadline |
-| `online-takeover-minutes` | `i` | 1 | Takeover, minutes before deadline |
-| `inperson-headsup-minutes` | `i` | 10 | Heads-up, minutes before leave-by (D-006) |
-| `inperson-nudge-minutes` | `i` | 5 | Nudge, minutes before leave-by |
-| `inperson-insist-minutes` | `i` | 0 | Insist, minutes before leave-by |
-| `inperson-takeover-minutes` | `i` | 1 | Takeover, minutes before leave-by (see ordering finding in `NOTES.md`) |
-| `default-travel-minutes` | `i` | 30 | Travel time for a place with no stored value (D-006) |
-| `headsup-display-seconds` | `i` | 15 | How long the heads-up stays |
-| `snooze-minutes` | `i` | 2 | Snooze at steps 1–3 |
-| `takeover-snooze-minutes` | `i` | 1 | Snooze at step 4 |
-| `cutoff-minutes` | `i` | 10 | Stop alerting this long after the start |
-| `large-meeting-size` | `i` | 15 | Above this many guests, a meeting is "large" |
-| `extra-important-words` | `as` | `[]` | Added to the built-in important words |
-| `extra-ignore-words` | `as` | `[]` | Added to the built-in ignore words |
-| `owner-domains` | `as` | `[]` | The owner's email domains. Empty means "detect from the calendars' own addresses" |
-| `sound-enabled` | `b` | `true` | Play a sound at insist and takeover |
+| Key | Type | Default | Range | Meaning (PRD section) |
+|---|---|---|---|---|
+| `online-headsup-minutes` | `i` | 30 | 1–240 | Heads-up, minutes before start (§3, D-006) |
+| `online-nudge-minutes` | `i` | 10 | 0–120 | Nudge, minutes before deadline |
+| `online-insist-minutes` | `i` | 3 | 0–60 | Insist, minutes before deadline |
+| `online-takeover-minutes` | `i` | 1 | 0–30 | Takeover, minutes before deadline |
+| `inperson-headsup-minutes` | `i` | 10 | 1–240 | Heads-up, minutes before leave-by (D-006, D-008) |
+| `inperson-nudge-minutes` | `i` | 5 | 0–120 | Nudge, minutes before leave-by (D-008) |
+| `inperson-insist-minutes` | `i` | 2 | 0–60 | Insist, minutes before leave-by (D-008) |
+| `inperson-takeover-minutes` | `i` | 0 | 0–30 | Takeover, at leave-by (D-008) |
+| `default-travel-minutes` | `i` | 30 | 0–240 | Travel time for a place with no stored value (D-006) |
+| `headsup-display-seconds` | `i` | 15 | 5–120 | How long the heads-up stays |
+| `snooze-minutes` | `i` | 2 | 1–30 | Snooze at steps 1–3 |
+| `takeover-snooze-minutes` | `i` | 1 | 1–10 | Snooze at step 4 |
+| `cutoff-minutes` | `i` | 10 | 0–60 | Stop alerting this long after the start |
+| `large-meeting-size` | `i` | 15 | 2–500 | Above this many guests, a meeting is "large" |
+| `extra-important-words` | `as` | `[]` | — | Added to the built-in important words |
+| `extra-ignore-words` | `as` | `[]` | — | Added to the built-in ignore words |
+| `owner-domains` | `as` | `[]` | — | The owner's email domains. Empty means "detect from the calendars' own addresses" |
+| `extra-owner-addresses` | `as` | `[]` | — | Owner addresses beyond each calendar's own address, e.g. aliases (§6, D-009). Lowercased by core |
+| `sound-enabled` | `b` | `true` | — | Play a sound at insist and takeover |
+
+Defaults live once, in core (`DEFAULT_SETTINGS`); the schema repeats them and a
+unit test keeps the two equal. Core also clamps offsets, so steps can never come
+out of order whatever the owner sets.
 
 Built-in word lists and the conferencing host allowlist are code in `core/`, not
 settings, so a release can fix them.
@@ -59,6 +64,14 @@ Every integer key gets a `<range>` in the schema, so a bad value cannot reach co
 | Key | Type | Meaning |
 |---|---|---|
 | `alert-state` | `s` | JSON, see below. Not shown in prefs. |
+| `health-data-at` | `x` | Epoch ms of the last fresh snapshot, written on `disable()`. `0` = unknown. Seeds the D-010 clock at the next `enable()`. |
+| `health-provider-at` | `x` | Epoch ms of the oldest per-calendar provider-sync time, written on `disable()`. `0` = unknown. Seeds the D-013 clock. |
+
+The two `health-*` keys exist so that locking the screen (which runs `disable()`,
+ADR-0005) does not reset the stale-calendar clocks: without them an owner working
+offline would get 15 minutes of false "all fine" after every unlock. They are
+written once per `disable()`, never per tick. See `interfaces.md`, addendum
+2026-09-26.
 
 ## Keys — the stored format (one-way door, ADR-0003)
 

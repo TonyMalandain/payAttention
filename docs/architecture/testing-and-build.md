@@ -12,14 +12,17 @@ Run in this order. Each must pass before the next is worth running.
 | Step | Command (contract) | What it runs |
 |---|---|---|
 | 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. |
-| 2. Unit | `npm test` | `node --test tests/unit/` over `extension/core/`. |
+| 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/` and the gi-free shell modules, plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
 | 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist` |
-| 5. Helper integration | `npm run test:helper` | The helper against an isolated EDS with a fixture calendar (below). |
-| 6. Smoke | `npm run smoke` | A headless gnome-shell with the built zip installed and enabled (below). |
+| 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). |
+| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then a headless gnome-shell with the built zip installed and enabled (below). |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
 Setup once: `npm ci` (dev tools only; nothing from `node_modules` is ever packed).
+Install into the real session: `npm run install:local` (not `install`, which npm
+would run on every `npm install`/`npm ci`). `scripts/install.sh` also adds the UUID to
+`org.gnome.shell enabled-extensions`, so it loads at the next login.
 
 ## Layer 1 — core unit tests (Node)
 
@@ -58,8 +61,15 @@ Z=<a directory on the home filesystem>        # e.g. .test-home/ in the repo, gi
 # $Z/data/evolution/calendar/fixture-cal/calendar.ics  <- written by the test, times relative to now
 XDG_CONFIG_HOME=$Z/config XDG_DATA_HOME=$Z/data XDG_CACHE_HOME=$Z/cache \
 GSETTINGS_BACKEND=memory \
-  dbus-run-session -- gjs -m extension/helper/<entry>.js --once
+  dbus-run-session -- gjs -m extension/helper/main.js --once
 ```
+
+- **An isolated EDS is never empty of sources.** It always has two built-in,
+  selected, empty sources: `birthdays` (contacts) and `system-calendar` (local).
+  "No calendars" in a test means 2 sources and 0 events.
+- The helper test runs its own `dbus-daemon --session` instead of
+  `dbus-run-session`, so a test-only writer can add an event through EDS on the
+  same bus. The local backend does not notice direct edits to the `.ics` file.
 
 The test then validates the output line with core's protocol validator and checks
 the fields: a named TZID converted to UTC, attendees with partstat and cutype, the
@@ -67,7 +77,7 @@ organiser, transparency, a recurring series expanded with recurrence ids, an
 X-GOOGLE-CONFERENCE link, all-day, and a cancelled event. Verified: a
 `TZID=America/New_York` 06:00 event came back as 10:00Z with 2 attendees.
 
-Against the real calendars, by hand only: `gjs -m extension/helper/<entry>.js --summary`
+Against the real calendars, by hand only: `gjs -m extension/helper/main.js --summary`
 (counts only, safe to paste into a bug report).
 
 ## Layer 3 — shell smoke test (headless gnome-shell)
@@ -100,12 +110,19 @@ What the smoke script checks:
 
 1. `Main.extensionManager.lookup(uuid).state` is ACTIVE (1) and `error` is empty.
 2. The indicator is in the panel. The helper started and sent `hello` and one
-   snapshot (empty here: the isolated EDS has no calendars).
+   snapshot (2 built-in sources, 0 events).
+   Do Not Disturb is set (`show-banners=false`) for the whole run.
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
-   at the takeover, one overlay per monitor (2) and an active grab.
-4. Sends the acknowledge action; checks the overlays are gone and no grab remains.
+   at the takeover, one overlay per monitor (2) and an active grab of ours.
+   Escape does nothing.
+4. Clicks acknowledge on the **second** monitor with a virtual pointer; checks the
+   overlays are gone and no grab of ours remains.
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
+6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.
+
+Checks are "no modal entry of ours", never an absolute `Main.modalCount`: in
+headless 50.4 the overview is open at startup and holds one modal entry (verified).
 
 Verified: a probe extension reached state 1 with two monitors reported.
 
@@ -126,7 +143,9 @@ Checklist (PRD "Done when" plus what headless cannot show): the top bar shows th
 next must-attend meeting from the real calendars; Test alert runs all four steps;
 the takeover cannot be dismissed without an action, with PaperWM enabled, over a
 full-screen window, on every monitor, and in Do Not Disturb; lock during an
-alert and unlock (alert returns at the right step); suspend across a step time.
+alert and unlock (alert returns at the right step); suspend across a step time;
+**network off for 15 min** shows "Calendar not updating since …" while cached
+meetings still alert, and it clears within seconds of the network returning (D-013).
 
 ## Pitfalls found while verifying
 
@@ -137,7 +156,9 @@ alert and unlock (alert returns at the right step); suspend across a step time.
   uses `/tmp` and therefore fails with our zip unless run with
   `TMPDIR=<dir on the home filesystem>`; that is why the smoke recipe above calls
   `gnome-shell` directly (it also needs two monitors, which the test tool does not
-  offer).
+  offer). Installing from the home filesystem into `~/.local/share` with the
+  default `TMPDIR` works (verified).
+- **`node --test <directory>` fails on Node 24.11.** Always pass a quoted glob.
 - **`gnome-extensions pack` segfaults** if the `--out-dir` directory does not exist.
   Create it first.
 - **`gnome-extensions pack` includes only** `metadata.json`, `extension.js`,
@@ -149,3 +170,25 @@ alert and unlock (alert returns at the right step); suspend across a step time.
 - **gjs segfaults at teardown after using EDS objects** (see ADR-0001). The helper's
   own exit path must not dump core; test it by closing the helper's stdin and
   checking the exit status in the helper integration test.
+- **The exit rule for any gjs process that touches EDS** (ADR-0001, evidence 5):
+  call `System.exit(code)` only from a GLib main-loop source callback while the
+  loop runs, deferred with `GLib.idle_add(GLib.PRIORITY_HIGH, …)`. Ending the
+  module, `loop.quit()` then return, or `System.exit` with no loop segfault (139);
+  `System.exit` from a promise continuation (after `await`) **hangs forever**.
+  One `exitSoon(code)` is the helper's only exit.
+
+### EDS / libical API traps (measured, gjs 1.88.1, EDS 3.60)
+
+- `ICalGLib.Time.as_timet()` ignores the zone; use `as_timet_with_zone(zone)`.
+  For `Z` times `get_timezone()` is null.
+- `ECal.util_get_system_timezone()` ignores `TZ`; `GLib.TimeZone.new_local()` honours it.
+- `ICalGLib.Property.isa()` throws on `CONFERENCE` (unknown to the typelib): match
+  properties by name.
+- `ECal.Client.connect` wants `0xFFFFFFFF`, not `-1`, for "do not wait".
+- ECal applies RFC 5545 attendee defaults: no `CUTYPE` → individual, no `PARTSTAT`
+  → needs-action, no `ROLE` → req-participant. So `cutype:'unknown'` only comes
+  from `X-`/`UNKNOWN` values.
+- The `local` backend reports the placeholder `[Local Backend] EmailAddress` as
+  `cal-email-address`. It is transcribed as is; it matches no attendee.
+- `ECal.Client.refresh` only schedules a sync and returns `true` at once (0–1 ms,
+  7 CalDAV sources). It is not evidence that the provider was reached.

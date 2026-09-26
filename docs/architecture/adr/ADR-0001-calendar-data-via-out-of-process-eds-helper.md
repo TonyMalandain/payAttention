@@ -42,6 +42,22 @@ Evidence gathered on the author's machine (GNOME Shell 50.4, EDS 3.60.2, gjs 1.8
    synchronous `generate_instances_sync` works, but it blocks — unacceptable in
    the shell's main thread, harmless in a separate process.
 
+Evidence added later on 2026-09-26, while planning the helper (PG-1b). It
+confirms the decision and sharpens its consequences:
+
+5. **How a gjs process that touches EDS can exit.** Clean (status 0) only when
+   `System.exit(code)` runs inside a GLib main-loop source callback while the loop
+   runs: 5/5 runs, and 10/10 on stdin EOF. Ending the module, `loop.quit()` then
+   return, and `System.exit` with no loop all segfaulted (139, 5/5 each).
+   `System.exit` from a promise continuation (after `await`) hangs forever,
+   measured on the fixture and on the real calendars; deferring it through
+   `GLib.idle_add(PRIORITY_HIGH)` fixes it.
+6. **`ECal.Client.refresh` only schedules a sync.** It returned `true` in 0–1 ms
+   on all 7 CalDAV sources, so it cannot tell whether the provider was reached.
+   The only sync signal EDS gives a read-only client is the link state
+   (`EClient:online`, `ESource:connection-status`); see `interfaces.md`,
+   addendum 2026-09-26 (D-013).
+
 ## Options
 
 1. **In-process EDS via GI inside gnome-shell.** Fewest parts. Forever cost: any EDS,
@@ -84,6 +100,8 @@ see `constraints.md`). It is read-only.
   supervision with backoff; a stale-data state the product must show.
 - The helper's own exit must be made not to dump core (evidence 3). SIGTERM from
   the shell ends it without running the GC, so the risk is on the stdin-EOF path.
+  The rule that works is evidence 5: one deferred exit, called from a main-loop
+  callback, never from after an `await`.
 - We can no longer assume calendar data is instantly available at `enable()`:
   the UI must handle "no snapshot yet".
 

@@ -60,7 +60,8 @@ For one must-attend occurrence:
 - **Deadline** = start (online or unknown mode), or start − travel minutes (in person).
 - **Step times** T1..T4 = deadline − offset for heads-up, nudge, insist, takeover.
   Offsets come from settings, one set per mode. `plan` clamps them so that
-  T1 ≤ T2 ≤ T3 ≤ T4 (see the in-person ordering finding in `NOTES.md`).
+  T1 ≤ T2 ≤ T3 ≤ T4. Defaults: online 30/10/3/1 min before start, in person
+  10/5/2/0 min before leave-by (D-008).
 - **Cutoff** = start + cutoff minutes (default 10). After it, no alert.
 - **Current step** = the highest i with Ti ≤ now, while now < cutoff and the
   occurrence is not acknowledged or skipped. Passed steps are never replayed.

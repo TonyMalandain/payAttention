@@ -10,7 +10,7 @@ machine on 2026-09-26; "assumed" means a target nobody has measured yet.
 |---|---|---|
 | GNOME Shell | 50 only (`"shell-version": ["50"]`) | PRD out-of-scope; measured 50.4 |
 | Session | Wayland; no X11 code paths | measured |
-| gjs | 1.88 (SpiderMonkey 140), ES modules | measured |
+| gjs | 1.88 (SpiderMonkey 140), ES modules. **No global `URL` and no `structuredClone`** (`ReferenceError`), so code shared with Node (`core/`) must not use them; a gjs run of core guards this | measured |
 | evolution-data-server | 3.60, typelibs `ECal-2.0`, `EDataServer-1.2`, `ICalGLib-3.0` present | measured |
 | Other extensions to coexist with | PaperWM, Blur my Shell, Move Clock, system-monitor-next | measured (`gnome-extensions list --enabled`) |
 
@@ -39,8 +39,8 @@ open window go with it. So:
 | Re-snapshot after a local EDS change | ≤ 3 s (2 s debounce) | assumed |
 | Periodic re-snapshot | every 5 min (slides the range) | assumed |
 | Remote sync by EDS | every 30 min by default | measured: 9 of 9 sources |
-| Helper asks EDS to sync remote sources | every 10 min, and on resume | assumed; see NOTES "freshness" |
-| Data considered stale | no good snapshot for 15 min → data-health flag false | assumed |
+| Helper asks EDS to sync remote sources | every 10 min, and on resume. The call only schedules the sync (returns in 0–1 ms), so its result is not evidence of a sync | interval assumed; timing measured on 7 CalDAV sources |
+| Data considered stale | no accepted snapshot for 15 min (D-010), **or** a remote calendar not online-and-connected for 15 min (D-013); clocks survive lock/unlock. Exact rule: `interfaces.md`, addendum 2026-09-26 | 15 min is product (D-010) |
 | Helper restart backoff | 1 s, doubling, capped at 5 min; reset after 10 min of healthy running | assumed |
 | Per-source connect timeout in helper | 5 s; a slow source is reported `ok:false`, others still delivered | assumed |
 
