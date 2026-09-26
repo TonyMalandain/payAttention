@@ -267,6 +267,11 @@ describe('verdict: the small-meeting default (PRD §1 rule 5, D-012)', () => {
         }), { config: { ...CONFIG, extraOwnerAddresses: ['me@home.test'] } });
         expectVerdict(r, 'must', 'small', SMALL_2);
     });
+
+    test('each guest with an empty address counts once', () => {
+        const r = judgeOne(event({ organizer: ALICE_ORGANISER, attendees: [att(OWNER), att(''), att('')] }));
+        expectVerdict(r, 'must', 'small', 'small meeting (3 guests): absence noticed');
+    });
 });
 
 describe('verdict: not enough information', () => {
@@ -274,6 +279,12 @@ describe('verdict: not enough information', () => {
         const r = judgeOne(event({
             organizer: { email: 'x@acme.test', name: 'x' }, attendees: [att('x@acme.test'), att('y@acme.test')],
         }), { sources: [{ ...SOURCE, ownerEmail: null }] });
+        expectVerdict(r, 'must', 'insufficient-data', INSUFFICIENT);
+    });
+
+    test('when the owner is unknown, 16 guests is not a large meeting: must-attend', () => {
+        const r = judgeOne(event({ attendees: [att('alice@acme.test'), ...guests(15)] }),
+            { sources: [{ ...SOURCE, ownerEmail: null }] });
         expectVerdict(r, 'must', 'insufficient-data', INSUFFICIENT);
     });
 });

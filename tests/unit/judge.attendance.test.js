@@ -77,7 +77,8 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
         assert.equal(r.joinUrl, null);
     });
 
-    for (const location of ['Online', ' virtual ', 'Remote.', 'TBD', 'Microsoft Teams Meeting', 'Zoom', 'n/a']) {
+    for (const location of ['Online', ' virtual ', 'Remote.', 'TBD', 'Zoom', 'Zoom Meeting', 'Phone', 'Microsoft Teams',
+        '-']) {
         test(`the location '${location}' is not a place`, () => {
             const r = judgeOne(event({ location }));
             assert.equal(r.mode, 'online');
@@ -86,6 +87,12 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
             assert.equal(r.deadline, T0);
         });
     }
+
+    test('a room name is a place: in person', () => {
+        const r = judgeOne(event({ location: 'Conference Room B' }));
+        assert.equal(r.mode, 'in-person');
+        assert.equal(r.placeText, 'Conference Room B');
+    });
 
     test('a location that is only a non-allowlisted link is not a place', () => {
         const r = judgeOne(event({ location: 'https://example.com/room' }));

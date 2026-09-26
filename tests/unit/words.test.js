@@ -85,6 +85,11 @@ describe('matcher and lists', () => {
             'one on one']);
     });
 
+    test('the not-a-place words are the PRD §2 list, lowercased', () => {
+        assert.deepEqual(NOT_A_PLACE_WORDS, ['online', 'virtual', 'remote', 'tbd', 'phone', 'call', 'video call',
+            'zoom', 'zoom meeting', 'teams', 'microsoft teams', 'google meet', 'meet', 'webex', 'hangout', 'slack']);
+    });
+
     test('the lists are frozen', () => {
         assert.ok(Object.isFrozen(BUILTIN_IGNORE_WORDS));
         assert.ok(Object.isFrozen(BUILTIN_IMPORTANT_WORDS));
