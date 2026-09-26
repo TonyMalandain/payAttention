@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The smoke test (testing-and-build.md, layer 3): a GJS store check, then a
+# The smoke test (testing-and-build.md, layer 3): a GJS store check, an
+# install/uninstall check in a throwaway home with its own dconf, then a
 # headless gnome-shell with two virtual monitors, its own D-Bus session, its
 # own XDG directories and one fixture calendar written here. It never touches
 # the owner's calendars, settings or session bus.
@@ -20,6 +21,13 @@ env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 GSETTINGS_SCHEMA_DIR="$T/schemas" 
     gjs -m "$ROOT/tests/smoke/store-check.js" | tee "$T/store.log"
 if ! grep -q '^PAYATTENTION-STORE PASS' "$T/store.log"; then
     echo "smoke: store check failed" >&2
+    exit 1
+fi
+
+# 1b. Install and uninstall, in their own home, bus and dconf database.
+bash "$ROOT/tests/smoke/uninstall-check.sh" "$T/uninstall" 2>&1 | tee "$T/uninstall.log" || true
+if ! grep -q '^PAYATTENTION-UNINSTALL PASS' "$T/uninstall.log"; then
+    echo "smoke: uninstall check failed" >&2
     exit 1
 fi
 

@@ -197,6 +197,52 @@ async function checkDisabled(name, home) {
     await mustWait(() => helperPids(home).length === 0, 3000, name, 'the helper is still running');
 }
 
+/**
+ * Runs argv with the shell's environment; resolves with its exit status and merged stdout+stderr.
+ * Asynchronous on purpose: the child may call back into this shell over D-Bus. The shell does not
+ * promisify communicate_utf8_async, so the callback form is wrapped here.
+ */
+async function runProgram(argv) {
+    const proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE);
+    const output = await new Promise((resolve, reject) => {
+        proc.communicate_utf8_async(null, null, (p, result) => {
+            try {
+                resolve(p.communicate_utf8_finish(result)[1] ?? '');
+            } catch (e) {
+                reject(e);
+            }
+        });
+    });
+    return { status: proc.get_exit_status(), output };
+}
+
+/** Uninstall while a takeover holds the grab: stopped, nothing left, files and enabled entry gone. */
+async function checkUninstall(name, home) {
+    Main.extensionManager.enableExtension(UUID);
+    await mustWait(() => Main.extensionManager.lookup(UUID)?.state === ACTIVE, 10000, name, 're-enable failed');
+    await checkIndicator(name, home);
+    Main.extensionManager.lookup(UUID).stateObj.runTestAlert();
+    await mustWait(() => stageFind('payattention-takeover'), 45000, name, 'no takeover after re-enable');
+    check(grabIsOurs(), name, 'the takeover does not hold the grab');
+
+    const script = Gio.File.new_for_uri(import.meta.url).get_parent().get_parent().get_parent()
+        .get_child('scripts').get_child('uninstall.sh').get_path();
+    const { status, output } = await runProgram(['bash', script]);
+    check(status === 0 && output.includes('Stopped: payAttention in the running session.'), name,
+        `uninstall.sh exited ${status}: ${output}`);
+    check(Main.extensionManager.lookup(UUID) === undefined, name, 'the shell still knows the extension');
+    check(countByPrefix(global.stage, 'payattention') === 0, name,
+        `${countByPrefix(global.stage, 'payattention')} payattention actors remain`);
+    check(Main.panel.statusArea.payattention === undefined, name, 'the indicator is still registered');
+    check(ourModalEntries().length === 0, name, 'a modal entry of ours remains');
+    check(!grabIsOurs(), name, 'a grab of ours remains');
+    await mustWait(() => helperPids(home).length === 0, 3000, name, 'the helper is still running');
+    check(!GLib.file_test(`${home}/data/gnome-shell/extensions/${UUID}`, GLib.FileTest.EXISTS), name,
+        'the install directory still exists');
+    await mustWait(() => !global.settings.get_strv('enabled-extensions').includes(UUID), 3000, name,
+        'the UUID is still in enabled-extensions');
+}
+
 const verdictOverrides = settings => settings.get_value('verdict-overrides').recursiveUnpack();
 
 /** Opens the menu and the all-day fixture's submenu; returns the submenu item. */
@@ -462,6 +508,9 @@ async function runLadder() {
     Main.extensionManager.lookup(UUID).stateObj.runTestAlert();
     await mustWait(() => stageFind('payattention-takeover'), 45000, '8-lock', 'no takeover after re-enable');
     await checkDisabled('8-lock', home);
+
+    // 9. Uninstall while a takeover holds the grab. Last: the extension is gone afterwards.
+    await checkUninstall('9-uninstall', home);
 }
 
 export async function run() {

@@ -14,7 +14,8 @@
     "build": "bash scripts/build.sh",
     "test:helper": "node --test \"tests/helper/**/*.test.js\"",
     "smoke": "bash scripts/smoke.sh",
-    "install:local": "bash scripts/install.sh"
+    "install:local": "bash scripts/install.sh",
+    "uninstall:local": "bash scripts/uninstall.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

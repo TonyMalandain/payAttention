@@ -29,6 +29,17 @@ gnome-extensions info payattention@tonymalandain.github.io    # State: ACTIVE
 
 The alarm icon in the top bar shows your next must-attend meeting and a countdown.
 
+## Uninstall
+
+```sh
+npm run uninstall:local              # stop it, remove it, keep your saved choices
+npm run uninstall:local -- --purge   # also erase overrides, travel times and settings
+```
+
+If payAttention is running, it stops at once, and no alert stays on screen. It no longer loads at login. The output lists what was removed and what was kept. Running it again is safe. It never touches your calendars or other extensions.
+
+To reinstall after uninstalling, run `npm run install:local`, then log out and back in, because GNOME loads extension code only at login.
+
 ## First five minutes
 
 1. Open the top-bar menu. Each of today's meetings shows its verdict: **Must attend** or ignorable.
@@ -89,4 +100,4 @@ All the timings, the default travel time (30 min), your extra important and igno
 
 ## Development
 
-Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md).
+Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test checks install and uninstall in a throwaway home, then runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md).
