@@ -93,3 +93,9 @@ Append only. Newest at the bottom.
 - **Fact:** Personal events with a physical place (for example children's practices) could be treated as must-attend with travel timing. This was not adopted: it would add takeovers for events another adult may handle. Revisit if the author overrides several such series to must-attend.
 - **Source:** product manager.
 - **Touches:** decisions.md D-015
+
+## 2026-09-26 — All requirements proven; product verified
+- **Kind:** solution
+- **Fact:** All 16 requirements are now `real`. Evidence: unit tests (647), calendar-reader tests against a test calendar (66), a headless GNOME 50 smoke test with Do Not Disturb on and two monitors, screenshots of every alert step, and a read-only verdict check on the author's real week. The first load in the author's real session needs a log out and log in, which cannot be done unattended (BACKLOG PG-2).
+- **Source:** product manager; reviewer round 2 accepted PG-1c.
+- **Touches:** solution.md

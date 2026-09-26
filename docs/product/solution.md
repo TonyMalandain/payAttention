@@ -23,98 +23,114 @@ Environment requirements come first.
 ### R-1 — Runs inside the GNOME desktop the user already has
 - **Serves:** the calendar owner works on a GNOME desktop and needs the warning where they already look.
 - **Who it serves:** Installer.
-- **What they get:** install one extension. Nothing else runs, and there is no separate app to keep open.
-- **State:** intended
+- **What they get:** install one extension. There is nothing else to start and no separate app to keep open.
+- **State:** real
+- **Evidence:** demoed
 
 ### R-2 — Uses the calendars already connected to the desktop
 - **Serves:** "install once and do almost no setup". The meetings are already on the calendar the owner uses.
 - **Who it serves:** Installer.
 - **What they get:** no second login and no copying of calendars. Every calendar shown in the desktop clock menu is covered.
-- **State:** intended
+- **State:** real
+- **Evidence:** demoed
 
 ### R-3 — Calendar contents never leave the machine
 - **Serves:** calendars hold sensitive business information. The warning must also work when the network is unreliable.
 - **Who it serves:** Calendar owner.
 - **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-4 — Every upcoming meeting gets a verdict without the user tagging anything
 - **Serves:** "a reminder for a client call looks the same as a reminder for a lunch placeholder". The owner has to filter by hand today.
 - **Who it serves:** Calendar owner.
 - **What they get:** must-attend meetings are picked out for them. Placeholders, personal blocks, declined or "free" meetings, all-day events, and large broadcasts are recognised as ignorable.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-5 — Every verdict explains itself in one line
 - **Serves:** a wrong verdict is the thing that makes the owner give up. They must be able to see why before they can trust or correct it.
 - **Who it serves:** Calendar owner.
 - **What they get:** a reason such as "you organised it, 3 guests" or "no other guests: personal block".
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-6 — The user can override a verdict for one meeting or its whole series
 - **Serves:** the owner can "carefully craft" a reminder today. Some judgment must stay with them, but it should take one action, not a crafted reminder.
 - **Who it serves:** Calendar owner.
 - **What they get:** from the top-bar menu or from an alert, mark a meeting "must-attend" or "ignore", for this one or for every meeting in the series. The choice is remembered.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-7 — Ignorable meetings produce no alert at all
 - **Serves:** "fewer and stronger" warnings. Placeholders "should make no noise at all".
 - **Who it serves:** Calendar owner.
 - **What they get:** silence for everything that does not matter.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-8 — Must-attend alerts escalate until acknowledged, ending in a full-screen takeover
 - **Serves:** a normal reminder "shows once and then goes away". The warning must get "harder to ignore, until they cannot ignore it".
 - **Who it serves:** Calendar owner.
 - **What they get:** a brief heads-up first, then a banner that stays on screen and repeats, then a full-screen takeover that stays until they choose an action. The takeover comes back if the meeting starts and they still have not acted.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-9 — One action stops the escalation
 - **Serves:** the product assumes you will miss the meeting until you show you will not. Showing it must cost almost nothing.
 - **Who it serves:** Calendar owner.
 - **What they get:** "I'm on it" silences that meeting. "Join" opens an online meeting's link and also silences it. A short snooze is available at every step. "Skip this one" is also available, for a meeting they chose to miss on purpose.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-10 — Online and in-person meetings are told apart
 - **Serves:** one lead time "is too early for a video call and too late for a meeting across town".
 - **Who it serves:** Calendar owner.
 - **What they get:** a meeting with a video-call link is online. A meeting with only a physical place is in-person. A meeting with both is treated as online, and the user can switch it.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-11 — In-person meetings count down to the leave-by time
 - **Serves:** "the right moment to warn someone depends on whether they must travel".
 - **Who it serves:** Calendar owner.
 - **What they get:** alerts timed to when they must leave. The travel time comes from what they set for that place, or from a default travel time. They can set it from the alert and it is remembered for that place.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-12 — Must-attend alerts break through Do Not Disturb
 - **Serves:** the owner silences noise to cope with overload. The one warning that matters must still get through.
 - **Who it serves:** Calendar owner.
 - **What they get:** Do Not Disturb keeps everything else quiet but never hides a must-attend alert.
-- **State:** intended
+- **State:** real
+- **Evidence:** demoed
 
 ### R-13 — Alerts missed while away are shown on return
 - **Serves:** a reminder that arrives "while you are away from the desk" is lost today.
 - **Who it serves:** Calendar owner.
 - **What they get:** when they come back, they see the escalation step that fits the current time, not a stale heads-up and not nothing.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-14 — The next must-attend meeting is always visible at a glance
 - **Serves:** the owner needs to trust that the product is watching. It also replaces checking the calendar "just in case".
 - **Who it serves:** Calendar owner.
 - **What they get:** a small top-bar countdown to the next must-attend meeting, and a menu listing today's meetings with their verdicts and reasons.
-- **State:** intended
+- **State:** real
+- **Evidence:** demoed
 
 ### R-15 — A few settings, with defaults that work out of the box
 - **Serves:** "install once and do almost no setup", while still letting the owner tune timing to their habits.
 - **Who it serves:** Installer.
 - **What they get:** a default lead time, a default travel time, escalation timings, extra words that mark a meeting important or ignorable, and a sound on or off switch. Everything works without opening settings.
-- **State:** intended
+- **State:** real
+- **Evidence:** demoed
 
 ### R-16 — The product says when it cannot see the calendar
 - **Serves:** the owner misses meetings that matter. A product that silently loses the calendar would let that happen while looking calm.
 - **Who it serves:** Calendar owner.
 - **What they get:** a visible warning and the time of the last good update whenever calendar data is stale. It never shows "no meetings" in that state.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ## What the solution is not
 
