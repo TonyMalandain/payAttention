@@ -2,7 +2,7 @@
 
 Delivery status. Not product documentation. Owned by the product manager.
 
-Spec for everything below: `docs/prd/meeting-guardian.md` (covers R-1…R-16 in `docs/product/solution.md`).
+Spec for everything below: `docs/prd/meeting-guardian.md` (covers R-1…R-19 in `docs/product/solution.md`).
 Architecture: `docs/architecture/` (ADR-0001…0006).
 
 ## Done — the meeting guardian (PG-1)
@@ -15,6 +15,14 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 ## Done — uninstall (PG-3)
 
 - **PG-3 — Remove payAttention with one command.** Built, reviewed (2 defects, fixed), and checked by the product manager. `npm run uninstall:local` removes it and keeps saved choices. `npm run uninstall:local -- --purge` also erases them.
+
+## Now — AI second opinion (PG-4, size L)
+
+- **PG-4 — Optional AI engine for unsure verdicts, local or cloud** (spec: `docs/prd/meeting-guardian.md`, "Addendum — AI second opinion"; R-18, R-19, D-017, D-018). Size **L**: a new concept, new stored secrets, and a new outside dependency.
+  - **What changes for the owner:** unsure meetings get an AI verdict with an "AI:" reason. The owner chooses a local or cloud engine, and AI is off by default.
+  - **Who it is for:** Calendar owner, Installer.
+  - **Done when:** see the addendum's "Done when".
+  - **Next step:** the architect designs it (library choice per the owner's request), then plan, build, review.
 
 ## Now — needs the owner (cannot be done unattended)
 

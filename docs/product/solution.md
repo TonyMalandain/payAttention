@@ -34,10 +34,10 @@ Environment requirements come first.
 - **State:** real
 - **Evidence:** demoed
 
-### R-3 — Calendar contents never leave the machine
+### R-3 — Calendar contents never leave the machine unless the owner chooses a cloud AI engine
 - **Serves:** calendars hold sensitive business information. The warning must also work when the network is unreliable.
 - **Who it serves:** Calendar owner.
-- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere.
+- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere, unless they turn on a cloud AI engine. Then only the facts listed in D-018 are sent.
 - **State:** real
 - **Evidence:** verified in code
 
@@ -139,11 +139,23 @@ Environment requirements come first.
 - **State:** real
 - **Evidence:** verified in code
 
+### R-18 — An optional AI engine judges the meetings the rules are unsure of
+- **Serves:** the author asked for a system "smart enough to understand meetings on my calendar I cannot afford to miss and meeting that are just placeholder". Fixed rules miss cases like a personal task that matters, and the owner "has to carefully craft" corrections by hand today.
+- **Who it serves:** Calendar owner.
+- **What they get:** smarter verdicts on unsure meetings, each with a one-line reason marked as the AI's opinion. Their own choices and the sure rules always win. If the engine cannot be reached, the rules alone decide and the menu says so.
+- **State:** intended
+
+### R-19 — The owner chooses where the AI engine runs
+- **Serves:** calendars hold sensitive business information (R-3). Only the owner can weigh smarter verdicts against sending meeting facts off the machine.
+- **Who it serves:** Installer.
+- **What they get:** AI stays off until they turn it on. They can then pick an engine on their own machine or network, or a cloud service, and switch at any time. Settings list exactly which meeting facts are sent (D-018).
+- **State:** intended
+
 ## What the solution is not
 
 - **Not a calendar.** It never creates, edits, or accepts meetings. The owner's calendar stays the one source of truth.
 - **Not a general notification filter.** It does nothing to other apps' notifications. Its job is to be the one alert that is worth reading, not to clean up the rest.
-- **No AI service and no cloud.** Verdicts are made on the machine from what the calendar says, and they are explained. This would be reconsidered if the owner found themselves overriding verdicts often enough that a smarter judge was worth sending meeting data somewhere.
+- **No AI unless the owner turns it on.** Out of the box, verdicts come from the rules alone. The AI engine never overrides a sure rule or an owner's choice (D-017).
 - **No live traffic or map routing.** Travel time is what the owner sets per place, or the default. This would be reconsidered if fixed travel times led to late arrivals in practice.
 - **Does not detect presence in a meeting.** It does not watch the camera, microphone, or call apps to decide that you joined. Acknowledging is the only signal, because it is reliable and costs one click.
 - **Nothing over the lock screen, and no phone.** If the desktop is locked or the owner is away from the computer, the alert waits for their return.

@@ -147,3 +147,39 @@ The owner pointed out that nothing removes the extension.
   - A second uninstall succeeds.
   - If the extension was running, it is stopped and leaves nothing on screen.
   - The README documents the command.
+
+## Addendum 2026-09-26 — AI second opinion (R-18, R-19, D-017, D-018)
+
+**Problem:** from `problem.md`: "A reminder for a client call looks the same as a reminder for a lunch placeholder." Fixed rules still misjudge some meetings. On the owner's real week, "Pick my child up for piano lessons" was silenced because it has no guests.
+
+**What changes:**
+- In Settings, an "AI second opinion" section, **off by default**. The owner picks:
+  - **where the engine runs:** on this machine or network (the owner gives its address), or a cloud service (the owner gives a key);
+  - **which model** to use;
+  - a **"Test connection"** button, which gives a clear yes or no.
+- The settings show, in plain words, exactly which facts are sent (D-018). For a cloud engine it also says "these facts leave your computer".
+- **Which meetings the AI judges:** only verdicts from the unsure rules. These are "no other guests: personal block", "large meeting", "small meeting", "you answered maybe" and "not enough information". The owner's overrides and the sure rules (cancelled, declined, not invited, all-day, free, ignore or important word, you organised it, external guests) are never sent and never changed.
+- **The AI's reason:** it returns must-attend or ignorable with a one-line reason. The menu and alerts show it as "AI: <reason>".
+- **When the AI is unreachable** (slow, erroring, offline, or out of quota), the rule verdict stands. The menu says "AI unavailable — using rules". An alert is never delayed while waiting for the AI.
+- **Asking again:** a meeting is judged once, and asked again only when its facts change. This keeps cost and traffic low.
+- **What the model returns is data, never instructions.** A meeting title cannot make the product do anything other than pick a verdict.
+
+**Who it lands on:**
+- **Calendar owner:** helps (smarter verdicts). Cost: an AI verdict can be wrong in new ways. The reason shown and the one-click override are the remedy.
+- **Installer:** cost. Setup is no longer zero if they want AI; with AI off, nothing changes.
+
+**Out of scope:**
+- Sending descriptions, names, email addresses, or places.
+- The AI changing sure verdicts or the alert timing.
+- Travel time from AI.
+- Bundling or installing an engine for the owner.
+
+**Done when:**
+- With AI off, the product behaves exactly as before, and nothing is sent anywhere.
+- With a local engine and with a cloud engine, unsure meetings get an AI verdict and an "AI:" reason.
+- A test proves that only the D-018 facts are sent.
+- A test proves that an unreachable engine falls back to the rules without delaying any alert.
+- A test proves that a title containing instructions to the model cannot change anything except the verdict.
+
+**Open questions:**
+- None for product. Which engines to support first, and the library, are for the architect.

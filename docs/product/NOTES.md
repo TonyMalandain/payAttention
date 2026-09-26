@@ -128,3 +128,15 @@ Append only. Newest at the bottom.
 - **Why:** The original prompt asked for a system "smart enough to understand" meetings. Real-data evidence so far: 1 miss in 24 events, fixed with one override.
 - **Source:** the owner's question; hardware checked by the product manager.
 - **Touches:** decisions.md D-003, solution.md exclusions
+
+## 2026-09-26 — AI question closed: optional engine, owner's choice of where it runs
+- **Kind:** decision
+- **Fact:** The owner chose AI verdicts, with the choice of a cloud-hosted or internally hosted engine. Closed as D-017, which supersedes D-003, and D-018 (only the minimum facts are sent). R-3 was reworded; R-18 and R-19 were added.
+- **Source:** the owner, 2026-09-26.
+- **Touches:** decisions.md, solution.md, docs/prd/meeting-guardian.md
+
+## 2026-09-26 — Handoff: LLM abstraction library
+- **Kind:** handoff
+- **Fact:** The owner said, verbatim: "you should use a llm abstraction library, so that the user can decide to use a cloud-hosted or internally hosted llm engine". Which library, where it runs (the extension's processes are gjs, and it must never block the shell), how keys are stored, and which engines are supported first are all for the architect.
+- **Source:** the owner.
+- **Touches:** docs/architecture/

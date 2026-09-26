@@ -14,7 +14,7 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** We own the maintenance, including keeping up with each new GNOME release.
 **Source:** the author's request, plus a web search on 2026-09-26.
 
-### D-003 — Verdicts are made locally by explainable rules, not by an AI service — 2026-09-26
+### D-003 — Verdicts are made locally by explainable rules, not by an AI service  [SUPERSEDED by D-017 on 2026-09-26]
 **Decision:** We judged must-attend versus ignorable on the machine, from what the calendar already says, and gave every verdict a readable reason and a one-click override.
 **Why:** Calendar contents are sensitive business data. The alert must work offline and instantly. A verdict you can read and correct builds trust faster than a smarter one you cannot inspect.
 **Costs accepted:** Unusual meetings get misjudged until the owner overrides them once. The product is less "smart" than the author's wording ("smart enough to understand") may have imagined.
@@ -97,3 +97,16 @@ Closed product decisions only. Newest at the bottom.
 **Why:** Overrides and travel times are the owner's own manual work. Losing them by accident on a reinstall costs more than leaving a few settings behind.
 **Costs accepted:** A plain uninstall leaves the saved settings on the machine. The owner must use the erase option for a full clean-up.
 **Source:** the product manager, after the owner pointed out that no uninstall existed (2026-09-26).
+
+### D-017 — An optional AI engine gives a second opinion, and the owner chooses where it runs — 2026-09-26
+**Decision:** We chose to let an AI model judge the meetings the rules are unsure of. The owner turns it on and picks the engine: one hosted on their own machine or network, or a cloud service. It is off by default. The rules still decide the sure cases, the owner's overrides always win, and every AI verdict shows a one-line reason marked as the AI's opinion. If the engine is unreachable, the rules alone decide.
+**Why:** The owner asked for a system "smart enough to understand" meetings, and asked for the choice between a cloud and an internally hosted engine. D-003's reasons still hold for anyone who leaves it off: privacy, working offline, and verdicts that explain themselves.
+**Costs accepted:** Setup is no longer zero for owners who want AI. With a cloud engine, meeting facts leave the machine (limited by D-018). AI verdicts can change from one day to the next, and they are harder to predict than rules.
+**Source:** the owner, 2026-09-26 ("you should use a llm abstraction library, so that the user can decide to use a cloud-hosted or internally hosted llm engine").
+
+### D-018 — Only the facts the rules already use are sent to the AI engine — 2026-09-26
+**Decision:** We chose to send only the meeting title, the start time and length, the number of guests from inside and outside the owner's organisation, the owner's response, whether the owner organised it, and whether it has a place or a video link. Guest names, email addresses, descriptions and places are never sent.
+**Why:** It is the smallest set that lets a model judge importance. It limits what a cloud engine can learn about the owner's contacts and business.
+**Costs accepted:** The model cannot use the description or the names of people, which sometimes show what a meeting is about.
+**Source:** assumed by the product manager. The owner can widen it by a new decision.
+
