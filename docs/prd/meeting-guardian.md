@@ -29,7 +29,7 @@ Check the signals in this order. The first rule that fires decides, and its reas
 4. **Ignorable, and weaker:**
    - There are no guests other than the owner. Reason: "no other guests: personal block".
    - There are more than 15 guests, the owner did not organise it, and nothing above matched. Reason: "large meeting (N guests): absence unlikely noticed".
-5. **Default:** there are 2 to 15 guests, and the owner accepted or has not answered. The verdict is must-attend. Reason: "small meeting (N guests): absence noticed". If the owner answered "maybe" (tentative), the verdict is ignorable, with the reason "you answered maybe".
+5. **Default:** there are 1 to 15 guests, and the owner accepted or has not answered. The verdict is must-attend. Reason: "small meeting (N guests): absence noticed". If the owner answered "maybe" (tentative), the verdict is ignorable, with the reason "you answered maybe".
 
 **Guests** means people other than the owner. Meeting rooms and equipment are never counted (D-011).
 

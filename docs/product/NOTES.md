@@ -44,3 +44,9 @@ Append only. Newest at the bottom.
 - **Fact:** The earlier handoff on where calendar data comes from is answered by the architect's ADR-0001. Nothing is left open on the product side.
 - **Source:** docs/architecture/adr/ADR-0001-calendar-data-via-out-of-process-eds-helper.md
 - **Touches:** none
+
+## 2026-09-26 — Senior engineer findings taken (PG-1a plan)
+- **Kind:** decision
+- **Fact:** One-guest meetings closed as D-012. A takeover winning the card over a lower step, singular "1 guest" wording, and "not enough information" when the owner's addresses are unknown were all accepted as planned. Removed from the inbox.
+- **Source:** docs/inbox.md, senior engineer, 2026-09-26.
+- **Touches:** decisions.md D-012, docs/prd/meeting-guardian.md §1

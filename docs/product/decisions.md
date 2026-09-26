@@ -67,3 +67,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** A room booking does not make someone notice your absence.
 **Costs accepted:** none of practical weight. A meeting whose only other attendee is a room is treated as a personal block.
 **Source:** the product manager, confirming the architect's assumption.
+
+### D-012 — A meeting with one other person is must-attend — 2026-09-26
+**Decision:** We made the small-meeting rule cover 1 to 15 guests, not 2 to 15, so a 1:1 is must-attend with the reason "small meeting (1 guest)".
+**Why:** In a 1:1 your absence is always noticed. The first spec left one-guest meetings with no rule (found by the senior engineer).
+**Costs accepted:** none of practical weight. A 1:1 the owner does not care about needs one override.
+**Source:** the product manager, closing a senior-engineer finding.
