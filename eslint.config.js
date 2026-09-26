@@ -20,7 +20,7 @@ export default [
     },
     {
         // Code that runs in gjs.
-        files: ['extension/**/*.js', 'tests/smoke/**/*.js', 'tests/unit/support/gjs-*.js'],
+        files: ['extension/**/*.js', 'tests/smoke/**/*.js', 'tests/unit/support/gjs-*.js', 'tests/helper/gjs/**/*.js'],
         ignores: ['extension/core/**'],
         languageOptions: {
             globals: {
@@ -37,8 +37,8 @@ export default [
     },
     {
         // Node code.
-        files: ['eslint.config.js', 'tests/unit/**/*.js', 'scripts/**/*.js'],
-        ignores: ['tests/unit/support/gjs-*.js'],
+        files: ['eslint.config.js', 'tests/unit/**/*.js', 'tests/helper/**/*.js', 'scripts/**/*.js'],
+        ignores: ['tests/unit/support/gjs-*.js', 'tests/helper/gjs/**'],
         languageOptions: { globals: globals.node },
     },
     {
@@ -72,8 +72,8 @@ export default [
                 patterns: [
                     { regex: '^resource:', message: 'the helper runs outside the shell: no resource:// imports' },
                     {
-                        regex: '^gi://(?!(ECal|EDataServer|ICalGLib|Gio|GLib)(\\?|$))',
-                        message: 'helper may use only ECal, EDataServer, ICalGLib, Gio, GLib',
+                        regex: '^gi://(?!(ECal|EDataServer|ICalGLib|Gio|GioUnix|GLib)(\\?|$))',
+                        message: 'helper may use only ECal, EDataServer, ICalGLib, Gio, GioUnix, GLib',
                     },
                     { regex: '^\\.\\./core/(?!protocol\\.js$)', message: 'helper may import only core/protocol.js' },
                     { regex: '^\\.\\./(shell|ui)/', message: 'helper may not import shell/ or ui/' },

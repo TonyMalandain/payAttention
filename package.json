@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "test": "node --test \"tests/unit/**/*.test.js\"",
     "build": "node -e \"console.error('npm run build: not implemented yet (PG-1c)'); process.exit(1)\"",
-    "test:helper": "node -e \"console.error('npm run test:helper: not implemented yet (PG-1b)'); process.exit(1)\"",
+    "test:helper": "node --test \"tests/helper/**/*.test.js\"",
     "smoke": "node -e \"console.error('npm run smoke: not implemented yet (PG-1c)'); process.exit(1)\""
   },
   "devDependencies": {

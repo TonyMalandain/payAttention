@@ -22,6 +22,8 @@ export const STATUSES = Object.freeze(['confirmed', 'tentative', 'cancelled', 'n
 export const TRANSPARENCIES = Object.freeze(['opaque', 'transparent', 'unknown']);
 /** Why the shell asks the helper for a fresh snapshot. */
 export const REFRESH_REASONS = Object.freeze(['resume', 'manual']);
+/** Backend link states a remote source may report (D-013); `offline` and `unknown` are the helper's, the rest mirror EDS. */
+export const CONNECTION_STATES = Object.freeze(['connected', 'connecting', 'disconnected', 'awaiting-credentials', 'ssl-failed', 'offline', 'unknown']);
 
 const STATUS_LEVELS = ['warn', 'error'];
 const STATUS_CODE = /^[a-z0-9][a-z0-9._-]*$/;
@@ -40,6 +42,9 @@ const SOURCE_FIELDS = [
     ['ownerEmail', isStringOrNull],
     ['ok', isBoolean],
     ['error', isStringOrNull],
+    // Added 2026-09-26 (D-013). Optional: an absent field reads as null.
+    ['remote', v => v === undefined || v === null || isBoolean(v)],
+    ['connection', v => v === undefined || v === null || oneOf(CONNECTION_STATES)(v)],
 ];
 
 const ATTENDEE_FIELDS = [

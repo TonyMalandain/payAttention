@@ -7,7 +7,8 @@
  *   summary:string,location:string,description:string,conferenceUris:string[],
  *   status:'confirmed'|'tentative'|'cancelled'|'none',transparency:'opaque'|'transparent'|'unknown',
  *   organizer:{email:string,name:string}|null,attendees:Attendee[]}} OccurrenceDTO */
-/** @typedef {{uid:string,name:string,backend:string,ownerEmail:string|null,ok:boolean,error:string|null}} SourceInfo */
+/** @typedef {{uid:string,name:string,backend:string,ownerEmail:string|null,ok:boolean,error:string|null,
+ *   remote?:boolean|null,connection?:string|null}} SourceInfo   remote/connection: optional, D-013 (interfaces.md addendum) */
 /** @typedef {{type:'snapshot',protocol:1,generatedAt:number,rangeStart:number,rangeEnd:number,sources:SourceInfo[],events:OccurrenceDTO[]}} Snapshot */
 
 /** Settings: camelCase of the GSettings keys. Same object feeds judge() and timingFromSettings().

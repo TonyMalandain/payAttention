@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-    PROTOCOL_VERSION, MAX_LINE_LENGTH, parseHelperLine, formatHelperMessage, parseShellLine, formatShellMessage,
+    PROTOCOL_VERSION, MAX_LINE_LENGTH, CONNECTION_STATES, parseHelperLine, formatHelperMessage, parseShellLine, formatShellMessage,
 } from '../../extension/core/protocol.js';
 import { event, snapshot, att } from './support/builders.js';
 
@@ -125,12 +125,45 @@ describe('helper protocol: snapshot field failures name the first bad field', ()
         ['sources[0].ownerEmail', s => {
             s.sources[0].ownerEmail = 5;
         }],
+        ['sources[0].remote', s => {
+            s.sources[0].remote = 'yes';
+        }],
+        ['sources[0].connection', s => {
+            s.sources[0].connection = 'online';
+        }],
     ];
     for (const [field, mutate] of cases) {
         test(`a bad ${field} is reported by path`, () => {
             assert.deepEqual(parseHelperLine(snapLine(mutate)), invalidSnapshot(field));
         });
     }
+
+    test('a source with remote and connection absent, null, or remote true with each connection state is accepted', () => {
+        assert.equal(parseHelperLine(snapLine(() => {})).ok, true);
+        assert.equal(parseHelperLine(snapLine(s => {
+            s.sources[0].remote = null;
+            s.sources[0].connection = null;
+        })).ok, true);
+        for (const state of CONNECTION_STATES) {
+            assert.equal(parseHelperLine(snapLine(s => {
+                s.sources[0].remote = true;
+                s.sources[0].connection = state;
+            })).ok, true, state);
+        }
+    });
+
+    test('remote and connection are not cross-checked: remote false with connected is accepted', () => {
+        assert.equal(parseHelperLine(snapLine(s => {
+            s.sources[0].remote = false;
+            s.sources[0].connection = 'connected';
+        })).ok, true);
+    });
+
+    test('the connection states are the D-013 list, frozen', () => {
+        assert.deepEqual([...CONNECTION_STATES],
+            ['connected', 'connecting', 'disconnected', 'awaiting-credentials', 'ssl-failed', 'offline', 'unknown']);
+        assert.ok(Object.isFrozen(CONNECTION_STATES));
+    });
 
     test('a description of exactly the maximum length is accepted', () => {
         assert.equal(parseHelperLine(snapLine(s => {
