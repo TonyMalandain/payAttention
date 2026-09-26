@@ -70,6 +70,10 @@ GSETTINGS_BACKEND=memory \
 - The helper test runs its own `dbus-daemon --session` instead of
   `dbus-run-session`, so a test-only writer can add an event through EDS on the
   same bus. The local backend does not notice direct edits to the `.ics` file.
+- One test adds `remote-cal`, a CalDAV source on a closed loopback port
+  (127.0.0.1:9), so a source reports `remote:true` without any network. Another
+  SIGKILLs the isolated `evolution-calendar-factory`, found by the test's private
+  bus address in its environment, never by name alone.
 
 The test then validates the output line with core's protocol validator and checks
 the fields: a named TZID converted to UTC, attendees with partstat and cutype, the

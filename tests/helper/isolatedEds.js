@@ -33,6 +33,15 @@ function t(ms) {
     return u(ms + TOKYO_OFFSET_MS).slice(0, -1);
 }
 
+/** America/New_York wall time of ms in basic format, without a Z (follows DST). */
+function newYork(ms) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York', hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(ms).map(p => [p.type, p.value]));
+    return `${parts.year}${parts.month}${parts.day}T${parts.hour}${parts.minute}${parts.second}`;
+}
+
 /** 'YYYYMMDD' of the Asia/Tokyo wall date of ms. */
 export function tokyoDate(ms) {
     return u(ms + TOKYO_OFFSET_MS).slice(0, 8);
@@ -105,6 +114,15 @@ export function fixtureIcs(baseMs) {
             'UID:long-description@fixture.test', `DTSTART:${u(H + 7 * h)}`, `DTEND:${u(H + 8 * h)}`,
             'SUMMARY:Long', `DESCRIPTION:${'x'.repeat(32767)}\u{1F600}yyyy`,
         ],
+        // Not the test's zone (Asia/Tokyo), so a TZID that is ignored shows.
+        [
+            'UID:tz-new-york@fixture.test', `DTSTART;TZID=America/New_York:${newYork(H + 11 * h)}`,
+            `DTEND;TZID=America/New_York:${newYork(H + 12 * h)}`, 'SUMMARY:New York sync',
+        ],
+        // Floating: wall time in the local zone (the test's TZ, Asia/Tokyo).
+        [
+            'UID:floating@fixture.test', `DTSTART:${t(H + 13 * h)}`, `DTEND:${t(H + 14 * h)}`, 'SUMMARY:Floating',
+        ],
         [
             'UID:too-late@fixture.test', `DTSTART:${u(H + 48 * h)}`, `DTEND:${u(H + 49 * h)}`, 'SUMMARY:Out of range',
         ],
@@ -129,14 +147,26 @@ function sourceFile({ name, backend, selected, email }) {
     return lines.join('\n') + '\n';
 }
 
+// Port 9 on loopback: nothing listens, so no request ever leaves the machine.
+const REMOTE_SOURCE = [
+    '[Data Source]', 'DisplayName=Remote', 'Enabled=true', 'Parent=', '',
+    '[Calendar]', 'BackendName=caldav', 'Selected=true', '',
+    '[Authentication]', 'Host=127.0.0.1', 'Port=9', 'User=', 'Method=none', '',
+    '[Security]', 'Method=none', '',
+    '[WebDAV Backend]', 'ResourcePath=/cal/', '',
+    '[Offline]', 'StaySynchronized=false', '',
+].join('\n');
+
 /**
  * A private EDS with the fixture calendar, on its own dbus-daemon.
  *
  * @param {string} name a short label; the home is <repo>/.test-home/helper-<name>
  * @param {number} baseMs H, the whole hour the fixture times are relative to
+ * @param {{withRemote?: boolean}} [options] withRemote adds 'remote-cal', a
+ *   CalDAV source on a closed loopback port (remote, never reachable)
  * @returns {Promise<{home:string, env:object, stop:() => Promise<void>}>}
  */
-export async function createIsolatedEds(name, baseMs) {
+export async function createIsolatedEds(name, baseMs, { withRemote = false } = {}) {
     const home = path.join(repoRoot, '.test-home', `helper-${name}`);
     // Cleaned at start, not at the end, so there is no race with EDS still writing.
     fs.rmSync(home, { recursive: true, force: true });
@@ -153,6 +183,8 @@ export async function createIsolatedEds(name, baseMs) {
     fs.writeFileSync(path.join(sources, 'hidden-cal.source'),
         sourceFile({ name: 'Hidden', backend: 'local', selected: false }));
     fs.writeFileSync(path.join(calendar, 'calendar.ics'), fixtureIcs(baseMs));
+    if (withRemote)
+        fs.writeFileSync(path.join(sources, 'remote-cal.source'), REMOTE_SOURCE);
 
     // Never spread process.env: it carries the real DBUS_SESSION_BUS_ADDRESS.
     const env = {
@@ -211,6 +243,32 @@ export function runHelper(env, args) {
         });
         child.stdin.end();
     });
+}
+
+/**
+ * SIGKILLs the evolution-calendar-factory of THIS isolated EDS only: the
+ * process is picked by its environment carrying this test's private bus
+ * address, so the owner's real EDS can never match.
+ *
+ * @returns {number} how many processes were killed
+ */
+export function killIsolatedCalendarFactory(env) {
+    const busEntry = `DBUS_SESSION_BUS_ADDRESS=${env.DBUS_SESSION_BUS_ADDRESS}`;
+    let killed = 0;
+    for (const pid of fs.readdirSync('/proc').filter(p => /^\d+$/.test(p))) {
+        let environ, argv0;
+        try {
+            environ = fs.readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0');
+            argv0 = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0')[0];
+        } catch {
+            continue; // gone, or not ours to read
+        }
+        if (path.basename(argv0) === 'evolution-calendar-factory' && environ.includes(busEntry)) {
+            process.kill(Number(pid), 'SIGKILL');
+            killed++;
+        }
+    }
+    return killed;
 }
 
 /** A helper running in serve mode. */

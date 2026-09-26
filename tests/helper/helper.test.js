@@ -1,12 +1,15 @@
 import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { parseHelperLine } from '../../extension/core/protocol.js';
 import {
-    createIsolatedEds, runHelper, startHelper, addFixtureEvent, nextWholeHour, tokyoDate, u, HOUR_MS,
+    createIsolatedEds, runHelper, startHelper, addFixtureEvent, killIsolatedCalendarFactory,
+    nextWholeHour, tokyoDate, u, HOUR_MS,
 } from './isolatedEds.js';
 
 const MIN_MS = 60_000;
-const FIXTURE_CONTENT = ['Tokyo sync', 'Alice', 'owner@fixture.test', 'Rivoli', 'zoom.us', 'meet.google.com', 'Standup', 'Holiday', 'Erin'];
+const FIXTURE_CONTENT = ['Tokyo sync', 'Alice', 'owner@fixture.test', 'Rivoli', 'zoom.us', 'meet.google.com', 'Standup', 'Holiday', 'Erin', 'New York sync', 'Floating'];
 
 function assertNoContent(text, strings, where) {
     for (const secret of strings)
@@ -93,11 +96,24 @@ describe('helper against the fixture calendar', () => {
             row('long-description@fixture.test', null, H + 7 * h, H + 8 * h),
             row('series@fixture.test', H + 9 * h, H + 10 * h, H + 10 * h + 30 * MIN_MS),
             row('series@fixture.test', H + 15 * h, H + 15 * h, H + 15 * h + 30 * MIN_MS),
+            row('tz-new-york@fixture.test', null, H + 11 * h, H + 12 * h),
+            row('floating@fixture.test', null, H + 13 * h, H + 14 * h),
             row('all-day@fixture.test', null, A, A + 24 * h, true),
         ];
         const actual = snap.events.map(({ uid, recurrenceId, recurring, start, end, allDay }) =>
             ({ uid, recurrenceId, recurring, start, end, allDay }));
         assert.deepEqual(actual.sort(byUidRid), expected.sort(byUidRid));
+    });
+
+    test('a TZID other than the local zone, and a floating time, convert to the right UTC instant', () => {
+        // The test runs in Asia/Tokyo: New York must use its own zone, floating must use Tokyo.
+        const h = HOUR_MS;
+        const pick = uid => {
+            const ev = find(snap.events, uid);
+            return ev && { start: ev.start, end: ev.end };
+        };
+        assert.deepEqual(pick('tz-new-york@fixture.test'), { start: H + 11 * h, end: H + 12 * h });
+        assert.deepEqual(pick('floating@fixture.test'), { start: H + 13 * h, end: H + 14 * h });
     });
 
     test('out-of-range events and the excluded series instance are absent', () => {
@@ -212,11 +228,11 @@ describe('helper against the fixture calendar', () => {
             'protocol 1',
             'sources 4 ok 3 failed 1 with-owner-address 1',
             'source-errors connect-failed 1',
-            'occurrences 10 recurring 3 all-day 1 cancelled 2 tentative 1 with-attendees 2 with-organizer 2 ' +
+            'occurrences 12 recurring 3 all-day 1 cancelled 2 tentative 1 with-attendees 2 with-organizer 2 ' +
                 'with-conference-uri 2 with-location 1 with-description 2 transparent 2',
         ]);
         // Whether the all-day event starts within 24 h depends on the time of day.
-        assert.match(out[5], /^next-24h (9|10)$/);
+        assert.match(out[5], /^next-24h (11|12)$/);
         assert.equal(out[6], 'attendees 9 individual 5 group 1 resource 1 room 1 unknown 1');
     });
 
@@ -231,7 +247,7 @@ describe('helper against the fixture calendar', () => {
         assert.deepEqual((await serving.nextMessage(15000)).parsed.message, { type: 'hello', protocol: 1 });
         const first = (await serving.nextMessage(15000)).parsed.message;
         assert.equal(first.type, 'snapshot');
-        assert.equal(first.events.length, 10);
+        assert.equal(first.events.length, 12);
 
         serving.send('{"type":"refresh","reason":"manual"}\n');
         const refreshed = (await serving.nextMessage(5000)).parsed.message;
@@ -288,5 +304,69 @@ describe('helper follows calendar changes', () => {
 
         serving.closeStdin();
         assert.deepEqual(await serving.exited(10000), { code: 0, signal: null });
+    });
+});
+
+describe('helper survives the calendar factory dying', () => {
+    let eds, serving = null;
+
+    before(async () => {
+        eds = await createIsolatedEds('factory-death', nextWholeHour(Date.now()));
+    });
+
+    after(async () => {
+        serving?.kill();
+        await eds?.stop();
+    });
+
+    test('keeps serving, writes only diagnostic codes to stderr, and exits 0 on EOF', async () => {
+        serving = startHelper(eds.env);
+        assert.equal((await serving.nextMessage(15000)).parsed.message.type, 'hello');
+        assert.equal((await serving.nextMessage(15000)).parsed.message.type, 'snapshot');
+
+        assert.equal(killIsolatedCalendarFactory(eds.env), 1, 'exactly one isolated calendar factory to kill');
+        const after = (await serving.nextMessage(10000)).parsed.message;
+        assert.ok(['snapshot', 'status'].includes(after.type), `unexpected message ${after.type}`);
+
+        // The dead client was retired, so a later read reconnects through a new factory.
+        const killedAt = Date.now();
+        let message = after;
+        const recovered = m => m.type === 'snapshot' && m.sources.find(s => s.uid === 'fixture-cal')?.ok && m.events.length === 12;
+        while (!recovered(message)) {
+            const remaining = 10000 - (Date.now() - killedAt);
+            assert.ok(remaining > 0, 'no snapshot with the fixture calendar read again within 10 s');
+            message = (await serving.nextMessage(remaining)).parsed.message;
+        }
+
+        serving.closeStdin();
+        assert.deepEqual(await serving.exited(10000), { code: 0, signal: null });
+        const stderr = serving.stderr();
+        assert.equal(stderr.includes('JS ERROR'), false, `stderr has a JS ERROR:\n${stderr}`);
+        assert.equal(stderr.includes('Gjs-CRITICAL'), false, `stderr has a Gjs-CRITICAL:\n${stderr}`);
+        for (const line of stderr.split('\n').filter(l => l !== ''))
+            assert.match(line, /^payattention-helper: [a-z0-9][a-z0-9._-]*( [A-Za-z0-9 ._:[\]-]*)?$/);
+        assert.match(stderr, /^payattention-helper: view-stop-failed$/m);
+    });
+});
+
+describe('link-state handlers (D-013)', () => {
+    let eds;
+
+    before(async () => {
+        eds = await createIsolatedEds('link-handlers', nextWholeHour(Date.now()), { withRemote: true });
+    });
+
+    after(async () => {
+        await eds?.stop();
+    });
+
+    test('online and connection-status changes re-snapshot for remote sources only', () => {
+        const run = spawnSync('gjs', ['-m', path.join(import.meta.dirname, 'gjs/linkHandlers.js')],
+            { env: eds.env, encoding: 'utf8', timeout: 30000 });
+        assert.equal(run.status, 0, `gjs exited ${run.status}\nstdout: ${run.stdout}\nstderr: ${run.stderr}`);
+        assert.deepEqual(JSON.parse(run.stdout), {
+            'fixture-cal': { source: 0, client: 0 },
+            'remote-cal': { source: 1, client: 1 },
+        });
     });
 });

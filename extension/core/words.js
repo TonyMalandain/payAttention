@@ -11,8 +11,10 @@ export const BUILTIN_IMPORTANT_WORDS = Object.freeze(['interview', 'client', 'cu
     'one on one']);
 
 /** Location texts that are not a place to travel to (PRD §2). */
-export const NOT_A_PLACE_WORDS = Object.freeze(['online', 'virtual', 'remote', 'tbd', 'phone', 'call', 'video call',
-    'zoom', 'zoom meeting', 'teams', 'microsoft teams', 'google meet', 'meet', 'webex', 'hangout', 'slack']);
+export const NOT_A_PLACE_WORDS = Object.freeze(['online', 'virtual', 'remote', 'tbd', 'tba', 'n/a', 'none', 'phone',
+    'phone call', 'call', 'video call', 'zoom', 'zoom meeting', 'teams', 'teams meeting', 'microsoft teams',
+    'microsoft teams meeting', 'google meet', 'meet', 'webex', 'hangout', 'google hangouts', 'whereby', 'jitsi',
+    'goto meeting', 'gotomeeting', 'slack', 'slack huddle', 'huddle']);
 
 // Marks a real matcher, so findWord cannot be handed an uncompiled list.
 const COMPILED = Symbol('compiled word matcher');

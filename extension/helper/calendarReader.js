@@ -11,6 +11,7 @@ import { transcribeInstance } from './transcribe.js';
 import { overlapsRange } from './range.js';
 import { sourceConnection } from './connection.js';
 import { SOURCE_ERRORS } from './messages.js';
+import { reportDiagnostic } from './stdio.js';
 
 /** How long one source may take to connect (constraints.md). */
 export const CONNECT_TIMEOUT_MS = 5000;
@@ -76,15 +77,23 @@ class CalendarReader {
         if (this._clients.get(uid) !== entry)
             return;
         this._clients.delete(uid);
-        entry.view?.stop();
+        this._retired.push(entry);
         for (const [obj, id] of entry.handlers)
             obj.disconnect(id);
-        this._retired.push(entry);
+        try {
+            entry.view?.stop();
+        } catch {
+            // The factory is gone, so its view is too. Never the error text:
+            // it can carry a calendar path.
+            reportDiagnostic('view-stop-failed');
+        }
     }
 
     async _connect(source) {
         const uid = source.get_uid();
         const client = await connectClient(source);
+        // Asked before anything is connected, so a throw leaves nothing behind.
+        const remote = client.check_refresh_supported();
         const handlers = [];
         let view;
         try {
@@ -102,9 +111,12 @@ class CalendarReader {
             this._retire(uid, entry);
             this._onChange();
         })]);
-        // D-013: loss and recovery of a remote link reach the shell within the debounce.
-        handlers.push([client, client.connect('notify::online', () => this._onChange())]);
-        handlers.push([source, source.connect('notify::connection-status', () => this._onChange())]);
+        // D-013: loss and recovery of a remote link reach the shell within the
+        // debounce. Remote sources only: a local source has no link to lose.
+        if (remote) {
+            handlers.push([client, client.connect('notify::online', () => this._onChange())]);
+            handlers.push([source, source.connect('notify::connection-status', () => this._onChange())]);
+        }
         this._clients.set(uid, entry);
     }
 

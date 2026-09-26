@@ -78,7 +78,7 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
     });
 
     for (const location of ['Online', ' virtual ', 'Remote.', 'TBD', 'Zoom', 'Zoom Meeting', 'Phone', 'Microsoft Teams',
-        '-']) {
+        '-', 'n/a', 'N/A.', 'Slack huddle']) {
         test(`the location '${location}' is not a place`, () => {
             const r = judgeOne(event({ location }));
             assert.equal(r.mode, 'online');
