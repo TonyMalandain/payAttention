@@ -128,3 +128,22 @@ This whole spec is the smallest useful version. Verdicts without escalation woul
 ## Open questions
 
 None open. All were closed by assumption in D-003 to D-011 because the run is unattended.
+
+## Addendum 2026-09-26 — Uninstall (R-17, D-016)
+
+The owner pointed out that nothing removes the extension.
+
+- **What changes:** one command removes payAttention.
+  - If the extension is running in the current session, it stops at once. No card, takeover or input grab is left on screen, and no background calendar reader keeps running.
+  - The extension no longer loads at the next login.
+  - Its files are removed.
+  - The output says what was removed and what was kept.
+- **Default:** saved overrides, travel times and settings are kept (D-016). An erase option also removes them.
+- **Safe to run twice:** running it when nothing is installed succeeds and says so.
+- **Never:** it never touches the calendars, other extensions, or other GNOME settings.
+- **Done when:**
+  - A test in an isolated home proves that install, then uninstall, leaves no extension files and no enabled entry.
+  - The same test proves that saved settings remain after a plain uninstall and are gone after the erase option.
+  - A second uninstall succeeds.
+  - If the extension was running, it is stopped and leaves nothing on screen.
+  - The README documents the command.

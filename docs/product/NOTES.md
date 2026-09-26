@@ -99,3 +99,11 @@ Append only. Newest at the bottom.
 - **Fact:** All 16 requirements are now `real`. Evidence: unit tests (647), calendar-reader tests against a test calendar (66), a headless GNOME 50 smoke test with Do Not Disturb on and two monitors, screenshots of every alert step, and a read-only verdict check on the author's real week. The first load in the author's real session needs a log out and log in, which cannot be done unattended (BACKLOG PG-2).
 - **Source:** product manager; reviewer round 2 accepted PG-1c.
 - **Touches:** solution.md
+
+## 2026-09-26 — Missing uninstall
+- **Kind:** solution
+- **Profiles:** Installer
+- **Fact:** No way to remove the extension existed. Added as R-17 with D-016: saved choices are kept by default and erased only on request. Backlog item PG-3.
+- **Why:** The owner raised it. The coverage check missed it, because users.md covered installing but not removing.
+- **Source:** the owner, 2026-09-26.
+- **Touches:** solution.md R-17, decisions.md D-016, docs/prd/meeting-guardian.md

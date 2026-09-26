@@ -91,3 +91,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The calendar cannot tell "no guest list" apart from "an empty guest list". Personal blocks and placeholders are the main source of noise the product exists to remove.
 **Costs accepted:** A personal appointment that matters (a doctor, a flight) is silent unless its title has an important word or the owner marks it must-attend once. Overrides can cover the whole series.
 **Source:** the product manager, closing a reviewer finding.
+
+### D-016 — Uninstalling keeps the owner's saved choices unless asked to erase them — 2026-09-26
+**Decision:** We chose an uninstall that removes the extension and stops it loading, keeps the saved overrides, travel times and settings by default, and erases them only when the owner asks.
+**Why:** Overrides and travel times are the owner's own manual work. Losing them by accident on a reinstall costs more than leaving a few settings behind.
+**Costs accepted:** A plain uninstall leaves the saved settings on the machine. The owner must use the erase option for a full clean-up.
+**Source:** the product manager, after the owner pointed out that no uninstall existed (2026-09-26).

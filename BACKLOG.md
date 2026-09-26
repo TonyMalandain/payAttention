@@ -12,6 +12,13 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - **PG-1c — Alerts, top bar, settings, install.** Built, reviewed (2 defects and 1 risk, fixed), accepted in round 2.
 - Checks at the end: lint clean, 647 unit tests, 66 calendar-reader tests, headless GNOME smoke test PASS, installed to `~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io` and enabled for the next login.
 
+## Now — uninstall (PG-3, size S)
+
+- **PG-3 — Remove payAttention with one command** (spec: `docs/prd/meeting-guardian.md`, "Addendum — Uninstall"; R-17, D-016).
+  - **What changes for the owner:** one command stops and removes the extension. Saved choices are kept unless the owner asks to erase them.
+  - **Who it is for:** Installer.
+  - **Done when:** see the addendum's "Done when".
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
