@@ -39,12 +39,14 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | `core/` | other `core/` modules only | anything `gi://`, anything `resource://`, any Node built-in. No clock reads, timers, or I/O: time is a parameter. |
 | `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, St/Clutter/Meta/Shell, the rest of `core/` |
 | `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, `ui/` internals, the `system` built-in |
-| `ui/` | `gi://` St/Clutter/Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, the store, GSettings, ECal/EDataServer/ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
+| `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, the store, GSettings, ECal/EDataServer/ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
 | `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
 | `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib; `core/` (for defaults such as built-in word lists) | Clutter, Meta, St, Shell, `shell/`, `ui/`, `helper/` |
 
-These are enforced with ESLint `no-restricted-imports` per directory, so a breach
-fails lint rather than review.
+The "must not import" column is enforced with ESLint `no-restricted-imports` per
+directory, so a breach fails lint rather than review. Two parts are not enforced
+by lint and are held by review only: `shell/` using St/Clutter, and `ui/`
+creating a `Gio.Settings`.
 
 - **`GioUnix` in the helper (allowed 2026-09-26).** Since GLib 2.80 the Unix
   stream classes live in `GioUnix`; the old `Gio.Unix*Stream` names still work
@@ -71,7 +73,9 @@ fails lint rather than review.
 - **Calendar feed** must not know what a meeting means. It passes validated
   snapshots on; it never filters or edits events.
 - **Store** must not know rules. It reads and writes typed values and prunes by key
-  age. It is the only code that touches GSettings in the shell process.
+  age. It is the only code that reads or writes GSettings in the shell process;
+  `extension.js` only obtains the `Gio.Settings` object (`getSettings()`) and
+  hands it to the store.
 - **Controller** must not draw. It must not reach into actors; it hands the UI a
   Plan and receives actions.
 - **UI** must not decide. It never computes a step, a verdict, a deadline, or

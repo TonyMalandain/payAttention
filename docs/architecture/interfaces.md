@@ -15,7 +15,9 @@ are UTF-8 JSON, one object per line (NDJSON). No other channel is used.
 **Lifecycle promises.**
 - The helper exits on its own when stdin reaches EOF. If the shell dies, the helper
   dies too; there are no orphan helpers.
-- The shell sends SIGTERM (`force_exit()`) in `disable()` and does not wait.
+- The shell sends SIGKILL (`Gio.Subprocess.force_exit()`) in `disable()` and does
+  not wait. The helper holds no state and writes nothing, so it needs no clean
+  shutdown; the stdin-EOF exit covers the case where the shell itself dies.
 - The helper exits non-zero on a fatal error. The feed restarts it with backoff
   (`constraints.md`).
 - The helper never writes anything but protocol lines to stdout.
@@ -197,8 +199,14 @@ used for health.
   `disable()` (`health-data-at`, `health-provider-at`, `data.md`), or from
   `enable()` time when none is stored.
 - *Verdict.* **Stale** when either clock is 15 min or more old, except during the
-  first 60 s after `enable()` while no snapshot has been accepted yet (so an
-  unlock does not flash the warning). `since` = the older expired clock.
+  first 60 s after `enable()` (so an unlock does not flash the warning):
+  - no stale at all while no snapshot has been accepted yet;
+  - no stale from the provider clock while any source it counts
+    (`remote !== false`) reports `connection` `"connecting"` or `"offline"` in
+    the latest snapshot (a remote calendar still reconnecting after unlock).
+    Product rule, 2026-09-26, after the PG-1c review.
+
+  After 60 s the rule above applies unchanged. `since` = the older expired clock.
   **Waiting** when not stale and no snapshot has been accepted yet. Otherwise **ok**.
 - Stale changes only the indicator mark and the menu status line. Alerts keep
   running from the cached snapshot (D-013); `plan` passes `dataHealthy` through

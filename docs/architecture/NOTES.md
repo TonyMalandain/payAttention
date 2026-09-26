@@ -190,3 +190,59 @@ Append only. Newest at the bottom.
 - **Why:** The inbox is not a log.
 - **Source:** this session.
 - **Touches:** —
+
+## 2026-09-26 — Provider-clock grace after enable
+- **Kind:** interface
+- **Fact:** In the first 60 s after `enable()`, provider staleness is not shown while any counted source reports `connecting` or `offline`; after 60 s the D-013 rule is unchanged.
+- **Why:** A remote calendar still reconnecting after unlock inherited the persisted provider clock and flashed "not updating since <lock time>". Product rule; the shell's `health.js` carries it.
+- **Source:** product manager via inbox, after the PG-1c review.
+- **Touches:** interfaces.md addendum (D-013)
+
+## 2026-09-26 — The helper is stopped with SIGKILL
+- **Kind:** interface
+- **Fact:** `Gio.Subprocess.force_exit()` sends SIGKILL, not SIGTERM; `interfaces.md` §1 and ADR-0001's consequences now say so.
+- **Why:** The helper is read-only and stateless, so no clean shutdown is owed; SIGKILL also sidesteps the gjs/EDS teardown segfault. The comment at `extension/shell/calendarFeed.js:83` still says SIGTERM (code, not mine to edit).
+- **Source:** product manager via inbox; `extension/shell/calendarFeed.js:84`.
+- **Touches:** interfaces.md §1, ADR-0001
+
+## 2026-09-26 — Smoke isolation stops at the session bus
+- **Kind:** constraint
+- **Fact:** The headless smoke shares the real system bus (GDM registration attempt, logind `prepare-for-sleep`); accepted, with the rule that a smoke script never calls a system service that changes machine state.
+- **Why:** Both observed uses are harmless; a private system bus would remove logind and change `environment.js` behaviour under test for no gain. Repaid, if ever needed, by a private `dbus-daemon --system` in `scripts/smoke.sh`.
+- **Source:** PG-1c engineer via inbox.
+- **Touches:** testing-and-build.md Layer 3
+
+## 2026-09-26 — Headless virtual input and connectObject pitfalls
+- **Kind:** stack
+- **Fact:** Folded into testing-and-build.md pitfalls: re-send virtual pointer motion until it lands; confirm key arrival before asserting no effect; plain-gjs checks of `shell/` modules need a `connectObject` stand-in, shared once a second check needs it.
+- **Why:** 1 of 6 smoke runs failed before the fix; each costs hours to rediscover.
+- **Source:** PG-1c engineer via inbox; `tests/smoke/alert-ladder.js`, `tests/smoke/store-check.js:16`.
+- **Touches:** testing-and-build.md
+
+## 2026-09-26 — Engineer's smoke step 2 edit adopted
+- **Kind:** stack
+- **Fact:** Smoke step 2 now checks the indicator shows the fixture meeting `scripts/smoke.sh` writes into the isolated EDS, not "0 events".
+- **Why:** It proves helper, `judge` and `plan` ran end to end on fixture data only.
+- **Source:** commit 2295429, product manager asked to adopt.
+- **Touches:** testing-and-build.md
+
+## 2026-09-26 — Conformance pass after PG-1a/b/c
+- **Kind:** debt
+- **Fact:** Built tree, imports and schema match boundaries/interfaces/data and ADR-0001..0006; two enforcement gaps only: lint does not forbid St/Clutter in `shell/` nor `Gio.Settings` in `ui/` (neither is used today).
+- **Why:** The boundary table claimed full lint enforcement; now it says those two are review-held. Repaid by two more `no-restricted-imports`/`no-restricted-syntax` patterns in `eslint.config.js`.
+- **Source:** `eslint.config.js`, grep of `extension/` imports, 2026-09-26.
+- **Touches:** boundaries.md
+
+## 2026-09-26 — Doc drift fixed: ui/ imports GObject and Pango
+- **Kind:** boundary
+- **Fact:** `ui/indicator.js` imports `gi://GObject` and `gi://Pango`; added to the `ui/` allowed list.
+- **Why:** Needed for a registered PanelMenu subclass and label ellipsizing; not a breach, the doc list was incomplete.
+- **Source:** `extension/ui/indicator.js:3-4`.
+- **Touches:** boundaries.md
+
+## 2026-09-26 — Inbox emptied (for-architecture, PG-1c)
+- **Kind:** question
+- **Fact:** 4 `for-architecture` entries taken and removed from `docs/inbox.md`.
+- **Why:** The inbox is not a log.
+- **Source:** this session.
+- **Touches:** —

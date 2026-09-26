@@ -119,12 +119,20 @@ What the smoke script checks:
    Do Not Disturb is set (`show-banners=false`) for the whole run.
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
-   Escape does nothing.
+   Escape does nothing, and the check proves the key event reached the takeover,
+   so a lost key cannot pass it.
 4. Clicks acknowledge on the **second** monitor with a virtual pointer; checks the
    overlays are gone and no grab of ours remains.
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
 6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.
+
+**Isolation boundary.** The smoke isolates the session bus, the XDG directories
+(so settings and calendars) and nothing else. The system bus is the real one: the
+headless shell logs "Registering display with GDM", and `shell/environment.js`
+listens to logind's `prepare-for-sleep` on it. Both are harmless (a registration
+attempt and a read-only signal). Accepted: a smoke script must never *call* a
+system-bus service (logind, UPower, NetworkManager…) that changes machine state.
 
 Checks are "no modal entry of ours", never an absolute `Main.modalCount`: in
 headless 50.4 the overview is open at startup and holds one modal entry (verified).
@@ -181,6 +189,19 @@ meetings still alert, and it clears within seconds of the network returning (D-0
   module, `loop.quit()` then return, or `System.exit` with no loop segfault (139);
   `System.exit` from a promise continuation (after `await`) **hangs forever**.
   One `exitSoon(code)` is the helper's only exit.
+
+- **Headless virtual input drops early events** (gnome-shell 50.4, measured
+  PG-1c: 1 of 6 runs failed). The first `notify_absolute_motion` of a new virtual
+  pointer lost its x (landed at x=0); once, a motion stopped at the edge of
+  monitor 0 instead of reaching monitor 1. Re-send the motion until
+  `global.get_pointer()` is at the target before clicking, and confirm a key
+  event arrived before asserting that it had no effect.
+- **`connectObject` does not exist under plain `gjs`.** The shell's
+  `misc/signalTracker.js` adds `connectObject`/`disconnectObject` to GObject, so a
+  plain-gjs check of a `shell/` module that uses them (store, environment) must
+  give the object a stand-in, as `tests/smoke/store-check.js` does. Rule: run such
+  checks inside the headless shell where possible; if a second plain-gjs check
+  needs the stand-in, move it to one shared test helper rather than copy it.
 
 ### EDS / libical API traps (measured, gjs 1.88.1, EDS 3.60)
 

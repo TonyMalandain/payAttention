@@ -98,8 +98,9 @@ see `constraints.md`). It is read-only.
   EDS with no shell (verified).
 - Harder: two processes to reason about; a versioned protocol (`interfaces.md`);
   supervision with backoff; a stale-data state the product must show.
-- The helper's own exit must be made not to dump core (evidence 3). SIGTERM from
-  the shell ends it without running the GC, so the risk is on the stdin-EOF path.
+- The helper's own exit must be made not to dump core (evidence 3). The kill from
+  the shell (SIGKILL via `force_exit()`; "SIGTERM" here until the 2026-09-26
+  correction) ends it without running the GC, so the risk is on the stdin-EOF path.
   The rule that works is evidence 5: one deferred exit, called from a main-loop
   callback, never from after an `await`.
 - We can no longer assume calendar data is instantly available at `enable()`:

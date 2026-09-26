@@ -32,4 +32,6 @@ the agents read this before they read anything else.
 | the plan for a task, before it is built | `docs/plans/<ticket>.md` (owned by the senior engineer) |
 | findings waiting for product or architecture | `docs/inbox.md`, entries tagged `for-product` / `for-architecture` |
 | how to run tests, lint, and build | `docs/architecture/testing-and-build.md` — in order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke` (scripts created by the engineers to that contract) |
+| user guide (install, first use, how it decides) | `README.md` |
+| screenshots of the alert steps | `docs/screenshots/` |
 | build timing for this experiment | `TIMELINE.md` |
