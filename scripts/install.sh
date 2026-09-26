@@ -5,11 +5,12 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UUID=payattention@tonymalandain.github.io
+DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
 
 bash "$ROOT/scripts/build.sh"
 # Also compiles the schemas into the install directory.
 gnome-extensions install --force "$ROOT/dist/$UUID.shell-extension.zip"
-test -f "$HOME/.local/share/gnome-shell/extensions/$UUID/schemas/gschemas.compiled"
+test -f "$DIR/schemas/gschemas.compiled"
 
 gjs -c "const {Gio} = imports.gi; const s = new Gio.Settings({schema_id: 'org.gnome.shell'}); const u = '$UUID';
   const e = s.get_strv('enabled-extensions'); if (!e.includes(u)) s.set_strv('enabled-extensions', [...e, u]);
