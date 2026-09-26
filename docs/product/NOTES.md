@@ -26,3 +26,21 @@ Append only. Newest at the bottom.
 - **Fact:** Product needs every calendar that the desktop clock menu shows, including attendee lists, the owner's response status, the organiser, the free/busy flag, the location, the description, and the conference link. The architect must confirm what the desktop calendar service exposes to an extension, and how.
 - **Source:** product manager.
 - **Touches:** docs/architecture/
+
+## 2026-09-26 — Coverage check, problem vs solution
+- **Kind:** question
+- **Fact:** Every pain in problem.md is answered: noise → R-4/R-7, "shows once" → R-8/R-13, one lead time → R-10/R-11, hand-crafted reminders → R-4/R-6. Two requirements trace only weakly: R-12 (Do Not Disturb) and R-14 (top-bar countdown). Both follow from "they have learned to ignore all of them" and from trust in verdicts (users.md), but problem.md does not name them. They are kept because both are cheap and protect the core promise. Revisit if either grows.
+- **Source:** product manager reading check.
+- **Touches:** solution.md R-12, R-14
+
+## 2026-09-26 — Architect findings taken
+- **Kind:** decision
+- **Fact:** All six architect findings were acted on: in-person step order (D-008), not-invited and cancelled meetings (D-009), stale calendar warning (D-010, R-16), rooms are not guests (D-011), and the roughly 10-minute sync delay (stated as an exclusion in solution.md). The inbox was emptied.
+- **Source:** docs/inbox.md, architect, 2026-09-26.
+- **Touches:** decisions.md, solution.md, docs/prd/meeting-guardian.md
+
+## 2026-09-26 — Handoff closed: calendar data source
+- **Kind:** handoff
+- **Fact:** The earlier handoff on where calendar data comes from is answered by the architect's ADR-0001. Nothing is left open on the product side.
+- **Source:** docs/architecture/adr/ADR-0001-calendar-data-via-out-of-process-eds-helper.md
+- **Touches:** none

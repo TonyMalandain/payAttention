@@ -110,6 +110,12 @@ Environment requirements come first.
 - **What they get:** a default lead time, a default travel time, escalation timings, extra words that mark a meeting important or ignorable, and a sound on or off switch. Everything works without opening settings.
 - **State:** intended
 
+### R-16 — The product says when it cannot see the calendar
+- **Serves:** the owner misses meetings that matter. A product that silently loses the calendar would let that happen while looking calm.
+- **Who it serves:** Calendar owner.
+- **What they get:** a visible warning and the time of the last good update whenever calendar data is stale. It never shows "no meetings" in that state.
+- **State:** intended
+
 ## What the solution is not
 
 - **Not a calendar.** It never creates, edits, or accepts meetings. The owner's calendar stays the one source of truth.
@@ -119,3 +125,5 @@ Environment requirements come first.
 - **Does not detect presence in a meeting.** It does not watch the camera, microphone, or call apps to decide that you joined. Acknowledging is the only signal, because it is reliable and costs one click.
 - **Nothing over the lock screen, and no phone.** If the desktop is locked or the owner is away from the computer, the alert waits for their return.
 - **GNOME only.** Other desktops are out of scope. One tested desktop is what keeps the product small enough to trust.
+- **No instant view of meetings booked moments ago.** A meeting added on the calendar provider's website can take about 10 minutes to reach the desktop, so a meeting booked just before its heads-up time may first alert at a later step. This would be reconsidered if such late bookings led to a missed meeting.
+- **Only meetings the owner is invited to.** Meetings on calendars of others that the owner displays, with no invitation to the owner, never alert.

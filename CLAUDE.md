@@ -18,8 +18,18 @@ the agents read this before they read anything else.
 | the product working log | `docs/product/NOTES.md` |
 | feature specs (PRDs) | `docs/prd/` |
 | delivery status / the backlog | `BACKLOG.md` |
-| architecture: boundaries, interfaces, data, ADRs, architect log | `docs/architecture/` (owned by the architect) |
+| architecture: index of architecture docs | `docs/architecture/00-index.md` (owned by the architect) |
+| architecture: system overview, time/escalation model, UI layer, product term → code name | `docs/architecture/overview.md` |
+| architecture: repo layout, module boundaries, import rules | `docs/architecture/boundaries.md` |
+| architecture: contracts (helper protocol, core/controller/UI) | `docs/architecture/interfaces.md` |
+| architecture: stored data, GSettings schema, key formats | `docs/architecture/data.md` |
+| architecture: constraints, numbers, GNOME review rules | `docs/architecture/constraints.md` |
+| architecture: tech stack and why | `docs/architecture/stack.md` |
+| architecture decision records (ADRs) | `docs/architecture/adr/ADR-NNNN-<slug>.md` |
+| architect working log | `docs/architecture/NOTES.md` |
+| extension UUID / install dir | `payattention@tonymalandain.github.io` → `~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/` |
+| extension source (what ships) | `extension/` (`core/` pure logic, `helper/` calendar subprocess, `shell/` in-shell services, `ui/` actors) |
 | the plan for a task, before it is built | `docs/plans/<ticket>.md` (owned by the senior engineer) |
 | findings waiting for product or architecture | `docs/inbox.md`, entries tagged `for-product` / `for-architecture` |
-| how to run tests, lint, and build | `(none yet)` — the architect/engineers record it in `README.md` |
+| how to run tests, lint, and build | `docs/architecture/testing-and-build.md` — in order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke` (scripts created by the engineers to that contract) |
 | build timing for this experiment | `TIMELINE.md` |

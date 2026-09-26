@@ -43,3 +43,27 @@ Closed product decisions only. Newest at the bottom.
 **Why:** A remote option always exists, so the shorter warning is never fatal. It is also the more common case in the author's calendar (assumed).
 **Costs accepted:** If the owner plans to go in person, they get a late warning unless they switch the meeting once.
 **Source:** assumed by the product manager.
+
+### D-008 — In-person steps run 10, 5, and 2 minutes before leave-by, then take over at leave-by — 2026-09-26
+**Decision:** We set in-person escalation to heads-up 10 min, nudge 5 min, and insist 2 min before the leave-by time, with the takeover at the leave-by time. Steps always come in the same order.
+**Why:** The first spec put the takeover before the insist step for in-person meetings, so insist could never show (found by the architect).
+**Costs accepted:** In-person steps are closer together than online steps.
+**Source:** the product manager, closing an architect finding.
+
+### D-009 — Cancelled meetings and meetings the owner is not invited to are ignorable — 2026-09-26
+**Decision:** We made cancelled meetings, and meetings that list guests but none of the owner's addresses, ignorable, with the reasons "cancelled" and "not invited: someone else's meeting". The owner's addresses are those of the connected calendar accounts, plus any extras in settings.
+**Why:** 3 of 8 real meetings with guests in the author's week came from calendars of others. They would have caused false takeovers, and a false takeover is what makes the owner give up.
+**Costs accepted:** An invitation sent to an address the product does not know gets no alert until the owner adds that address or overrides the meeting.
+**Source:** the product manager, closing an architect finding based on the author's real calendar (counts only).
+
+### D-010 — The product warns when it cannot see the calendar, and never shows "no meetings" instead — 2026-09-26
+**Decision:** We chose to show a warning mark and a "calendar not updating since <time>" line after 15 minutes without fresh calendar data.
+**Why:** Silent failure looks like safety, and a false "you are fine" is the worst failure (D-004).
+**Costs accepted:** A short network loss can show a warning that turns out to be harmless.
+**Source:** the product manager, closing an architect finding.
+
+### D-011 — Meeting rooms and equipment are not guests — 2026-09-26
+**Decision:** We counted only people other than the owner as guests, for reasons and meeting-size rules.
+**Why:** A room booking does not make someone notice your absence.
+**Costs accepted:** none of practical weight. A meeting whose only other attendee is a room is treated as a personal block.
+**Source:** the product manager, confirming the architect's assumption.

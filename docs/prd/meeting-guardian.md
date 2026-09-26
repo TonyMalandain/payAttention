@@ -4,7 +4,7 @@
 
 From `problem.md`: *"A reminder for a client call looks the same as a reminder for a lunch placeholder … The one reminder that mattered disappears with the rest."* Also: *"It shows once and then goes away"*, and *"The right moment to warn someone depends on whether they must travel."*
 
-The calendar owner feels this. It covers every requirement from R-1 to R-15 in `solution.md`.
+The calendar owner feels this. It covers every requirement from R-1 to R-16 in `solution.md`.
 
 ## What changes
 
@@ -16,7 +16,9 @@ Check the signals in this order. The first rule that fires decides, and its reas
 
 1. **Override** — the owner's own override for this occurrence, then for the series. Reason: "you marked this must-attend" or "you marked this ignore".
 2. **Ignorable, and certain:**
+   - The meeting is cancelled. Reason: "cancelled".
    - The owner declined it. Reason: "you declined".
+   - It has guests, and none of the owner's addresses appear as organiser or guest. This happens with someone else's calendar that the owner displays. Reason: "not invited: someone else's meeting". The owner's addresses are every address of the calendar accounts connected to the desktop, plus any extra addresses entered in settings.
    - It is an all-day event, or it has no start time. Reason: "all-day event".
    - It is marked "free" / "show as available". Reason: "marked as free time".
    - The title matches an ignore word. Reason: "placeholder: '<word>'". The built-in ignore words are: hold, placeholder, block, blocked, focus, focus time, deep work, lunch, break, commute, travel, ooo, out of office, busy, tentative hold, do not book, dnb, reminder, gym. Match whole words, and ignore letter case.
@@ -28,6 +30,8 @@ Check the signals in this order. The first rule that fires decides, and its reas
    - There are no guests other than the owner. Reason: "no other guests: personal block".
    - There are more than 15 guests, the owner did not organise it, and nothing above matched. Reason: "large meeting (N guests): absence unlikely noticed".
 5. **Default:** there are 2 to 15 guests, and the owner accepted or has not answered. The verdict is must-attend. Reason: "small meeting (N guests): absence noticed". If the owner answered "maybe" (tentative), the verdict is ignorable, with the reason "you answered maybe".
+
+**Guests** means people other than the owner. Meeting rooms and equipment are never counted (D-011).
 
 When calendar data is missing (for example, no guest list), the verdict is must-attend with the reason "not enough information: treated as must-attend". When unsure, the product warns rather than stays silent.
 
@@ -44,10 +48,14 @@ The **deadline** is the start time for an online meeting. For an in-person meeti
 
 | Step | When | What the owner sees |
 |---|---|---|
-| 1. Heads-up | 30 min before the start (online). 10 min before the leave-by time (in person). | A distinct card in a corner of the screen, with the title, the time left, the reason, and the actions. It goes away on its own after 15 seconds. The top-bar countdown becomes highlighted. |
-| 2. Nudge | 10 min before the deadline (in person: 5 min before the leave-by time) | A larger card that stays until the owner acts, with a colour stronger than step 1. If the owner snoozes it, it comes back after the snooze. |
-| 3. Insist | 3 min before the deadline (in person: at the leave-by time) | A large card in the middle of the screen, with a pulsing border. It stays on screen, a sound plays once if sound is on, and the top-bar indicator flashes. |
-| 4. Takeover | 1 min before the deadline, and every minute after that until 10 min past the start | A full-screen overlay on every monitor, with the title, a big countdown, the reason, and the actions. It does not go away until the owner picks an action. A sound plays if sound is on. |
+| Step | Online: time before the start | In person: time before the leave-by time | What the owner sees |
+|---|---|---|---|
+| 1. Heads-up | 30 min | 10 min | A distinct card in a corner of the screen, with the title, the time left, the reason, and the actions. It goes away on its own after 15 seconds. The top-bar countdown becomes highlighted. |
+| 2. Nudge | 10 min | 5 min | A larger card that stays until the owner acts, with a colour stronger than step 1. If the owner snoozes it, it comes back after the snooze. |
+| 3. Insist | 3 min | 2 min | A large card in the middle of the screen, with a pulsing border. It stays on screen, a sound plays once if sound is on, and the top-bar indicator flashes. |
+| 4. Takeover | 1 min, then again every minute until 10 min after the start | at the leave-by time, then again every minute until 10 min after the start | A full-screen overlay on every monitor, with the title, a big countdown, the reason, and the actions. It does not go away until the owner picks an action. A sound plays if sound is on. |
+
+The steps are always in this order (D-008).
 
 Actions shown at every step:
 - **Join** (online meetings with a link only). Opens the link and acknowledges the meeting.
@@ -77,7 +85,13 @@ Behaviour:
 
 ### 6. Settings (R-15)
 
-The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off, and the owner's email domain(s) (detected automatically, and can be edited).
+The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off, the owner's email domain(s) (detected automatically, and can be edited), and extra owner addresses.
+
+### 7. When the calendar cannot be read (R-16)
+
+If the product has not received fresh calendar data for 15 minutes, the top-bar icon shows a warning mark. The menu says "Calendar not updating since <time>. Alerts may be missing." It never shows "no meetings" in that state (D-010). The warning clears on its own when fresh data arrives.
+
+A meeting added on the calendar website can take up to about 10 minutes to reach the desktop. If it is booked just before its heads-up time, its first alert can come at a later step. This is accepted (see `solution.md`).
 
 ## Who it lands on
 
@@ -108,8 +122,9 @@ This whole spec is the smallest useful version. Verdicts without escalation woul
 - The extension installs on the author's GNOME 50 Wayland session and enables with no errors in the shell log.
 - The top bar shows the next must-attend meeting from the author's real connected calendars.
 - A built-in "Test alert" runs through all four steps, and the takeover cannot be dismissed without choosing an action.
+- The top bar shows a warning when calendar data is stale.
 - Automated tests cover the verdict rules (every reason listed above), online/in-person detection, deadline and step timing (online, in person, hybrid, overrides, snooze limits, return after being away, overlapping meetings, and the 10-minutes-after cutoff).
 
 ## Open questions
 
-None open. All were closed by assumption in D-003 to D-007 because the run is unattended.
+None open. All were closed by assumption in D-003 to D-011 because the run is unattended.
