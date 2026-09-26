@@ -107,3 +107,9 @@ Append only. Newest at the bottom.
 - **Why:** The owner raised it. The coverage check missed it, because users.md covered installing but not removing.
 - **Source:** the owner, 2026-09-26.
 - **Touches:** solution.md R-17, decisions.md D-016, docs/prd/meeting-guardian.md
+
+## 2026-09-26 — Wider search for alternatives
+- **Kind:** decision
+- **Fact:** The owner asked whether tools outside GNOME were checked. The first search covered GNOME only. A wider search found partial matches (oh-shit-meeting, Calendar Alarm for Chrome, gcalcli, cloud AI calendars such as Calendar.AI and Reclaim, and takeover apps for Mac and Windows). None combines importance judgment, escalation to a takeover, and travel timing on Linux. D-002 still holds, and its evidence was too narrow. Recorded in alternatives.md.
+- **Source:** the owner's question; web search, 2026-09-26.
+- **Touches:** alternatives.md, decisions.md D-002
