@@ -120,3 +120,11 @@ Append only. Newest at the bottom.
 - **Fact:** R-17 is `real`. One command removes the extension, and it stops it first if it is running. Saved choices are kept unless the owner asks to erase them. Failure paths leave nothing half-removed. All of this is proven in isolated test homes. The owner's real install was never touched.
 - **Source:** reviewer round 1 and the fix round; the product manager re-ran the isolated check.
 - **Touches:** solution.md R-17
+
+## 2026-09-26 — Owner asks for smarter verdicts (AI)
+- **Kind:** question
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner asked whether an AI model could make verdicts smarter. Two options were offered: a local model on the owner's machine that gives a second opinion only on the verdicts the rules are unsure of, or staying rules-only until overrides show the rules failing. A cloud model would reverse D-003 and was not recommended. The owner's machine has 61 GB of RAM and a 16 GB graphics card, which is enough for a small local model. No local model runtime is installed.
+- **Why:** The original prompt asked for a system "smart enough to understand" meetings. Real-data evidence so far: 1 miss in 24 events, fixed with one override.
+- **Source:** the owner's question; hardware checked by the product manager.
+- **Touches:** decisions.md D-003, solution.md exclusions
