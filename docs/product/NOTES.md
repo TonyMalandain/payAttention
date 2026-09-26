@@ -80,3 +80,16 @@ Append only. Newest at the bottom.
 - **Fact:** When more than one calendar is stale, the menu reads "Calendars not updating since …: A, B, C. Alerts may be missing.", with ", and N more" after 3 names. This is the senior engineer's wording, and it fits D-014.
 - **Source:** senior engineer, PG-1c plan refresh.
 - **Touches:** decisions.md D-014
+
+## 2026-09-26 — Verdicts checked on the author's real week
+- **Kind:** solution
+- **Fact:** Over 7 days of the author's real calendars (24 events), 7 were judged must-attend and 17 ignorable. All 7 must-attend were real meetings with other people: 2 weekly team meetings, 1 external 1:1, and appointments. The 17 ignorable were personal blocks, including a reminder that repeats twice a day and children's activities. One personal task that matters, picking a child up, was judged ignorable because it has no guests (the accepted cost in D-015). One series override fixes it.
+- **Why:** This is the first real-data evidence for R-4, R-5 and R-7.
+- **Source:** product manager, read-only run against the author's calendars on 2026-09-26. No calendar content was saved in the repo.
+- **Touches:** solution.md R-4, R-5, R-7; decisions.md D-015
+
+## 2026-09-26 — Condition to revisit D-015
+- **Kind:** question
+- **Fact:** Personal events with a physical place (for example children's practices) could be treated as must-attend with travel timing. This was not adopted: it would add takeovers for events another adult may handle. Revisit if the author overrides several such series to must-attend.
+- **Source:** product manager.
+- **Touches:** decisions.md D-015
