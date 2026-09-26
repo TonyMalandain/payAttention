@@ -38,7 +38,7 @@ When calendar data is missing (for example, the owner's own address is unknown, 
 ### 2. Online or in person (R-10)
 
 - **Online:** the location, description, or conference field holds a video-call link (Google Meet, Zoom, Microsoft Teams, Webex, Whereby, Jitsi, GoTo, Slack huddle, or any https link to one of those services).
-- **In person:** there is no link, and the location is not empty and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, phone, call, video call, zoom, zoom meeting, teams, microsoft teams, google meet, meet, webex, hangout, slack.
+- **In person:** there is no link, and the location is not empty and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, TBA, n/a, none, phone, phone call, call, video call, zoom, zoom meeting, teams, teams meeting, microsoft teams, microsoft teams meeting, google meet, meet, webex, hangout, google hangouts, whereby, jitsi, goto meeting, gotomeeting, slack, slack huddle, huddle.
 - **Unknown:** there is no link and no location. Treat it as online (short lead time).
 - Both a link and a place: online (D-007). The owner can switch it in the menu.
 
