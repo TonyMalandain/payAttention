@@ -68,3 +68,9 @@ Append only. Newest at the bottom.
 - **Fact:** Per-calendar staleness accepted and closed as D-014, with the calendar named in the menu. Removed from the inbox.
 - **Source:** docs/inbox.md, architect.
 - **Touches:** decisions.md D-014
+
+## 2026-09-26 — Reviewer finding on "no guest list" taken
+- **Kind:** decision
+- **Fact:** Closed as D-015. The PRD example was corrected. Words that mean "no physical place" were widened (phone, call, zoom meeting, teams, …), because "Zoom Meeting" typed as a location was being treated as a physical place.
+- **Source:** reviewer, PG-1a round 1.
+- **Touches:** decisions.md D-015, docs/prd/meeting-guardian.md §1, §2

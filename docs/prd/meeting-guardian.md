@@ -33,12 +33,12 @@ Check the signals in this order. The first rule that fires decides, and its reas
 
 **Guests** means people other than the owner. Meeting rooms and equipment are never counted (D-011).
 
-When calendar data is missing (for example, no guest list), the verdict is must-attend with the reason "not enough information: treated as must-attend". When unsure, the product warns rather than stays silent.
+When calendar data is missing (for example, the owner's own address is unknown, so the product cannot tell whether they are invited), the verdict is must-attend with the reason "not enough information: treated as must-attend". When unsure, the product warns rather than stays silent.
 
 ### 2. Online or in person (R-10)
 
 - **Online:** the location, description, or conference field holds a video-call link (Google Meet, Zoom, Microsoft Teams, Webex, Whereby, Jitsi, GoTo, Slack huddle, or any https link to one of those services).
-- **In person:** there is no link, and the location is not empty and is not a word like "online", "virtual", "remote", or "TBD".
+- **In person:** there is no link, and the location is not empty and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, phone, call, video call, zoom, zoom meeting, teams, microsoft teams, google meet, meet, webex, hangout, slack.
 - **Unknown:** there is no link and no location. Treat it as online (short lead time).
 - Both a link and a place: online (D-007). The owner can switch it in the menu.
 

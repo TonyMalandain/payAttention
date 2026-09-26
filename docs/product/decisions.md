@@ -85,3 +85,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** One failing account hides that account's meetings, so warning is the safe direction. Naming the calendar tells the owner what to fix or hide.
 **Costs accepted:** A calendar that always fails keeps the warning on until the owner fixes or hides it. A provider that is reachable but answers with errors is not detected.
 **Source:** the product manager, closing an architect finding.
+
+### D-015 — An event with no guests and no organiser is a personal block — 2026-09-26
+**Decision:** We kept the rule that an event with no other guests is ignorable ("no other guests: personal block"), even when the calendar gives no guest list at all. "Not enough information" applies only when the owner's own address is unknown.
+**Why:** The calendar cannot tell "no guest list" apart from "an empty guest list". Personal blocks and placeholders are the main source of noise the product exists to remove.
+**Costs accepted:** A personal appointment that matters (a doctor, a flight) is silent unless its title has an important word or the owner marks it must-attend once. Overrides can cover the whole series.
+**Source:** the product manager, closing a reviewer finding.
