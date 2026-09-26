@@ -73,3 +73,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** In a 1:1 your absence is always noticed. The first spec left one-guest meetings with no rule (found by the senior engineer).
 **Costs accepted:** none of practical weight. A 1:1 the owner does not care about needs one override.
 **Source:** the product manager, closing a senior-engineer finding.
+
+### D-013 — "Calendar not updating" also covers a calendar that cannot sync with its provider — 2026-09-26
+**Decision:** We extended D-010. The warning also shows when the desktop has not synced with the calendar provider for 15 minutes, even if meetings are still shown from the saved copy. Alerts keep running from the saved copy while the warning shows.
+**Why:** Offline, the saved copy looks healthy but misses newly booked meetings. That is the same false "you are fine" that D-010 exists to prevent.
+**Costs accepted:** Working offline for long periods shows a steady warning.
+**Source:** the product manager, closing a senior-engineer finding (PG-1b plan).

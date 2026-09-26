@@ -50,3 +50,15 @@ Append only. Newest at the bottom.
 - **Fact:** One-guest meetings closed as D-012. A takeover winning the card over a lower step, singular "1 guest" wording, and "not enough information" when the owner's addresses are unknown were all accepted as planned. Removed from the inbox.
 - **Source:** docs/inbox.md, senior engineer, 2026-09-26.
 - **Touches:** decisions.md D-012, docs/prd/meeting-guardian.md §1
+
+## 2026-09-26 — Owner addresses: one per account, plus settings
+- **Kind:** decision
+- **Fact:** D-009's "addresses of the connected calendar accounts" means the one address each calendar reports. Aliases and other addresses go in the "extra owner addresses" setting. No change to D-009.
+- **Source:** product manager, answering a senior-engineer finding (PG-1b plan).
+- **Touches:** decisions.md D-009
+
+## 2026-09-26 — Offline freshness closed as D-013
+- **Kind:** decision
+- **Fact:** A stale-provider warning is required even while meetings are served from the saved copy (D-013). The architect owns how.
+- **Source:** senior engineer finding, PG-1b plan.
+- **Touches:** decisions.md, solution.md R-16

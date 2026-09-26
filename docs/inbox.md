@@ -55,3 +55,60 @@ Agents append findings here, tagged `for-product` or `for-architecture`. The own
   - Verified: `gnome-extensions install` from the home filesystem to `~/.local/share` works with the default `TMPDIR`. The cross-filesystem pitfall applies only to targets on another filesystem.
   - Verified in headless 50.4: at startup the overview is open and holds one modal entry, so the smoke checks "no modal entry of ours" rather than an absolute `Main.modalCount`.
 - **Asked:** fold these into `testing-and-build.md` if you agree.
+
+### 2026-09-26 — How the helper must exit, measured (ADR-0001 evidence 3) — for-architecture
+- **From:** senior engineer, plan `docs/plans/PG-1b.md` (facts 1–14 there).
+- **Finding:** gjs 1.88 with EDS objects exits cleanly **only** when `System.exit(code)` runs inside a GLib main-loop source callback while the loop is running.
+  - That case: 0 exit in 5/5 runs, and 10/10 on stdin EOF.
+  - Ending the module, `loop.quit()` followed by a return, and `System.exit` with no loop all segfaulted (139) in 5/5 runs.
+  - **`System.exit` called from a promise continuation (after `await`) hangs forever.** This was measured on the fixture, and on the real calendars with counts only.
+  - Deferring the call through `GLib.idle_add(PRIORITY_HIGH)` fixes it.
+- **What the plan does:** one `exitSoon(code)` in `helper/main.js` is the only exit, and it always defers.
+- **Asked:** add this to ADR-0001 evidence and to the pitfalls in `testing-and-build.md`. The same rule would apply to any future gjs process that touches EDS.
+
+### 2026-09-26 — Helper imports `gi://GioUnix`, which boundaries.md does not list — for-architecture
+- **From:** senior engineer, PG-1b plan.
+- **Finding:**
+  - The helper needs stdin and stdout as streams.
+  - Since GLib 2.80 the Unix stream classes live in `GioUnix`. `Gio.UnixInputStream` and `Gio.UnixOutputStream` still resolve, but print a `Gjs-WARNING` on every use (measured on GLib 2.88.3).
+  - The helper also imports gjs's built-in `system` module (`System.exit`, `System.programArgs`). It is not a `gi://` import, and the lint rules do not cover it.
+- **What the plan does:** adds `GioUnix` to the helper's `gi://` allowlist in `eslint.config.js`, with a boundaries test row.
+- **Asked:** add `GioUnix` (and the `system` built-in) to the helper row of `boundaries.md`, or overrule. The engineer stops if you overrule.
+
+### 2026-09-26 — EDS/libical API traps for anyone reading calendar data — for-architecture
+- **From:** senior engineer, PG-1b plan.
+- **Finding** (measured with gjs 1.88.1, EDS 3.60):
+  - `ICalGLib.Time.as_timet()` ignores the time zone. Conversion needs `as_timet_with_zone(zone)`, and for `Z` times `get_timezone()` is null.
+  - `ECal.util_get_system_timezone()` ignores `TZ`, but `GLib.TimeZone.new_local()` honours it.
+  - `ICalGLib.Property.isa()` throws on `CONFERENCE` (a kind unknown to the typelib), so properties must be matched by name.
+  - `ECal.Client.connect` needs `0xFFFFFFFF`, not `-1`, for "do not wait".
+  - ECal applies RFC 5545 defaults to attendees: no `CUTYPE` becomes individual, no `PARTSTAT` becomes needs-action, no `ROLE` becomes req-participant. So `cutype:'unknown'` only comes from `X-`/`UNKNOWN` values.
+  - The `local` backend reports `[Local Backend] EmailAddress` as `cal-email-address`.
+- **Asked:** worth a line in `NOTES.md` or `constraints.md`.
+
+### 2026-09-26 — Offline EDS cache looks fresh to the stale-data warning (D-010) — for-architecture
+- **From:** senior engineer, PG-1b plan.
+- **Finding:**
+  - The helper reads EDS's cache, so snapshots keep arriving, and passing validation, while the network is down and remote sync fails.
+  - The D-010 warning ("not updating since…") then never shows, while meetings added on the provider's side are not seen.
+  - Protocol v1 has no per-source "last synced" field.
+- **What the plan does:** emits `{"type":"status","level":"warn","code":"sync-failed"}` after a sync round where any remote refresh failed. Nothing else changes.
+- **Asked:** decide whether freshness should also consider remote sync. That would mean a protocol field and a product call on D-010's wording.
+
+### 2026-09-26 — Owner addresses: protocol v1 carries one address per calendar — for-architecture
+- **From:** senior engineer, PG-1b plan.
+- **Finding:**
+  - D-009 says the owner's addresses are "every address of the calendar accounts connected to the desktop".
+  - The protocol carries only `sources[].ownerEmail`, from `cal-email-address`. On this machine 7 of 9 sources have one (all CalDAV); local and contacts sources have none.
+  - Mail-identity addresses and aliases of the same accounts are not carried.
+- **What the plan does:** transcribes `cal-email-address` exactly as `interfaces.md` says.
+- **Asked:** if aliases matter, that is a protocol addition (for example `ownerAddresses`) and a decision for you.
+
+### 2026-09-26 — Helper entry file name, and what an isolated EDS contains — for-architecture
+- **From:** senior engineer, PG-1b plan.
+- **Finding:**
+  - The helper entry is `extension/helper/main.js`, so `interfaces.md` §1 `<entry>` is `main.js`. PG-1c's `HELPER_ENTRY` must be `'main.js'`.
+  - An isolated EDS (Layer 2 and the smoke test) always has two built-in, selected, empty sources: `birthdays` (contacts) and `system-calendar` (local). "The isolated EDS has no calendars" in `testing-and-build.md` really means 2 sources and 0 events.
+  - The helper test uses a private `dbus-daemon --session` instead of `dbus-run-session`, so a test-only writer can add an event through EDS on the same bus. The local backend does not notice direct edits to the `.ics` file.
+  - `npm run test:helper` is `node --test "tests/helper/**/*.test.js"` (the directory form fails on Node 24, as PG-1a already reported).
+- **Asked:** record these in `interfaces.md` and `testing-and-build.md`.
