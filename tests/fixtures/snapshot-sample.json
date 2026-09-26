@@ -1,0 +1,115 @@
+{
+  "type": "snapshot",
+  "protocol": 1,
+  "generatedAt": 1790600400000,
+  "rangeStart": 1790596800000,
+  "rangeEnd": 1790730000000,
+  "sources": [
+    {
+      "uid": "src-1",
+      "name": "Work",
+      "backend": "caldav",
+      "ownerEmail": "me@acme.test",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "events": [
+    {
+      "sourceUid": "src-1",
+      "uid": "weekly-sync",
+      "recurrenceId": 1790604000000,
+      "recurring": true,
+      "start": 1790604000000,
+      "end": 1790605800000,
+      "allDay": false,
+      "summary": "Weekly sync",
+      "location": "",
+      "description": "Join: https://meet.google.com/abc-defg-hij",
+      "conferenceUris": [
+        "https://meet.google.com/abc-defg-hij"
+      ],
+      "status": "confirmed",
+      "transparency": "opaque",
+      "organizer": {
+        "email": "alice@acme.test",
+        "name": "alice"
+      },
+      "attendees": [
+        {
+          "email": "me@acme.test",
+          "name": "me",
+          "partstat": "accepted",
+          "cutype": "individual",
+          "role": "req-participant"
+        },
+        {
+          "email": "alice@acme.test",
+          "name": "alice",
+          "partstat": "accepted",
+          "cutype": "individual",
+          "role": "req-participant"
+        },
+        {
+          "email": "room-4@acme.test",
+          "name": "room-4",
+          "partstat": "accepted",
+          "cutype": "room",
+          "role": "non-participant"
+        }
+      ]
+    },
+    {
+      "sourceUid": "src-1",
+      "uid": "partner-visit",
+      "recurrenceId": null,
+      "recurring": false,
+      "start": 1790614800000,
+      "end": 1790618400000,
+      "allDay": false,
+      "summary": "Partner visit",
+      "location": "12 Rue Exemple, Paris",
+      "description": "",
+      "conferenceUris": [],
+      "status": "confirmed",
+      "transparency": "opaque",
+      "organizer": {
+        "email": "dana@partner.test",
+        "name": "dana"
+      },
+      "attendees": [
+        {
+          "email": "me@acme.test",
+          "name": "me",
+          "partstat": "needs-action",
+          "cutype": "individual",
+          "role": "req-participant"
+        },
+        {
+          "email": "dana@partner.test",
+          "name": "dana",
+          "partstat": "accepted",
+          "cutype": "individual",
+          "role": "req-participant"
+        }
+      ]
+    },
+    {
+      "sourceUid": "src-1",
+      "uid": "holiday",
+      "recurrenceId": null,
+      "recurring": false,
+      "start": 1790640000000,
+      "end": 1790726400000,
+      "allDay": true,
+      "summary": "Company holiday",
+      "location": "",
+      "description": "",
+      "conferenceUris": [],
+      "status": "confirmed",
+      "transparency": "transparent",
+      "organizer": null,
+      "attendees": []
+    }
+  ]
+}
