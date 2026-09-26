@@ -108,9 +108,12 @@ The automation script is an ES module exporting `async function run()` and
 `function finish()` (the shell's `ui/scripting.js` harness; `Scripting.sleep(ms)`
 waits). The shell exits when `run()` resolves. The script prints one
 `PAYATTENTION-SMOKE PASS` or `PAYATTENTION-SMOKE FAIL <reason>` line; the wrapper
-greps for it and also fails on any `JS ERROR` line, any "has been already
-disposed" line (its stack trace may name only shell files), and any
-`Gjs-CRITICAL` whose line or stack trace mentions payattention.
+greps for it and also fails on any `JS ERROR` line, any `JS WARNING` naming
+payattention, any "has been already disposed" line (its stack trace may name
+only shell files), any of our own failure log codes (`tick-failed`,
+`destroy-failed`, `grab-failed`, `protocol-mismatch`, `helper-spawn-failed`, and
+the helper's `registry-failed`, `helper-failed`), and any `Gjs-CRITICAL` whose
+line or stack trace mentions payattention.
 
 What the smoke script checks:
 

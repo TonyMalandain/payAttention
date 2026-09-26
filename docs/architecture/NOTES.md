@@ -246,3 +246,24 @@ Append only. Newest at the bottom.
 - **Why:** The inbox is not a log.
 - **Source:** this session.
 - **Touches:** —
+
+## 2026-09-26 — Unlock grace is per source (D-013 addendum aligned)
+- **Kind:** interface
+- **Fact:** In the 60 s after `enable()`, only sources whose `connection` is `connecting` or `offline` are left out of provider staleness; any other counted source (e.g. `ssl-failed`) still warns at once. `interfaces.md` Verdict reworded to match `shell/health.js` (`RECONNECTING`, `dataHealth`).
+- **Why:** Product manager ruled hiding a real failure is worse than a brief warning; the old "while any source is reconnecting" wording would have hidden it. Doc was the bug, code was right.
+- **Source:** `extension/shell/health.js` `dataHealth`; product ruling in `docs/inbox.md`, 2026-09-26.
+- **Touches:** interfaces.md (D-013 addendum)
+
+## 2026-09-26 — Engineer's fix-round edits to testing-and-build.md adopted
+- **Kind:** stack
+- **Fact:** Adopted: smoke monitor 960x540, all-day fixture and Must attend menu check, worst-case alert and failed-construction checks, single parked virtual pointer pitfall. Corrected: the wrapper's failure patterns also include `JS WARNING` naming payattention and our own failure log codes.
+- **Why:** Each matches `scripts/smoke.sh` and `tests/smoke/alert-ladder.js`; the pattern list was incomplete against `scripts/smoke.sh:94-96`.
+- **Source:** commit e7cffe2; `scripts/smoke.sh:84,94-103`.
+- **Touches:** testing-and-build.md Layer 3
+
+## 2026-09-26 — Inbox emptied (for-architecture, PG-1c fix round)
+- **Kind:** question
+- **Fact:** 1 `for-architecture` entry (unlock grace wording) taken and removed from `docs/inbox.md`.
+- **Why:** The inbox is not a log.
+- **Source:** this session.
+- **Touches:** —

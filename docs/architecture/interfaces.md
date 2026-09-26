@@ -201,10 +201,15 @@ used for health.
 - *Verdict.* **Stale** when either clock is 15 min or more old, except during the
   first 60 s after `enable()` (so an unlock does not flash the warning):
   - no stale at all while no snapshot has been accepted yet;
-  - no stale from the provider clock while any source it counts
-    (`remote !== false`) reports `connection` `"connecting"` or `"offline"` in
-    the latest snapshot (a remote calendar still reconnecting after unlock).
-    Product rule, 2026-09-26, after the PG-1c review.
+  - a counted source (`remote !== false`) whose `connection` in the latest
+    snapshot is `"connecting"` or `"offline"` (a remote calendar still
+    reconnecting after unlock) is left out of the provider clock and of the
+    named calendars. The grace is **per source**: any other counted source,
+    including one in another failed state (for example `"ssl-failed"`), still
+    makes the verdict stale at once, because hiding a real failure is worse
+    than a brief warning. The data clock is not graced by this rule.
+    Product rule, 2026-09-26, after the PG-1c review; per-source reading
+    confirmed by the product manager after the PG-1c fix round.
 
   After 60 s the rule above applies unchanged. `since` = the older expired clock.
   **Waiting** when not stale and no snapshot has been accepted yet. Otherwise **ok**.
