@@ -73,16 +73,19 @@ changed="$(gjs -c "const {Gio} = imports.gi; const s = new Gio.Settings({schema_
     if (list.includes(u)) { s.set_strv(key, list.filter(x => x !== u)); print(key); }
   }
   Gio.Settings.sync();")" || changed=''
+# Safe to discard a failed edit: the check below reads both lists again and
+# stops if the UUID is still in either.
+if ! lists="$(gsettings get org.gnome.shell enabled-extensions && gsettings get org.gnome.shell disabled-extensions)" \
+        || printf '%s\n' "$lists" | grep -qF "'$UUID'"; then
+    die "could not remove $UUID from the GNOME extension lists. Run this from a terminal inside your GNOME session."
+fi
+# Reported only now that the removal is known to be stored.
 while IFS= read -r key; do
     case "$key" in
         enabled-extensions) echo "Removed: $UUID from the enabled extensions."; did=1 ;;
         disabled-extensions) echo "Removed: $UUID from the disabled extensions."; did=1 ;;
     esac
 done <<< "$changed"
-if ! lists="$(gsettings get org.gnome.shell enabled-extensions && gsettings get org.gnome.shell disabled-extensions)" \
-        || printf '%s\n' "$lists" | grep -qF "'$UUID'"; then
-    die "could not remove $UUID from the GNOME extension lists. Run this from a terminal inside your GNOME session."
-fi
 
 if [ "$did" -eq 0 ]; then
     echo "Nothing to remove: payAttention is not installed."

@@ -17,3 +17,10 @@ This project was an experiment: build a working program from one high-level prom
 5. Reviewers: found 5 defects and 1 risk in total. All fixed, all accepted.
 6. Product manager: answered 20+ findings as decisions D-008 to D-015, checked the verdicts on the author's real week, and checked the screenshots.
 
+
+## Follow-up session (owner feedback)
+
+| Event | Time |
+|---|---|
+| Owner reported the missing uninstall; work resumed | 2026-09-26, after the first stop |
+| Uninstall accepted | 2026-09-26T07:08:20-04:00 |

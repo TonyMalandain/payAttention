@@ -136,7 +136,8 @@ Environment requirements come first.
 - **Serves:** "install once and do almost no setup" (users.md, Installer). A tool that is easy to add but hard to remove is not low-effort, and an extension that takes over the screen must be easy to get rid of.
 - **Who it serves:** Installer.
 - **What they get:** one command stops the extension and removes it. It no longer loads at the next login. By default, their saved choices (overrides, travel times, settings) are kept, so a reinstall picks up where they left off. One option also erases those choices. Their calendars are never touched.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ## What the solution is not
 

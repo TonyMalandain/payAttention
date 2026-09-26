@@ -113,3 +113,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner asked whether tools outside GNOME were checked. The first search covered GNOME only. A wider search found partial matches (oh-shit-meeting, Calendar Alarm for Chrome, gcalcli, cloud AI calendars such as Calendar.AI and Reclaim, and takeover apps for Mac and Windows). None combines importance judgment, escalation to a takeover, and travel timing on Linux. D-002 still holds, and its evidence was too narrow. Recorded in alternatives.md.
 - **Source:** the owner's question; web search, 2026-09-26.
 - **Touches:** alternatives.md, decisions.md D-002
+
+## 2026-09-26 — Uninstall built and proven
+- **Kind:** solution
+- **Profiles:** Installer
+- **Fact:** R-17 is `real`. One command removes the extension, and it stops it first if it is running. Saved choices are kept unless the owner asks to erase them. Failure paths leave nothing half-removed. All of this is proven in isolated test homes. The owner's real install was never touched.
+- **Source:** reviewer round 1 and the fix round; the product manager re-ran the isolated check.
+- **Touches:** solution.md R-17
