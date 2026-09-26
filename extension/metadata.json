@@ -1,0 +1,7 @@
+{
+    "uuid": "payattention@tonymalandain.github.io",
+    "name": "payAttention",
+    "description": "Makes sure you do not miss the meetings that matter: judges each meeting, escalates to a full-screen alert on every monitor, and never relies on notifications.",
+    "shell-version": ["50"],
+    "settings-schema": "org.gnome.shell.extensions.payattention"
+}

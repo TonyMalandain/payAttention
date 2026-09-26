@@ -11,9 +11,10 @@
   "scripts": {
     "lint": "eslint .",
     "test": "node --test \"tests/unit/**/*.test.js\"",
-    "build": "node -e \"console.error('npm run build: not implemented yet (PG-1c)'); process.exit(1)\"",
+    "build": "bash scripts/build.sh",
     "test:helper": "node --test \"tests/helper/**/*.test.js\"",
-    "smoke": "node -e \"console.error('npm run smoke: not implemented yet (PG-1c)'); process.exit(1)\""
+    "smoke": "bash scripts/smoke.sh",
+    "install:local": "bash scripts/install.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

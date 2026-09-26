@@ -1,0 +1,32 @@
+/* payAttention's own cards and takeover (ADR-0004). Never reuse shell notification classes. */
+.payattention-card { border-radius: 18px; padding: 20px 24px; spacing: 10px; color: #ffffff;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55); transition-duration: 500ms; }
+.payattention-card-step1 { width: 380px; background-color: #17324d; border: 2px solid #5fa8e8; }
+.payattention-card-step2 { width: 460px; background-color: #4a3000; border: 3px solid #ffb020; }
+.payattention-card-step3 { width: 640px; background-color: #5c0a0a; border: 4px solid #ff3b30; }
+.payattention-card-step3.payattention-pulse-on { border-color: #ffd0cc; background-color: #7a1010; }
+.payattention-headline { font-size: 11pt; font-weight: bold; letter-spacing: 1px; color: rgba(255,255,255,0.8); }
+.payattention-card-step1 .payattention-title { font-size: 15pt; font-weight: bold; }
+.payattention-card-step2 .payattention-title { font-size: 18pt; font-weight: bold; }
+.payattention-card-step3 .payattention-title { font-size: 26pt; font-weight: 800; }
+.payattention-time, .payattention-reason, .payattention-also { font-size: 11pt; }
+.payattention-actions { spacing: 10px; }
+.payattention-button { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-size: 13pt;
+  font-weight: bold; color: #ffffff; background-color: rgba(255,255,255,0.16); }
+.payattention-button:hover, .payattention-button:focus { background-color: rgba(255,255,255,0.30); }
+.payattention-button-primary { background-color: #ffffff; color: #111111; }
+.payattention-button-primary:hover, .payattention-button-primary:focus { background-color: #e6e6e6; }
+.payattention-travel-toggle { font-size: 11pt; text-decoration: underline; color: #ffd98a; }
+.payattention-choice-current { background-color: #ffb020; color: #111111; }
+.payattention-takeover { background-color: rgba(0,0,0,0.0); }
+.payattention-takeover-panel { background-color: rgba(80,0,0,0.96); spacing: 18px; padding: 48px; color: #ffffff; }
+.payattention-takeover-panel .payattention-headline { font-size: 20pt; }
+.payattention-takeover-panel .payattention-title { font-size: 40pt; font-weight: 800; text-align: center; }
+.payattention-countdown { font-size: 110pt; font-weight: 800; font-feature-settings: "tnum"; }
+.payattention-caption { font-size: 16pt; color: rgba(255,255,255,0.85); }
+.payattention-takeover-panel .payattention-time, .payattention-takeover-panel .payattention-reason { font-size: 16pt; }
+.payattention-takeover-panel .payattention-button { min-height: 64px; min-width: 200px; font-size: 18pt; padding: 16px 32px; }
+.payattention-indicator-highlight { background-color: rgba(255,176,32,0.35); border-radius: 99px; }
+.payattention-indicator-box.payattention-pulse-on { background-color: rgba(255,59,48,0.65); }
+.payattention-warning { color: #ffb020; }
+.payattention-row-detail { font-size: 9pt; color: rgba(255,255,255,0.6); padding-left: 12px; }

@@ -12,6 +12,7 @@ import { judge } from '../../../extension/core/judge.js';
 import { emptyAlertState, parseAlertState, serializeAlertState, reduce } from '../../../extension/core/alertState.js';
 import { plan, actionFor } from '../../../extension/core/plan.js';
 import { testAlert } from '../../../extension/core/testAlert.js';
+import { formatClock, formatSince } from '../../../extension/core/display.js';
 import '../../../extension/core/types.js';
 
 function check(condition, what) {
@@ -58,6 +59,8 @@ try {
 
     const t = testAlert(0);
     check(t.judged[0].key === 'test:0', 'test alert');
+
+    check(typeof formatSince(0, 0) === 'string' && typeof formatClock(start) === 'string', 'display runs');
 
     print('CORE-GJS OK');
 } catch (e) {

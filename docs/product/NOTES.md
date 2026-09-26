@@ -74,3 +74,9 @@ Append only. Newest at the bottom.
 - **Fact:** Closed as D-015. The PRD example was corrected. Words that mean "no physical place" were widened (phone, call, zoom meeting, teams, …), because "Zoom Meeting" typed as a location was being treated as a physical place.
 - **Source:** reviewer, PG-1a round 1.
 - **Touches:** decisions.md D-015, docs/prd/meeting-guardian.md §1, §2
+
+## 2026-09-26 — Multi-calendar stale wording accepted
+- **Kind:** decision
+- **Fact:** When more than one calendar is stale, the menu reads "Calendars not updating since …: A, B, C. Alerts may be missing.", with ", and N more" after 3 names. This is the senior engineer's wording, and it fits D-014.
+- **Source:** senior engineer, PG-1c plan refresh.
+- **Touches:** decisions.md D-014

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.payattention" path="/org/gnome/shell/extensions/payattention/">
+    <key name="online-headsup-minutes" type="i">
+      <default>30</default>
+      <range min="1" max="240"/>
+      <summary>Online heads-up: minutes before the start</summary>
+    </key>
+    <key name="online-nudge-minutes" type="i">
+      <default>10</default>
+      <range min="0" max="120"/>
+      <summary>Online nudge: minutes before the start</summary>
+    </key>
+    <key name="online-insist-minutes" type="i">
+      <default>3</default>
+      <range min="0" max="60"/>
+      <summary>Online insist: minutes before the start</summary>
+    </key>
+    <key name="online-takeover-minutes" type="i">
+      <default>1</default>
+      <range min="0" max="30"/>
+      <summary>Online takeover: minutes before the start</summary>
+    </key>
+    <key name="inperson-headsup-minutes" type="i">
+      <default>10</default>
+      <range min="1" max="240"/>
+      <summary>In-person heads-up: minutes before you must leave</summary>
+    </key>
+    <key name="inperson-nudge-minutes" type="i">
+      <default>5</default>
+      <range min="0" max="120"/>
+      <summary>In-person nudge: minutes before you must leave</summary>
+    </key>
+    <key name="inperson-insist-minutes" type="i">
+      <default>2</default>
+      <range min="0" max="60"/>
+      <summary>In-person insist: minutes before you must leave</summary>
+    </key>
+    <key name="inperson-takeover-minutes" type="i">
+      <default>0</default>
+      <range min="0" max="30"/>
+      <summary>In-person takeover: minutes before you must leave</summary>
+    </key>
+    <key name="default-travel-minutes" type="i">
+      <default>30</default>
+      <range min="0" max="240"/>
+      <summary>Travel time for a place with no stored value, in minutes</summary>
+    </key>
+    <key name="headsup-display-seconds" type="i">
+      <default>15</default>
+      <range min="5" max="120"/>
+      <summary>How long the heads-up stays, in seconds</summary>
+    </key>
+    <key name="snooze-minutes" type="i">
+      <default>2</default>
+      <range min="1" max="30"/>
+      <summary>Snooze at steps 1 to 3, in minutes</summary>
+    </key>
+    <key name="takeover-snooze-minutes" type="i">
+      <default>1</default>
+      <range min="1" max="10"/>
+      <summary>Snooze at the takeover, in minutes</summary>
+    </key>
+    <key name="cutoff-minutes" type="i">
+      <default>10</default>
+      <range min="0" max="60"/>
+      <summary>Stop alerting this many minutes after the start</summary>
+    </key>
+    <key name="large-meeting-size" type="i">
+      <default>15</default>
+      <range min="2" max="500"/>
+      <summary>Above this many guests, a meeting is large</summary>
+    </key>
+    <key name="extra-important-words" type="as">
+      <default>[]</default>
+      <summary>Words added to the built-in important words</summary>
+    </key>
+    <key name="extra-ignore-words" type="as">
+      <default>[]</default>
+      <summary>Words added to the built-in ignore words</summary>
+    </key>
+    <key name="owner-domains" type="as">
+      <default>[]</default>
+      <summary>Your email domains; empty means detect them from your calendars</summary>
+    </key>
+    <key name="extra-owner-addresses" type="as">
+      <default>[]</default>
+      <summary>Your email addresses beyond each calendar's own address, such as aliases</summary>
+    </key>
+    <key name="sound-enabled" type="b">
+      <default>true</default>
+      <summary>Play a sound at insist and takeover</summary>
+    </key>
+    <key name="verdict-overrides" type="a{ss}">
+      <default>{}</default>
+      <summary>Meeting key to &quot;must&quot; or &quot;ignore&quot;, set from the menu and alerts</summary>
+    </key>
+    <key name="mode-overrides" type="a{ss}">
+      <default>{}</default>
+      <summary>Meeting key to &quot;online&quot; or &quot;in-person&quot;, set from the menu</summary>
+    </key>
+    <key name="travel-times" type="a{si}">
+      <default>{}</default>
+      <summary>Place key to travel minutes, set from the menu and alerts</summary>
+    </key>
+    <key name="alert-state" type="s">
+      <default>''</default>
+      <summary>Recorded alert actions per meeting (JSON; internal)</summary>
+    </key>
+    <key name="health-data-at" type="x">
+      <default>0</default>
+      <summary>When calendar data was last fresh, in epoch ms; 0 is unknown (internal)</summary>
+    </key>
+    <key name="health-provider-at" type="x">
+      <default>0</default>
+      <summary>Oldest calendar provider sync time, in epoch ms; 0 is unknown (internal)</summary>
+    </key>
+  </schema>
+</schemalist>

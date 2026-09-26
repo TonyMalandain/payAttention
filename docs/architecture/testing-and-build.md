@@ -113,8 +113,9 @@ greps for it and also fails on any `JS ERROR` line or stack mentioning the UUID.
 What the smoke script checks:
 
 1. `Main.extensionManager.lookup(uuid).state` is ACTIVE (1) and `error` is empty.
-2. The indicator is in the panel. The helper started and sent `hello` and one
-   snapshot (2 built-in sources, 0 events).
+2. The indicator is in the panel and shows the one fixture meeting that
+   `scripts/smoke.sh` writes into the isolated EDS (`Smoke client review`, 2–3 h
+   ahead), so the helper, `judge` and `plan` all ran on fixture data only.
    Do Not Disturb is set (`show-banners=false`) for the whole run.
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.

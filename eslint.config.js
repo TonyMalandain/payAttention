@@ -9,10 +9,11 @@ const NO_SHELL_SIDE_GI = {
     regex: '^gi://(ECal|EDataServer|ICalGLib|Gtk|Gdk|Adw)(\\?|$)',
     message: 'shell-side code may not use EDS or GTK/Adw (boundaries.md)',
 };
+const NO_SYSTEM = { regex: '^system$', message: 'only the helper may import system: System.exit would end the session (boundaries.md)' };
 const TIME_MESSAGE = 'time and randomness are parameters in core/';
 
 export default [
-    { ignores: ['node_modules/**', 'dist/**', '.test-home/**'] },
+    { ignores: ['node_modules/**', 'dist/**', '.test-home/**', '.smoke-home/**'] },
     js.configs.recommended,
     {
         files: ['**/*.js'],
@@ -91,6 +92,7 @@ export default [
                     NO_SHELL_SIDE_GI,
                     { regex: '^\\.\\./(ui|helper)/', message: 'shell/ may not import ui/ or helper/' },
                     NO_NODE,
+                    NO_SYSTEM,
                 ],
             }],
         },
@@ -102,8 +104,9 @@ export default [
                 patterns: [
                     NO_SHELL_SIDE_GI,
                     { regex: '^\\.\\./(shell|helper)/', message: 'ui/ may not import shell/ or helper/' },
-                    { regex: '^\\.\\./core/(?!format\\.js$)', message: 'ui/ may import only display helpers (core/format.js)' },
+                    { regex: '^\\.\\./core/(?!display\\.js$)', message: 'ui/ may import only display helpers (core/display.js)' },
                     NO_NODE,
+                    NO_SYSTEM,
                 ],
             }],
         },
@@ -116,6 +119,7 @@ export default [
                     NO_SHELL_SIDE_GI,
                     { regex: '^\\./(helper|core)/', message: 'extension.js may not import helper/ or core/ directly' },
                     NO_NODE,
+                    NO_SYSTEM,
                 ],
             }],
         },
@@ -128,6 +132,7 @@ export default [
                     { regex: '^gi://(Clutter|Meta|St|Shell)(\\?|$)', message: 'prefs runs outside the shell: no Clutter/Meta/St/Shell' },
                     { regex: '^\\./(shell|ui|helper)/', message: 'prefs may not import shell/, ui/ or helper/' },
                     NO_NODE,
+                    NO_SYSTEM,
                 ],
             }],
         },
