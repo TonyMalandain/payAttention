@@ -227,3 +227,9 @@ Append only. Newest at the bottom.
 - **Fact:** The alert plays a fixed alarm-clock sound, which the owner calls "noise". It should play the alert sound chosen in GNOME Settings. Backlog item PG-7. This refines R-8/R-15 (sound at insist and takeover, sound on/off); it needs no new requirement.
 - **Source:** the owner, 2026-09-27.
 - **Touches:** solution.md R-8, R-15
+
+## 2026-09-27 — PG-4a review: text passcodes leaked in grouped formats
+- **Kind:** decision
+- **Fact:** Google Meet PINs and spaced passcodes leaked past D-025's "next word" rule. Closed as D-027: removal runs to the end of the line.
+- **Source:** reviewer, PG-4a round 1.
+- **Touches:** decisions.md D-025, D-027

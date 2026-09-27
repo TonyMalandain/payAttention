@@ -147,7 +147,7 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** The owner's calendar names reach the engine, including a cloud one.
 **Source:** the product manager, closing an architect finding.
 
-### D-025 — Passcodes written as text are also removed before sending — 2026-09-27
+### D-025 — Passcodes written as text are also removed before sending  [SUPERSEDED by D-027 on 2026-09-27]
 **Decision:** We extended D-022. In the description and the place, the value after "passcode", "password", "pwd" or "PIN" is replaced with "[removed]" before the invite is sent.
 **Why:** Zoom and Teams invites usually repeat the passcode as plain text. Removing it only from links (D-022) left it going to the engine anyway.
 **Costs accepted:** A description that uses one of these words for something else loses the word after it. The verdict does not depend on it.
@@ -158,3 +158,10 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner's choice.
 **Costs accepted:** GNOME's review rules say an extension must be distributable under terms compatible with GPL-2.0-or-later. Apache 2.0 is compatible with GPL-3.0 but not with GPL-2.0 alone. A reviewer on extensions.gnome.org could question it if the extension is ever published there. It does not affect installing it from the repository. Checked on 2026-09-27: nothing is bundled; the development tools are permissive (MIT, Apache-2.0, BSD, ISC, BlueOak) and never shipped; the GNOME libraries used at run time are LGPL or GPL-2.0-or-later and come with the system. Because GNOME Shell is GPL-2.0-*or-later* and Apache 2.0 is GPL-3.0-compatible, the combination can be distributed, so there is no conflict.
 **Source:** the owner, 2026-09-27.
+
+### D-027 — A text passcode is removed up to the end of its line — 2026-09-27
+**Decision:** We changed how D-025 reads "the value". Everything after "passcode", "password", "pwd" or "PIN" (and any words such as "code" or "is" and separators such as ":", "-" or "=") is replaced with "[removed]", up to the end of that line.
+**Why:** Codes are often written in groups ("PIN: 263 947 381#", "Passcode: 12 34 56"). Removing only the next word leaked most of the code (found in review).
+**Costs accepted:** Text after the keyword on the same line is lost, even when it is not part of the code. The verdict does not depend on it.
+**Source:** the product manager, closing a reviewer finding.
+
