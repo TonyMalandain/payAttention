@@ -496,6 +496,62 @@ const SCENARIOS = {
         step({ afterClose: { children: aiChildren().length, result: find(window, 'payattention-ai-test-result').subtitle } });
     },
 
+    // An address change, from this window or from outside it: the key row's refusal, Remove,
+    // and the address row follow the new address. Keys come in argv and are never printed.
+    'address-change': async (Prefs, [key]) => {
+        const window = await openWindow(Prefs);
+        const settings = window._settings;
+        // Another writer of the same settings, as the Extensions app or gsettings would be.
+        const outside = new Gio.Settings({ schema_id: settings.schema_id });
+        const endpointRow = find(window, 'payattention-ai-endpoint');
+        const where = find(window, 'payattention-ai-where');
+        const keyRow = find(window, 'payattention-ai-key');
+        const status = find(window, 'payattention-ai-key-status');
+        const remove = find(window, 'payattention-ai-key-remove');
+        const test = find(window, 'payattention-ai-test');
+        const statusIs = (text, what) => waitFor(() => status.subtitle === text, WAIT_MS, what);
+
+        apply(endpointRow, ENGINE_ONE);
+        apply(keyRow, key);
+        await statusIs(describeKey('saved', true), 'a key saved for engine-one');
+        await waitFor(() => keyRow.get_sensitive(), WAIT_MS, 'the key row sensitive after the save');
+
+        // A refused key, then the address changes: the field empties and its red goes with it.
+        apply(keyRow, 'a b');
+        const refusedRed = keyRow.has_css_class('error');
+        const removeBefore = remove.get_sensitive();
+        apply(endpointRow, ENGINE_TWO);
+        step({
+            refusedThenAddress: { refusedRed, cleared: keyRow.text === '', red: keyRow.has_css_class('error') },
+            pendingAway: { removeBefore, status: status.subtitle, removeSensitive: remove.get_sensitive() },
+        });
+        await statusIs(describeKey('none', true), 'status none for engine-two');
+        step({ answeredAway: { removeSensitive: remove.get_sensitive() } });
+
+        apply(endpointRow, ENGINE_ONE);
+        const pendingBack = { status: status.subtitle, removeSensitive: remove.get_sensitive() };
+        await statusIs(describeKey('saved', true), 'status saved for engine-one again');
+        step({ pendingBack, answeredBack: { removeSensitive: remove.get_sensitive() } });
+
+        // A change made outside the window: the address row follows, even over a refused address.
+        apply(endpointRow, 'ftp://x');
+        const typedRed = endpointRow.has_css_class('error');
+        outside.set_string('ai-endpoint', ENGINE_TWO);
+        const followed = {
+            typedRed, text: endpointRow.text, red: endpointRow.has_css_class('error'), where: where.subtitle,
+            status: status.subtitle, removeSensitive: remove.get_sensitive(),
+        };
+        await statusIs(describeKey('none', true), 'status none for engine-two, set outside');
+        step({
+            outside: {
+                ...followed,
+                removeSensitiveAfter: remove.get_sensitive(),
+                keySensitiveAfter: keyRow.get_sensitive(),
+                testSensitiveAfter: test.get_sensitive(),
+            },
+        });
+    },
+
     // No Secret Service on the bus: the status says so.
     'key-unreachable': async Prefs => {
         const window = await openWindow(Prefs);

@@ -1003,9 +1003,10 @@ computer / on the local network / on the internet, the last two saying
 invites leave the computer); or the rules because AI mode is on but its
 address or model cannot be used. Then per local day a heading, and per meeting: start–end time,
 verdict (`MUST` / `ignore`), online / in person (with travel minutes when in
-person), title, and core's reason on its own line (AI reasons already read
+person; neither on an all-day row), title, and core's reason on its own line (AI reasons already read
 "AI: …", `core/verdict.js:99`); "your choice" when overridden. A footer: calendars
-that failed (`ok:false`, by name), and in AI mode the count of meetings the
+that failed (`ok:false`, one line each, by name, with the error code in plain
+words; the JSON keeps the code), and in AI mode the count of meetings the
 rules decided because the engine was unavailable (`byRules`), and the count
 still waiting for the engine when the 5 minutes ran out (`pending`), shown
 with the verdict payAttention gives now. "Your choice" marks a verdict

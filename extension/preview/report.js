@@ -8,6 +8,7 @@
 import { cleanText } from '../core/aiProtocol.js';
 import { aiEngine } from '../core/aiEngine.js';
 import { formatClock } from '../core/display.js';
+import { meetingCount, unreadableCalendarText } from './cli.js';
 
 // Built once, as core/display.js does: the options are static, the zone is the process's.
 const DAY = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -81,17 +82,19 @@ function timeText(j) {
     return `${formatClock(j.start)}–${formatClock(j.end)}`;
 }
 
-const meetings = n => (n === 1 ? '1 meeting' : `${n} meetings`);
+/** '' for an all-day meeting: its row shows no online or in-person label (product, 2026-09-27). */
+function modeText(j) {
+    if (j.allDay)
+        return '';
+    return j.mode === 'online' ? 'online' : `in person, ${j.travelMinutes} min travel`;
+}
 
 function footerLines({ sources, aiProgress }) {
-    const out = [];
-    const unreadable = sources.filter(s => s.ok === false);
-    if (unreadable.length > 0)
-        out.push('Could not read: ' + unreadable.map(s => `${cleanText(s.name)} (${cleanText(s.error ?? 'error')})`).join(', '));
+    const out = sources.filter(s => s.ok === false).map(s => unreadableCalendarText(s.name, s.error));
     if (aiProgress.byRules > 0)
-        out.push(`${meetings(aiProgress.byRules)} decided by the rules: the AI engine was unavailable.`);
+        out.push(`${meetingCount(aiProgress.byRules)} decided by the rules: the AI engine was unavailable.`);
     if (aiProgress.pending > 0)
-        out.push(`${meetings(aiProgress.pending)} still waiting for the AI engine after 5 minutes: shown with the verdict payAttention gives now.`);
+        out.push(`${meetingCount(aiProgress.pending)} still waiting for the AI engine after 5 minutes: shown with the verdict payAttention gives now.`);
     return out;
 }
 
@@ -112,9 +115,8 @@ export function previewText(input) {
             out.push('', day);
         previousDay = day;
         const verdict = (j.verdict === 'must' ? 'MUST' : 'ignore') + (j.verdictOverridden ? ' (your choice)' : '');
-        const mode = j.mode === 'online' ? 'online' : `in person, ${j.travelMinutes} min travel`;
         const title = cleanText(j.title) || '(no title)';
-        out.push(`  ${timeText(j)}  ${verdict}  ${mode}  ${title}`, `    ${cleanText(j.reason)}`);
+        out.push(`  ${[timeText(j), verdict, modeText(j), title].filter(Boolean).join('  ')}`, `    ${cleanText(j.reason)}`);
     }
     const footer = footerLines(input);
     if (footer.length > 0)

@@ -231,6 +231,50 @@ describe('the API key', { skip: SKIP }, () => {
     });
 });
 
+describe('an address change', { skip: SKIP }, () => {
+    let session, seen, output, K;
+    const ENGINE_TWO = 'https://engine-two.example.test/v1';
+
+    before(async () => {
+        session = await createPrefsSession('prefs-address-change');
+        K = throwawayKey();
+        const r = await drive(session, 'address-change', [K]);
+        seen = merged(r.steps);
+        output = r.output;
+    });
+
+    after(async () => {
+        await session?.stop();
+    });
+
+    test("a refused key's red style clears when the address change empties the field", () => {
+        assert.deepEqual(seen.refusedThenAddress, { refusedRed: true, cleared: true, red: false });
+    });
+
+    test('Remove is disabled while the new address is looked up, never the old answer', () => {
+        assert.deepEqual(seen.pendingAway, { removeBefore: true, status: '', removeSensitive: false });
+        assert.deepEqual(seen.answeredAway, { removeSensitive: false });
+        assert.deepEqual(seen.pendingBack, { status: '', removeSensitive: false });
+    });
+
+    test('Remove reflects the new address as soon as its lookup ends', () => {
+        assert.deepEqual(seen.answeredBack, { removeSensitive: true });
+        assert.equal(seen.outside.removeSensitiveAfter, false);
+    });
+
+    test('the address field follows a change of ai-endpoint made outside the window', () => {
+        assert.deepEqual(seen.outside, {
+            typedRed: true, text: ENGINE_TWO, red: false, where: describeEndpoint(ENGINE_TWO).text,
+            status: '', removeSensitive: false,
+            removeSensitiveAfter: false, keySensitiveAfter: true, testSensitiveAfter: true,
+        });
+    });
+
+    test('no key reaches any output', () => {
+        assert.equal(output.includes(K), false);
+    });
+});
+
 /** A loopback port that was open a moment ago and is closed now. */
 async function closedPort() {
     const server = net.createServer();

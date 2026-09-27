@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Tony Malandain
 
-// The preview's command-line rules and fixed texts (interfaces.md §7.3). Gi-free,
-// so Node tests them.
+// The preview's command-line rules and fixed texts (interfaces.md §7.3), with the
+// shared wording the run and the report print. Gi-free, so Node tests them.
 import { cleanText } from '../core/aiProtocol.js';
 
 export const EXIT = Object.freeze({ printed: 0, error: 1, notInstalled: 2, noCalendar: 3 });
@@ -45,4 +45,44 @@ export function parseArgs(argv) {
  */
 export function internalErrorText(error) {
     return 'payAttention preview: internal error: ' + cleanText(String(error));
+}
+
+/**
+ * @param {number} n
+ * @returns {string} '1 meeting', else '<n> meetings'
+ */
+export function meetingCount(n) {
+    return n === 1 ? '1 meeting' : `${n} meetings`;
+}
+
+/**
+ * The stderr line while the run waits for the AI engine: counts only.
+ *
+ * @param {number} pending
+ * @returns {string}
+ */
+export function progressText(pending) {
+    return `payAttention: asking the AI engine: ${meetingCount(pending)} waiting`;
+}
+
+// The calendar helper's source error codes (helper/messages.js SOURCE_ERRORS), in plain words.
+// Repeated as strings because preview/ may not import helper/ (boundaries.md).
+const SOURCE_ERROR_PHRASES = new Map([
+    ['connect-timeout', 'it did not answer in time'],
+    ['connect-failed', 'could not connect'],
+    ['read-failed', 'could not read its meetings'],
+]);
+const UNKNOWN_SOURCE_ERROR_PHRASE = 'something went wrong';
+
+/**
+ * One footer line for a calendar the helper could not read. The code itself is
+ * never printed: --json carries it.
+ *
+ * @param {string} name the source's display name
+ * @param {string|null} error the source's error code
+ * @returns {string} 'Could not read calendar "<name>": <plain reason>.'
+ */
+export function unreadableCalendarText(name, error) {
+    const reason = SOURCE_ERROR_PHRASES.get(error) ?? UNKNOWN_SOURCE_ERROR_PHRASE;
+    return `Could not read calendar "${cleanText(name)}": ${reason}.`;
 }

@@ -9,7 +9,7 @@
 import { aiEngine } from '../core/aiEngine.js';
 import { Verdicts } from '../app/verdicts.js';
 import { formatPreview } from './report.js';
-import { EXIT, internalErrorText } from './cli.js';
+import { EXIT, internalErrorText, progressText } from './cli.js';
 
 export const SNAPSHOT_WAIT_MS = 30_000;   // constraints.md, §7.3
 export const AI_WAIT_MS = 300_000;        // constraints.md, §7.3; counted from the first accepted snapshot
@@ -22,8 +22,6 @@ const DEP_NAMES = ['createStoreReader', 'createFeed', 'createAiClient', 'createT
  * own state before it calls this, so the answers live for the run and are never stored.
  */
 function keepAnswersInMemoryOnly() {}
-
-const meetings = n => (n === 1 ? '1 meeting' : `${n} meetings`);
 
 /** @typedef {{code: 0|1|3, stdout: string, stderr: string}} PreviewOutcome  no trailing newlines; '' = print nothing */
 
@@ -123,7 +121,7 @@ export function startPreview(deps) {
         const p = verdicts.aiProgress(t);
         if (p.pending > 0 && t - firstSnapshotAt < AI_WAIT_MS) {
             if (p.pending !== lastPending)
-                progress(`payAttention: asking the AI engine: ${meetings(p.pending)} waiting`);
+                progress(progressText(p.pending));
             lastPending = p.pending;
             return null;
         }

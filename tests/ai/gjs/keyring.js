@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Tony Malandain
 
-// Test-only keyring writer for the throwaway keyring of tests/ai/session.js.
-// Never run it against a real session bus.
+// Test-only keyring tool for a throwaway keyring: it stores, locks and counts
+// items. Used by tests/ai/session.js and by tests/smoke/uninstall-check.sh, each
+// on its own private bus and home. Never run it against a real session bus.
 //
 //   gjs -m keyring.js store <endpoint> <key>   saves a key under the engine key schema
 //   gjs -m keyring.js lock                     locks every collection
@@ -19,12 +20,12 @@ import System from 'system';
 import { ENGINE_KEY_SCHEMA } from '../../../extension/ai/keyring.js';
 import { ENGINE_KEY_ATTRIBUTE } from '../../../extension/core/aiEngine.js';
 
-// Exits from inside a main-loop callback: ending any other way can hang or
-// crash gjs (plan PG-1b, fact 1).
 /** Another application's schema with the same attribute: uninstall --purge must leave it alone. */
 const OTHER_SCHEMA = new Secret.Schema('org.example.payattention-test.Other', Secret.SchemaFlags.NONE,
     { [ENGINE_KEY_ATTRIBUTE]: Secret.SchemaAttributeType.STRING });
 
+// Exits from inside a main-loop callback: ending any other way can hang or
+// crash gjs (plan PG-1b, fact 1).
 function finish(code, text) {
     GLib.idle_add(GLib.PRIORITY_HIGH, () => {
         (code === 0 ? print : printerr)(text);

@@ -109,17 +109,36 @@ async function installedSession(name) {
 
 /**
  * Runs a preview entry file with env to its exit; SIGKILLed after RUN_TIMEOUT_MS.
+ * helpersAtExit lists the processes still running from the entry's install directory's
+ * helper/main.js or ai/main.js at the moment the preview process exits. It is taken at
+ * 'exit', not 'close': the helpers inherit stderr, so 'close' waits for them anyway.
  *
  * @returns {{child: import('node:child_process').ChildProcess,
- *   done: Promise<{code:number|null, signal:string|null, stdout:string, stderr:string, ms:number}>}}
+ *   done: Promise<{code:number|null, signal:string|null, stdout:string, stderr:string, ms:number,
+ *     helpersAtExit:number[]}>}}
  */
 function startPreviewProcess(mainJs, env, args = []) {
+    const installDir = path.dirname(path.dirname(mainJs));
+    const helperMains = [path.join(installDir, 'helper/main.js'), path.join(installDir, 'ai/main.js')];
+    let helpersAtExit = null;
     const started = Date.now();
     const child = spawn('gjs', ['-m', mainJs, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '';
     child.stdout.setEncoding('utf8').on('data', d => (stdout += d));
     child.stderr.setEncoding('utf8').on('data', d => (stderr += d));
     const timer = setTimeout(() => child.kill('SIGKILL'), RUN_TIMEOUT_MS);
+    child.once('exit', () => {
+        helpersAtExit = helperMains.flatMap(processesRunning);
+        // A helper left behind holds the inherited stderr open, so 'close' would never
+        // come: kill it (it is recorded above, so the test still fails).
+        for (const pid of helpersAtExit) {
+            try {
+                process.kill(pid, 'SIGKILL');
+            } catch {
+                // already gone
+            }
+        }
+    });
     const done = new Promise((resolve, reject) => {
         child.once('error', e => {
             clearTimeout(timer);
@@ -127,7 +146,7 @@ function startPreviewProcess(mainJs, env, args = []) {
         });
         child.once('close', (code, signal) => {
             clearTimeout(timer);
-            resolve({ code, signal, stdout, stderr, ms: Date.now() - started });
+            resolve({ code, signal, stdout, stderr, ms: Date.now() - started, helpersAtExit });
         });
     });
     return { child, done };
@@ -186,6 +205,7 @@ describe('the preview, installed from the zip', { skip: SKIP }, () => {
             assert.deepEqual(json.meetings.map(x => x.overridden), expected.map(j => j.verdictOverridden));
 
             assert.ok(fs.readFileSync(s.keyfile).equals(before), 'the keyfile is byte-for-byte unchanged');
+            assert.deepEqual(r.helpersAtExit, [], 'the calendar helper is gone when the preview exits 0');
         });
 
         test('text: the report, with no control byte but the line ends', async () => {
@@ -235,6 +255,7 @@ describe('the preview, installed from the zip', { skip: SKIP }, () => {
 
             assert.ok(fs.readFileSync(s.keyfile).equals(before), 'the keyfile is byte-for-byte unchanged');
             assert.deepEqual(await s.session.countKeys(), keysBefore);
+            assert.deepEqual(r.helpersAtExit, [], 'both helpers are gone when the preview exits 0');
         });
     });
 
@@ -288,6 +309,7 @@ describe('the preview, installed from the zip', { skip: SKIP }, () => {
             assert.ok(r.stderr.includes('no calendar data after 30 seconds'), r.stderr);
             assert.ok(r.stderr.includes('registry-failed'), r.stderr);
             assert.equal(r.stdout, '');
+            assert.deepEqual(r.helpersAtExit, [], 'both helpers are gone when the preview exits 3');
         });
     });
 

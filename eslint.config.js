@@ -7,6 +7,11 @@
 import js from '@eslint/js';
 import globals from 'globals';
 
+// Every relative pattern starts with UP (a parent directory) or HERE (this directory), so
+// './../x', '.././x' and '././x' cannot sidestep a rule written for '../x' or './x'.
+// Each prefix consumes every './', so a lookahead after it sees the real directory name.
+const UP = '^(?:\\./)*\\.\\./(?:\\./)*(?!\\./)';
+const HERE = '^(?:\\./)+(?!\\./)';
 const NO_NODE = { regex: '^node:', message: 'GNOME code cannot import Node modules' };
 const NO_SHELL_SIDE_GI = {
     regex: '^gi://(ECal|EDataServer|ICalGLib|Gtk|Gdk|Adw|Soup|Secret)(\\?|$)',
@@ -39,18 +44,18 @@ const GJS_GLOBALS = {
 };
 const DYNAMIC_IMPORT = { selector: 'ImportExpression', message: 'no dynamic import() in preview/: lint cannot see what it loads' };
 const PREVIEW_COMMON = [
-    { regex: '^\\.\\./core/(judge|plan|alertState)\\.js$', message: 'the preview never judges, plans or touches alert state (ADR-0012)' },
-    { regex: '^\\.\\./app/(?!verdicts\\.js$)', message: 'the preview gets verdicts only from app/verdicts.js (ADR-0012)' },
-    { regex: '^\\.\\./shell/store\\.js$', importNames: ['StoreWriter'], message: 'the preview is read-only: it never holds the store writer (ADR-0012)' },
-    { regex: '^\\.\\./(ui|helper|ai)/', message: 'the preview may not import ui/, helper/ or ai/: it spawns the helpers (ADR-0012)' },
-    { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'the preview may not import extension.js or prefs.js' },
+    { regex: UP + 'core/(judge|plan|alertState)\\.js$', message: 'the preview never judges, plans or touches alert state (ADR-0012)' },
+    { regex: UP + 'app/(?!verdicts\\.js$)', message: 'the preview gets verdicts only from app/verdicts.js (ADR-0012)' },
+    { regex: UP + 'shell/store\\.js$', importNames: ['StoreWriter'], message: 'the preview is read-only: it never holds the store writer (ADR-0012)' },
+    { regex: UP + '(ui|helper|ai)/', message: 'the preview may not import ui/, helper/ or ai/: it spawns the helpers (ADR-0012)' },
+    { regex: UP + '(extension|prefs)\\.js$', message: 'the preview may not import extension.js or prefs.js' },
 ];
 const ONE_JUDGE = 'only app/verdicts.js may import core/judge.js (ADR-0011, boundaries.md)';
 const APP_PATTERNS = [
     { regex: '^(gi|resource|node):', message: 'app/ is GNOME-free: no gi://, resource:// or node: imports (ADR-0011)' },
     NODE_BUILTINS,
     NO_SYSTEM,
-    { regex: '^\\.\\./(?!core/)', message: 'app/ may import only app/ and core/ modules (ADR-0011)' },
+    { regex: UP + '(?!core/)', message: 'app/ may import only app/ and core/ modules (ADR-0011)' },
 ];
 
 export default [
@@ -81,8 +86,8 @@ export default [
                 patterns: [
                     { regex: '^(gi|resource|node):', message: 'core/ is pure: no GNOME or Node imports (ADR-0002)' },
                     NODE_BUILTINS,
-                    { regex: '^\\.\\./', message: 'core/ may import only core/ modules (core/ is flat)' },
-                    { regex: '^\\./judge\\.js$', message: ONE_JUDGE },
+                    { regex: UP + '', message: 'core/ may import only core/ modules (core/ is flat)' },
+                    { regex: HERE + 'judge\\.js$', message: ONE_JUDGE },
                 ],
             }],
             'no-restricted-properties': ['error', ...NO_CLOCK_PROPERTIES],
@@ -107,7 +112,7 @@ export default [
         ignores: ['extension/app/verdicts.js'],
         rules: {
             'no-restricted-imports': ['error', {
-                patterns: [...APP_PATTERNS, { regex: '^\\.\\./core/judge\\.js$', message: ONE_JUDGE }],
+                patterns: [...APP_PATTERNS, { regex: UP + 'core/judge\\.js$', message: ONE_JUDGE }],
             }],
         },
     },
@@ -121,9 +126,9 @@ export default [
                         regex: '^gi://(?!(ECal|EDataServer|ICalGLib|Gio|GioUnix|GLib)(\\?|$))',
                         message: 'helper may use only ECal, EDataServer, ICalGLib, Gio, GioUnix, GLib',
                     },
-                    { regex: '^\\.\\./core/(?!protocol\\.js$)', message: 'helper may import only core/protocol.js' },
-                    { regex: '^\\.\\./(shell|ui|ai|app)/', message: 'helper may not import shell/, ui/, ai/ or app/' },
-                    { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'helper may not import extension.js or prefs.js' },
+                    { regex: UP + 'core/(?!protocol\\.js$)', message: 'helper may import only core/protocol.js' },
+                    { regex: UP + '(shell|ui|ai|app)/', message: 'helper may not import shell/, ui/, ai/ or app/' },
+                    { regex: UP + '(extension|prefs)\\.js$', message: 'helper may not import extension.js or prefs.js' },
                     NO_NODE,
                 ],
             }],
@@ -140,11 +145,11 @@ export default [
                         message: 'the AI helper may use only Soup, Secret, Gio, GioUnix, GLib',
                     },
                     {
-                        regex: '^\\.\\./core/(?!(aiProtocol|aiPrompt|aiEngine)\\.js$)',
+                        regex: UP + 'core/(?!(aiProtocol|aiPrompt|aiEngine)\\.js$)',
                         message: 'the AI helper may import only core/aiProtocol.js, aiPrompt.js and aiEngine.js (ADR-0010)',
                     },
-                    { regex: '^\\.\\./(shell|ui|helper|app)/', message: 'the AI helper may not import shell/, ui/, helper/ or app/' },
-                    { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'the AI helper may not import extension.js or prefs.js' },
+                    { regex: UP + '(shell|ui|helper|app)/', message: 'the AI helper may not import shell/, ui/, helper/ or app/' },
+                    { regex: UP + '(extension|prefs)\\.js$', message: 'the AI helper may not import extension.js or prefs.js' },
                     NO_NODE,
                 ],
             }],
@@ -156,8 +161,8 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\.\\./(ui|helper|ai)/', message: 'shell/ may not import ui/, helper/ or ai/' },
-                    { regex: '^\\.\\./core/judge\\.js$', message: ONE_JUDGE },
+                    { regex: UP + '(ui|helper|ai)/', message: 'shell/ may not import ui/, helper/ or ai/' },
+                    { regex: UP + 'core/judge\\.js$', message: ONE_JUDGE },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -179,8 +184,8 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\.\\./(shell|app|helper|ai)/', message: 'ui/ may not import shell/, app/, helper/ or ai/' },
-                    { regex: '^\\.\\./core/(?!display\\.js$)', message: 'ui/ may import only display helpers (core/display.js)' },
+                    { regex: UP + '(shell|app|helper|ai)/', message: 'ui/ may not import shell/, app/, helper/ or ai/' },
+                    { regex: UP + 'core/(?!display\\.js$)', message: 'ui/ may import only display helpers (core/display.js)' },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -193,7 +198,7 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\./(helper|core|ai)/', message: 'extension.js may not import helper/, core/ or ai/ directly' },
+                    { regex: HERE + '(helper|core|ai)/', message: 'extension.js may not import helper/, core/ or ai/ directly' },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -206,8 +211,8 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     { regex: '^gi://(Clutter|Meta|St|Shell|Soup)(\\?|$)', message: 'prefs runs outside the shell and never uses the network: no Clutter/Meta/St/Shell/Soup' },
-                    { regex: '^\\./(shell|app|ui|helper|ai)/', message: 'prefs may not import shell/, app/, ui/, helper/ or ai/' },
-                    { regex: '^\\./core/judge\\.js$', message: ONE_JUDGE },
+                    { regex: HERE + '(shell|app|ui|helper|ai)/', message: 'prefs may not import shell/, app/, ui/, helper/ or ai/' },
+                    { regex: HERE + 'core/judge\\.js$', message: ONE_JUDGE },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -225,7 +230,7 @@ export default [
                     { regex: '^resource:', message: 'the preview runs outside the shell: no resource:// imports' },
                     { regex: '^gi://(?!(Gio|GLib|GLibUnix)(\\?|$))', message: 'the preview may use only Gio, GLib and GLibUnix' },
                     {
-                        regex: '^\\.\\./shell/(?!(store|calendarFeed|aiHelperClient|helperProcess|ticker)\\.js$)',
+                        regex: UP + 'shell/(?!(store|calendarFeed|aiHelperClient|helperProcess|ticker)\\.js$)',
                         message: 'from shell/ the preview may use only the store reader, the calendar feed, the AI client, the spawn rule and the ticker (interfaces.md §7.3)',
                     },
                     NO_NODE,
@@ -249,7 +254,7 @@ export default [
                     { regex: '^(gi|resource|node):', message: 'preview/ logic is GNOME-free so Node can test it; only preview/main.js may use gi:// (ADR-0011)' },
                     NODE_BUILTINS,
                     NO_SYSTEM,
-                    { regex: '^\\.\\./(?!(core|app)/)', message: 'preview/ logic may import only core/, app/verdicts.js and preview/ modules' },
+                    { regex: UP + '(?!(core|app)/)', message: 'preview/ logic may import only core/, app/verdicts.js and preview/ modules' },
                 ],
             }],
             'no-restricted-properties': ['error', ...NO_CLOCK_PROPERTIES],

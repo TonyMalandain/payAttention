@@ -328,8 +328,10 @@ function verdictsPage(settings, helperPath, cancellable) {
     const refreshKey = async () => {
         const generation = ++keyGeneration;
         const address = settings.get_string('ai-endpoint');
-        // Empty until the answer, so the line never describes the previous address.
+        // Empty and disabled until the answer, so neither describes the previous address.
         keyStatusRow.subtitle = '';
+        keySaved = false;
+        updateSensitivity();
         const state = await keyState(address, cancellable);
         if (generation !== keyGeneration || cancellable.is_cancelled())
             return;
@@ -443,8 +445,14 @@ function verdictsPage(settings, helperPath, cancellable) {
     endpointRow.connect('changed', updateSensitivity);
     modelRow.connect('changed', updateSensitivity);
     settings.connect('changed::ai-endpoint', () => {
-        // A key typed but not saved was meant for the previous address.
+        // A key typed but not saved was meant for the previous address, and so was its refusal.
         keyRow.text = '';
+        keyRow.remove_css_class('error');
+        // Follow a change made outside this window; one made here already shows the stored text.
+        const address = settings.get_string('ai-endpoint');
+        if (endpointRow.text !== address)
+            endpointRow.text = address;
+        endpointRow.remove_css_class('error');
         refresh();
     });
     settings.connect('changed::ai-model', refresh);

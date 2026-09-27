@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
     EXIT, STOP_SIGNALS, NOT_INSTALLED_TEXT, USAGE, signalExitCode, parseArgs, internalErrorText,
+    meetingCount, progressText, unreadableCalendarText,
 } from '../../extension/preview/cli.js';
 
 describe('preview cli', () => {
@@ -50,5 +51,34 @@ describe('preview cli', () => {
         assert.deepEqual(EXIT, { printed: 0, error: 1, notInstalled: 2, noCalendar: 3 });
         assert.ok(Object.isFrozen(EXIT));
         assert.equal(NOT_INSTALLED_TEXT, 'payAttention is not installed');
+    });
+
+    test('a meeting count: singular for 1, plural otherwise', () => {
+        assert.equal(meetingCount(1), '1 meeting');
+        assert.equal(meetingCount(0), '0 meetings');
+        assert.equal(meetingCount(2), '2 meetings');
+    });
+
+    test('the progress line counts the meetings waiting for the AI engine', () => {
+        assert.equal(progressText(1), 'payAttention: asking the AI engine: 1 meeting waiting');
+        assert.equal(progressText(3), 'payAttention: asking the AI engine: 3 meetings waiting');
+    });
+
+    test('an unreadable calendar in plain words, one phrase per calendar-helper source error', () => {
+        assert.equal(unreadableCalendarText('Broken', 'connect-failed'), 'Could not read calendar "Broken": could not connect.');
+        assert.equal(unreadableCalendarText('Slow', 'connect-timeout'), 'Could not read calendar "Slow": it did not answer in time.');
+        assert.equal(unreadableCalendarText('Work', 'read-failed'), 'Could not read calendar "Work": could not read its meetings.');
+    });
+
+    test('an unknown or missing error gets a generic phrase, never the raw code', () => {
+        assert.equal(unreadableCalendarText('Odd', 'no-backend'), 'Could not read calendar "Odd": something went wrong.');
+        assert.equal(unreadableCalendarText('Odd', null), 'Could not read calendar "Odd": something went wrong.');
+        // An inherited property name is not a known code either.
+        assert.equal(unreadableCalendarText('Odd', 'toString'), 'Could not read calendar "Odd": something went wrong.');
+    });
+
+    test('the calendar name is cleaned of terminal controls', () => {
+        const text = unreadableCalendarText('Bad\u001b[2J cal', 'connect-failed');
+        assert.equal(text, 'Could not read calendar "Bad [2J cal": could not connect.');
     });
 });

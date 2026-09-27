@@ -98,6 +98,15 @@ describe('preview report: JSON', () => {
         assert.equal(office.travelMinutes, 45);
     });
 
+    test('v1 unchanged: an unreadable calendar keeps its code, an all-day meeting keeps its mode', () => {
+        const bad = { ...SOURCE, uid: 'b1', name: 'Broken', ok: false, error: 'connect-failed' };
+        const json = previewJson(input({ judged: judgedOf([ALL_DAY]), sources: [SOURCE, bad] }));
+        assert.deepEqual(json.calendars[1], { name: 'Broken', ok: false, error: 'connect-failed' });
+        assert.equal(json.meetings[0].title, 'Holiday');
+        assert.equal(json.meetings[0].mode, judgedOf([ALL_DAY])[0].mode);
+        assert.ok(['online', 'in-person'].includes(json.meetings[0].mode));
+    });
+
     test("verdictSource: 'rules' without an engine, even in AI mode with an unusable address; 'ai' with one", () => {
         assert.equal(previewJson(input()).verdictSource, 'rules');
         const unusable = { ...AI_SETTINGS, aiEndpoint: 'not a url' };
@@ -117,7 +126,7 @@ describe('preview report: cleaning', () => {
         assert.ok(!CONTROLS.test(text.replaceAll('\n', '')), JSON.stringify(text));
         assert.ok(text.includes('Board ]0;pwned sync'));
         assert.ok(text.includes('AI: fine 31m print'));
-        assert.ok(text.includes('Could not read: Bad [2J cal (gone [0m away)'));
+        assert.ok(text.includes('Could not read calendar "Bad [2J cal": something went wrong.'), text);
 
         const parsed = JSON.parse(formatPreview(inp, 'json'));
         assert.equal(parsed.meetings[0].title, 'Board ]0;pwned sync');
@@ -191,7 +200,7 @@ describe('preview report: text', () => {
         const noEnd = { ...judgedOf([ONLINE])[0], end: null };
         const out = lines(input({ judged: [noEnd, ...judged] }));
         assert.ok(out.includes(`  ${formatClock(T0 + 2 * HOUR)}–${formatClock(T0 + 3 * HOUR)}  ${judged[0].verdict === 'must' ? 'MUST' : 'ignore'}  in person, 45 min travel  Coffee`), out.join('\n'));
-        assert.ok(out.some(l => /^ {2}all day {2}ignore {2}\S.* {2}Holiday$/.test(l)), out.join('\n'));
+        assert.ok(out.includes('  all day  ignore  Holiday'), 'an all-day row shows no online or in-person label: ' + out.join('\n'));
         assert.ok(out.includes(`  ${formatClock(T0)}  MUST  online  Client review`), out.join('\n'));
     });
 
@@ -218,12 +227,13 @@ describe('preview report: text', () => {
     test('the footer: only the lines that apply, in order, singular and plural', () => {
         const bad = (uid, name, error) => ({ ...SOURCE, uid, name, ok: false, error });
         const full = previewText(input({
-            sources: [SOURCE, bad('b1', 'Broken', 'no backend'), bad('b2', 'Other', null)],
+            sources: [SOURCE, bad('b1', 'Broken', 'connect-failed'), bad('b2', 'Other', null)],
             aiProgress: { pending: 2, byRules: 1 },
         }));
         assert.ok(full.endsWith([
             '',
-            'Could not read: Broken (no backend), Other (error)',
+            'Could not read calendar "Broken": could not connect.',
+            'Could not read calendar "Other": something went wrong.',
             '1 meeting decided by the rules: the AI engine was unavailable.',
             '2 meetings still waiting for the AI engine after 5 minutes: shown with the verdict payAttention gives now.',
         ].join('\n')), full);
@@ -235,6 +245,7 @@ describe('preview report: text', () => {
             '1 meeting still waiting for the AI engine after 5 minutes: shown with the verdict payAttention gives now.',
         ].join('\n')), some);
         assert.ok(!some.includes('Could not read'));
+        assert.ok(!full.includes('connect-failed'), 'the text never shows a raw error code');
 
         const none = previewText(input());
         assert.ok(!/Could not read|decided by the rules|still waiting/.test(none));
