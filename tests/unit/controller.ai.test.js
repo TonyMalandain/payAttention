@@ -262,7 +262,7 @@ describe('controller AI: stored answers and re-asking', () => {
         const h = setup({ settings: AI, aiAnswers: stored({ [KEY]: entry, [BKEY]: entry }) });
         h.deliverAt(T0 - 2 * HOUR, snapshot([MEETING, B], [WORK]));
         h.aiTick(T0 - 2 * HOUR);
-        assert.equal(openAsks(h)[0].invite.start, allAsks(h)[0].invite.start);
+        assert.equal(openAsks(h)[0].invite.start, '2026-09-28 Mon 14:00', 'MEETING, the soonest, is asked first');
         h.client.answer(failed('bad-reply'));
         h.at(T0 - 2 * HOUR + S);
         h.aiTick(T0 - 2 * HOUR + S);
@@ -409,7 +409,7 @@ describe('controller AI: lifecycle', () => {
         const h = setup({ settings: AI, aiAnswers: stored({ [KEY]: entry }) });
         h.deliverAt(T0 - 2 * HOUR, snapshot([MEETING, LATER], [WORK]));
         h.aiTick(T0 - 2 * HOUR);
-        assert.equal(openAsks(h)[0].invite.start, allAsks(h)[0].invite.start);
+        assert.equal(openAsks(h)[0].invite.start, '2026-09-28 Mon 16:00', 'LATER is asked');
         assert.equal(allAsks(h).length, 1, 'only LATER: MEETING has a current answer');
         h.client.answer(failed('auth'));
         h.at(T0 - 2 * HOUR + S);

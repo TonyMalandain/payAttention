@@ -370,6 +370,67 @@ describe('AiQueue', () => {
             assert.equal(q.client.engine, E2);
             assert.equal(q.client.asks.length, 1);
         });
+
+        for (const code of ['auth', 'config', 'no-key']) {
+            test(`${code} gives the meeting its own 1 min retry: a bad-reply after the pause waits 2 min`, () => {
+                const q = makeQueue();
+                q.items = [item(1, T0 + HOUR)];
+                q.queue.setEngine(E1);
+                q.pump();
+                q.client.answer(failed(code));
+                q.now = T0 + 30 * MIN;
+                q.pump();
+                assert.equal(q.client.asks.length, 2);
+                q.client.answer(failed('bad-reply'));
+                // The refusal set waitMs to 1 min, so this failure doubles it to 2 min.
+                q.now = T0 + 31 * MIN;
+                q.pump();
+                assert.equal(q.client.asks.length, 2, 'not re-asked 1 min after the bad-reply');
+                q.now = T0 + 32 * MIN - 1;
+                q.pump();
+                assert.equal(q.client.asks.length, 2);
+                q.now = T0 + 32 * MIN;
+                q.pump();
+                assert.equal(q.client.asks.length, 3, 're-asked 2 min after the bad-reply');
+            });
+        }
+    });
+
+    describe('7b. the rows that clear engine down or leave it alone', () => {
+        test('a bad-reply after a network failure clears engine down (the engine did reply)', () => {
+            const q = makeQueue();
+            q.items = [item(1, T0 + HOUR)];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(failed('network'));
+            assert.equal(q.state.engineDown, true);
+            q.now = T0 + MIN;
+            q.pump();
+            assert.equal(q.client.asks.length, 2);
+            q.client.answer(failed('bad-reply'));
+            assert.equal(q.state.engineDown, false);
+            assert.equal(q.states.at(-1).engineDown, false);
+        });
+
+        test('bad-request leaves engine down as it was: false stays false, true stays true', () => {
+            const q = makeQueue();
+            q.items = [item(1, T0 + HOUR), item(2, T0 + 2 * HOUR)];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(failed('bad-request'));
+            assert.equal(q.state.engineDown, false);
+            assert.equal(q.state.status, 'unavailable');
+            // Engine up, so no pause: the next meeting is asked at once.
+            q.pump();
+            assert.equal(q.client.asks.length, 2);
+            q.client.answer(failed('network'));
+            assert.equal(q.state.engineDown, true);
+            q.now = T0 + MIN;
+            q.pump();
+            assert.equal(q.client.asks.length, 3);
+            q.client.answer(failed('bad-request'));
+            assert.equal(q.state.engineDown, true);
+        });
     });
 
     describe('8. an unreachable engine is probed at the end of each pause (D-031)', () => {

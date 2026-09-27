@@ -12,16 +12,22 @@ import { T0, MIN, HOUR, CONFIG, NO_OVERRIDES, TIMING, ENV, OWNER, att, event, sn
 
 const S = T0;
 
-function meanMs(fn, runs, warmup) {
+// The fastest of the timed runs, not the mean: `npm test` runs files in parallel, and other
+// load only ever adds time, so the minimum is the stable figure (testing-and-build.md, Layer 1).
+function fastestMs(fn, runs, warmup) {
+    assert.ok(runs >= 10, 'at least 10 timed runs');
     for (let i = 0; i < warmup; i++)
         fn();
-    const t0 = performance.now();
-    for (let i = 0; i < runs; i++)
+    let fastest = Infinity;
+    for (let i = 0; i < runs; i++) {
+        const t0 = performance.now();
         fn();
-    return (performance.now() - t0) / runs;
+        fastest = Math.min(fastest, performance.now() - t0);
+    }
+    return fastest;
 }
 
-test('plan over 500 meetings takes under 1 ms on average', () => {
+test('plan over 500 meetings takes under 1 ms at its fastest', () => {
     const list = [];
     let state = emptyAlertState();
     for (let i = 0; i < 500; i++) {
@@ -37,8 +43,8 @@ test('plan over 500 meetings takes under 1 ms on average', () => {
         if (i < 200)
             state = reduce(state, { type: 'headsUpShown', key, start }, start - 40 * MIN);
     }
-    const mean = meanMs(() => plan(S + HOUR, list, state, TIMING, ENV), 200, 20);
-    assert.ok(mean < 1, `plan mean ${mean.toFixed(3)} ms`);
+    const fastest = fastestMs(() => plan(S + HOUR, list, state, TIMING, ENV), 200, 20);
+    assert.ok(fastest < 1, `plan fastest ${fastest.toFixed(3)} ms`);
 });
 
 function twoThousandEvents() {
@@ -58,19 +64,19 @@ function twoThousandEvents() {
     return snapshot(events);
 }
 
-test('judge over 2 000 events takes under 20 ms on average', () => {
+test('judge over 2 000 events takes under 20 ms at its fastest', () => {
     const snap = twoThousandEvents();
-    const mean = meanMs(() => judge(snap, CONFIG, NO_OVERRIDES, {}), 10, 2);
-    assert.ok(mean < 20, `judge mean ${mean.toFixed(3)} ms`);
+    const fastest = fastestMs(() => judge(snap, CONFIG, NO_OVERRIDES, {}), 10, 2);
+    assert.ok(fastest < 20, `judge fastest ${fastest.toFixed(3)} ms`);
 });
 
 // Judge runs per snapshot and per stored answer, never per tick (controller.js _judgeDirty).
 // 200 ms is an order-of-magnitude guard (assumed): every eligible event builds an invite and a fingerprint.
-test('judge in AI mode over 2 000 events takes under 200 ms on average', () => {
+test('judge in AI mode over 2 000 events takes under 200 ms at its fastest', () => {
     const snap = twoThousandEvents();
     const config = { ...CONFIG, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
     const out = judge(snap, config, NO_OVERRIDES, {}, {});
     assert.ok(out.filter(r => r.aiAsk).length > 1000, 'most events are asked');
-    const mean = meanMs(() => judge(snap, config, NO_OVERRIDES, {}, {}), 10, 2);
-    assert.ok(mean < 200, `judge (AI mode) mean ${mean.toFixed(3)} ms`);
+    const fastest = fastestMs(() => judge(snap, config, NO_OVERRIDES, {}, {}), 10, 2);
+    assert.ok(fastest < 200, `judge (AI mode) fastest ${fastest.toFixed(3)} ms`);
 });
