@@ -118,7 +118,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - the README shows how to use it.
   - Architecture: ADR-0011 (ports and adapters), ADR-0012 and `interfaces.md` §7 (the preview design). Product: D-033.
   - Build order:
-    - **PG-8a — Move the GNOME-free orchestration into `extension/app/` (M, move only).** It moves controller, aiQueue, aiBudget, health, backoff, view and soundCue, with a lint block like core's. Done when all tests pass unchanged and lint forbids GNOME imports in `app/`.
+    - **PG-8a — Move the GNOME-free orchestration into `extension/app/` (M, move only). DONE**, accepted on evidence (byte-identical move, all checks green). Leftover: the stale `./shell/controller.js` lint probe at `tests/unit/boundaries.test.js:60`. It moves controller, aiQueue, aiBudget, health, backoff, view and soundCue, with a lint block like core's. Done when all tests pass unchanged and lint forbids GNOME imports in `app/`.
     - **PG-8b — Extract the verdict component and split the store into reader and writer (M).** Hard prerequisite for PG-8c. Done when the controller uses the new component, the existing controller tests keep their meaning, and the reader side cannot write.
     - **PG-8c — The preview command (M).** Notes from the PG-8b planner: the preview's lint block must forbid importing `StoreWriter` by name; the AI only progresses when the judged list is fetched, so the preview fetches it on its own timer. `extension/preview/`, shipped in the zip. Done when the four parity checks in §7 pass and the README shows how to run it.
 
