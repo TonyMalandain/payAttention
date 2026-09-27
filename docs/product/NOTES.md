@@ -300,3 +300,15 @@ Append only. Newest at the bottom.
 - **Fact:** The PG-4a3 fix round landed. Dial codes no longer eat dates, hashtags or order numbers, and Outlook leftovers are dropped. An unclosed comment or style block keeps its text, so later rules still read it. This was accepted: the agenda of a malformed invite survives. PG-4a3 is accepted and no more passcode work is planned (D-030).
 - **Source:** software engineer, PG-4a3 round 1 fixes.
 - **Touches:** decisions.md D-030
+
+## 2026-09-27 — PG-4d and PG-4e plans taken
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** Both plans are accepted, with three product calls:
+  - the key, "Remove" and "Test connection" use the applied address and model, and are greyed out while an edit is unapplied;
+  - the D-030 warning is always shown, plus a line saying whether this address keeps invites on the computer or sends them out;
+  - `--purge` stops with exit 1 if the password store is locked or unreachable, before erasing settings, and says so.
+
+  The page texts are the planner's wording, kept in one core module; the product manager reviews them on the built page. Findings for the architect are held until the architect's current inbox run ends: prefs.js carries three jobs, "as applied" versus "as entered", the key rule moving to core, the schema name repeated in uninstall.sh, and broadwayd needing `-u`.
+- **Source:** senior engineer, PG-4d and PG-4e plans.
+- **Touches:** solution.md R-17, R-19
