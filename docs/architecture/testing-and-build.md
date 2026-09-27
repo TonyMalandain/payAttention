@@ -11,11 +11,11 @@ Run in this order. Each must pass before the next is worth running.
 
 | Step | Command (contract) | What it runs |
 |---|---|---|
-| 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. |
-| 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/`, `extension/app/` and the gi-free shell modules (`shell/settingsKeys.js`), plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
+| 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. `preview/main.js` gets the gjs globals; the other `preview/` files are linted like `app/`. |
+| 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/`, `extension/app/`, the gi-free shell modules (`shell/settingsKeys.js`) and the preview's gi-free logic (`preview/cli.js`, `session.js`, `report.js`, and the parity test against the alert controller, `tests/unit/preview.parity.test.js`), plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
-| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), and PG-8c adds `preview/` (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, LICENSE and NOTICE (shipped since PG-6). |
-| 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). From PG-4 the same script also runs `tests/ai/**/*.test.js`: the AI helper against a fake engine (Layer 2b). |
+| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=preview --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), `preview/` since PG-8c (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, `preview/main.js`, LICENSE and NOTICE (shipped since PG-6). |
+| 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js" "tests/ai/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (Layer 2), the AI helper against a fake engine (Layer 2b, from PG-4), and the preview installed from the zip (Layer 2c, from PG-8c). **Needs a fresh zip from step 4**: the preview test refuses to run when `dist/…shell-extension.zip` is missing or older than any file under `extension/`. |
 | 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below). |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
@@ -207,6 +207,34 @@ The controller is tested with fake AI clients:
   meeting's last ask failed or the engine is down, and `ok` again once each
   waiting meeting has a current answer or the failed ones pass `cutoff`.
 
+## Layer 2c — the preview, installed (fake data, fake engine)
+
+From PG-8c (ADR-0012, `interfaces.md` §7.3 checks 3 and 4),
+`tests/helper/preview.test.js`. The preview runs only from an installed copy,
+so the test installs `dist/…shell-extension.zip` with
+`gnome-extensions install` into Layer 2b's throwaway home (its own bus, XDG
+directories and unlocked throwaway keyring), writes Layer 2's fixture
+calendars into its isolated EDS, and runs the installed `preview/main.js`
+with `GSETTINGS_BACKEND=keyfile` and `TZ=Asia/Tokyo` (times are the preview process's own).
+Never the owner's extensions directory, settings, calendars, bus or keyring.
+It proves:
+
+- rules mode, `--json`: the fixture verdicts equal `judge` over the same
+  snapshot, a stored override shows as overridden, a failing calendar is
+  named, and the keyfile is byte-for-byte unchanged;
+- text: the report, with no control byte but the line ends;
+- AI mode against Layer 2b's fake engine: AI verdicts sent with the stored
+  key, nothing written, no keyring item added;
+- SIGINT while an ask is held: exit 130 within 5 s, both helpers gone,
+  nothing written;
+- an unreachable bus: exit 3 after 30 s, with the helper's own status line;
+- a copy without a compiled schema: exit 2; `--bogus` exit 1, `--help` exit 0.
+
+stderr must never contain `destroy-failed`, `ai-failed`,
+`protocol-mismatch`, `helper-spawn-failed` or `internal error`. The whole
+layer is skipped (not failed) when `gjs`, `dbus-daemon`,
+`gnome-keyring-daemon` or `gnome-extensions` is not on `PATH`.
+
 ## Layer 3 — shell smoke test (headless gnome-shell)
 
 **Install and uninstall check** (`tests/smoke/uninstall-check.sh`, run by
@@ -373,11 +401,15 @@ it. The journal holds no title, invite field, reason or key.
   before any menu opens, and clicks only once the target is what the stage picks
   at that point.
 - **`connectObject` does not exist under plain `gjs`.** The shell's
-  `misc/signalTracker.js` adds `connectObject`/`disconnectObject` to GObject, so a
-  plain-gjs check of a `shell/` module that uses them (store, environment) must
-  give the object a stand-in, as `tests/smoke/store-check.js` does. Rule: run such
-  checks inside the headless shell where possible; if a second plain-gjs check
-  needs the stand-in, move it to one shared test helper rather than copy it.
+  `misc/signalTracker.js` adds `connectObject`/`disconnectObject` to GObject.
+  Any `shell/` module that also runs outside GNOME Shell must use plain
+  `connect`/`disconnect` with a kept handler id: `shell/store.js` does, since
+  the preview runs it under plain gjs (commit e30f715), so the store needs no
+  stand-in. `shell/environment.js` (and `ui/`) still use `connectObject`; they
+  run only in the shell, and a plain-gjs check of them must give the object a
+  stand-in. Rule: run such checks inside the headless shell where possible; if
+  a plain-gjs check needs the stand-in, put it in one shared test helper
+  rather than copy it.
 - **Counting `changed` signals cannot see a same-value write** (GSettings memory
   backend, found in PG-8b). A `set_*` that stores the value already there emits
   no `changed`, so a check like "writing X again does nothing" or "reading never

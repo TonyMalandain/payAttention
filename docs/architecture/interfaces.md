@@ -865,7 +865,7 @@ choose only its own verdict, because each request carries one invite.
   pure core, `core/aiSetup.js`, and is tested under Node. Prefs gets its own
   directory only if a second gi module is needed beside it.
 
-## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27; 7.1 built (PG-8a), 7.2 built (PG-8b), 7.3 not yet
+## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27; 7.1 built (PG-8a), 7.2 built (PG-8b), 7.3 built (PG-8c)
 
 Serves R-20 (the owner can see what payAttention would decide, without logging
 out) under D-032, and the owner's ports-and-adapters principle (ADR-0011).
@@ -903,6 +903,19 @@ list**, and is the only caller of `core/judge.js`:
   state and status (`aiStatusOf`), the feed's facts for health (snapshot,
   accepted-at, synced-at), `refresh(reason)`, a way for its owner to say "the
   overrides or travel changed", and `destroy()`.
+- **Also exposes, for a front end that waits for the AI (PG-8c):**
+  `aiProgress(now)` → frozen `{pending, byRules}`. It calls `judgedList(now)`
+  first, so the counts always describe the list as of `now`, and calling it is
+  what lets the AI ticker ask (the queue pumps the last list it was given).
+  The counting is `aiProgressOf(ai, judged, cutoffMs, now)` in
+  `app/aiQueue.js`, over §6.5's waiting meetings using the one `isWaiting`
+  definition: `byRules` = those whose own last ask failed (`failedKeys`), or
+  all of them while the engine is down; `pending` = the rest. Without an
+  engine, and after `destroy()`, it is `{pending: 0, byRules: 0}`.
+- **After `destroy()`:** `judgedList` is empty, `feedFacts` is
+  `{snapshot: null, acceptedAt: null, syncedAt: empty}`, `refresh` and
+  `reloadOverridesAndTravel` do nothing. A front end may therefore read it
+  from a callback that races its own teardown.
 - **Never** writes to the store except through the injected `writeAnswers`,
   never plans, never renders, never touches alert state.
 
@@ -921,7 +934,7 @@ Tests: the existing controller suites (`tests/unit/controller*.test.js`) pass
 unchanged in meaning; the verdict component gets its own suite for the AI
 paths now in `controller.ai.test.js`.
 
-### 7.3 The preview (gjs front end, `extension/preview/`)
+### 7.3 The preview (gjs front end, `extension/preview/`) — built in PG-8c
 
 **Invocation.** From a terminal in the owner's desktop session:
 
@@ -930,9 +943,22 @@ gjs -m ~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.i
 ```
 
 It needs the extension installed (for the compiled schema), not enabled. It
-runs the installed files, which may be newer than what the running shell
-loaded at login; that is the point. The README gives this line. A shorter
-wrapper is optional and the senior engineer's call.
+runs **only from the installed copy** (ADR-0012): it finds the schema and the
+helpers relative to its own file, so running `extension/preview/main.js` from
+the repository reports "not installed". It runs the installed files, which
+may be newer than what the running shell loaded at login; that is the point.
+The README gives this line. From the repository, `npm run preview` is the
+shortcut (`package.json`, it runs the installed copy under
+`${XDG_DATA_HOME:-$HOME/.local/share}`); for JSON a script needs
+`npm run -s preview -- --json`, because without `-s` npm prints its own
+banner on stdout ahead of the object.
+
+**Files.** `preview/main.js` is the only gi code and the only place that ends
+the process (composition only, like `extension.js`). The logic is gi-free and
+Node-tested: `preview/cli.js` (arguments, exit codes, fixed texts),
+`preview/session.js` (`startPreview`: one run, its waits and its one outcome)
+and `preview/report.js` (the text and JSON presenters). The split is
+`boundaries.md`'s, the file names are not a contract.
 
 **Composition.** Its entry builds, and nothing else:
 
@@ -944,18 +970,25 @@ wrapper is optional and the senior engineer's call.
 - The AI client factory with the extension's own argv (`gjs -m <dir>/ai/main.js`),
   and the `shell/ticker.js` ticker for the AI pump.
 - The verdict component (7.2) with `writeAnswers` = keep in memory.
-- A `GLib.MainLoop`, and a SIGINT/SIGTERM handler (`GLib.unix_signal_add`) that
-  destroys the component (which kills both helpers) and exits.
+- The `shell/ticker.js` ticker again, at 1 s, as the run tick that decides
+  when to print.
+- A `GLib.MainLoop`, and handlers for SIGHUP (terminal closed), SIGINT
+  (Ctrl-C) and SIGTERM (`GLibUnix.signal_add`, installed before the run
+  starts so a Ctrl-C during start-up is handled) that destroy the component
+  (which kills both helpers) and exit. Every exit is `System.exit` deferred to
+  a main-loop idle source (the helper's rule, `testing-and-build.md`).
 
 **When it prints.** After the first accepted snapshot, and:
 
 - in rules mode (or AI mode with no usable engine): at once;
-- in AI mode: when no eligible upcoming meeting is waiting (§6.5 `isWaiting`:
-  each has a current answer, or its ask failed, or the engine is down), or
-  when **5 minutes** have passed (assumed; the AI first-answer target in
-  `constraints.md` is ≤ 5 min). Waiting meetings are then printed with the
-  verdict the extension would show at that moment: the rule verdict. Progress
-  ("asking the engine: 3 of 12") goes to stderr, counts only.
+- in AI mode: when `aiProgress(now).pending` is 0 (no waiting meeting is
+  still to be answered: each has a current answer, or its ask failed, or the
+  engine is down; 7.2), or when **5 minutes** have passed **counted from the
+  first accepted snapshot**, not from start-up (assumed; the AI first-answer
+  target in `constraints.md` is ≤ 5 min). Waiting meetings are then printed
+  with the verdict the extension would show at that moment: the rule verdict.
+  Progress ("asking the AI engine: N meetings waiting") goes to stderr, counts
+  only, one line each time the count changes.
 
 The queue's pacing and budget apply unchanged (one ask in flight, 120/h in
 memory), so the preview cannot hammer an engine.
@@ -964,14 +997,19 @@ memory), so the preview cannot hammer an engine.
 to now + 36 h) whose end is after now, in judge order, must and ignore alike.
 The test alert is never shown.
 
-**Text output (default).** A header line with the mode (`Rules`, or `AI` with
-"on this computer" / "leaves your computer" from `endpointClass`, and the
-model). Then per local day a heading, and per meeting: start–end time,
+**Text output (default).** A header with the time, then the verdict source:
+the rules; AI with the model and where it runs from `endpointClass` (on this
+computer / on the local network / on the internet, the last two saying
+invites leave the computer); or the rules because AI mode is on but its
+address or model cannot be used. Then per local day a heading, and per meeting: start–end time,
 verdict (`MUST` / `ignore`), online / in person (with travel minutes when in
 person), title, and core's reason on its own line (AI reasons already read
 "AI: …", `core/verdict.js:99`); "your choice" when overridden. A footer: calendars
 that failed (`ok:false`, by name), and in AI mode the count of meetings the
-rules decided because the engine was unavailable. Layout is the senior
+rules decided because the engine was unavailable (`byRules`), and the count
+still waiting for the engine when the 5 minutes ran out (`pending`), shown
+with the verdict payAttention gives now. "Your choice" marks a verdict
+override only, as `overridden` does. Layout is the senior
 engineer's; the fields are the contract.
 
 **Every calendar- or engine-derived string is passed through core's
@@ -992,47 +1030,69 @@ object on stdout:
               "mode":"online"|"in-person","overridden":false,"travelMinutes":…|null}]}
 ```
 
-Field values are the judged occurrence's own, unformatted; JSON escaping
-covers control characters.
+Field values are the judged occurrence's own, unformatted, with these
+rules:
 
-**Exit status.** 0 printed; 1 usage or internal error; 2 the extension is
-not installed (schema not found); 3 no calendar snapshot within **30 s**
-(assumed). An AI failure never changes the exit status: it is shown.
+- `generatedAt` is the moment the list was computed (the tick that printed),
+  not the start of the run.
+- `overridden` is the judged occurrence's `verdictOverridden`: a mode override
+  alone does not set it.
+- `title`, `reason`, and each calendar's `name` and `error` pass through
+  `cleanText`, as in the text output. `key` and `seriesKey` are identifiers
+  that must match the stored override keys and are never cleaned.
+- The JSON text is **ASCII-only**: every code unit above U+007E is written as
+  a `\uXXXX` escape. Why: gjs `print()` converts to the locale's charset, so
+  raw UTF-8 could be corrupted on a non-UTF-8 terminal; parsing gives back
+  the same strings.
+- `meetings` lists the same meetings as the text output (judge order, end
+  after now or unknown).
+
+**Exit status.** 0 printed (also for `--help`, on stdout); 1 usage or
+internal error; 2 the extension is not installed (metadata or compiled schema
+not found or unreadable); 3 no calendar snapshot within **30 s** (assumed);
+128 + the signal number when stopped by a signal: **130** Ctrl-C (SIGINT),
+**129** terminal closed (SIGHUP), **143** killed (SIGTERM), the shell
+convention. An AI failure never changes the exit status: it is shown.
+Internal-error text passes through `cleanText` too.
 
 **Failure behaviour.**
 
 | Case | What happens |
 |---|---|
 | Not installed | "payAttention is not installed" on stderr, exit 2. |
-| Calendar helper cannot start or keeps crashing | The feed's usual restart and backoff; no snapshot in 30 s → stderr names the helper's status codes, exit 3. |
+| Calendar helper cannot start or keeps crashing | The feed's usual restart and backoff; no snapshot in 30 s → exit 3 with a fixed line pointing at the helper's own status lines, which the helper writes to the same stderr above it. |
 | Some calendars fail | Verdicts from the rest, failed ones named in the footer (as the extension). |
 | No key, locked keyring, engine down, lost helper | The queue's own rules (§6.5): rule verdicts for those meetings, footer says so, exit 0. |
-| Ctrl-C, terminal closed | Signal handler destroys the component; if the process dies anyway, both helpers exit on stdin EOF (§1). |
+| Ctrl-C, terminal closed, killed | Signal handler destroys the component, exit 130 / 129 / 143; if the process dies anyway, both helpers exit on stdin EOF (§1). |
 | Run with the extension active | Both read settings; only the extension writes. Two AI helpers, two budgets: up to 240 asks/h to the engine. EDS serves both. |
 | Outside the desktop session (SSH, no session bus) | EDS unreachable → exit 3; keyring unreachable → AI falls back to rules. |
 | A different `TZ` from the shell's | Times are local to the preview's process; the invite's start text changes, so AI answers would be re-asked. The README says to run it from a terminal on the desktop. |
 
 **Parity with the extension — how it is proved.**
 
-1. *By construction (lint).* `preview/` may import `core/` (except the
-   modules forbidden below), the verdict component in `app/`, and the adapters
-   `shell/store.js` (reader), `shell/calendarFeed.js`,
-   `shell/aiHelperClient.js`, `shell/helperProcess.js`, `shell/ticker.js`. It
-   may **not** import `core/judge.js`, `app/aiQueue.js`, `core/plan.js`,
-   `core/alertState.js`, `ui/`, `shell/environment.js`, `shell/launcher.js`,
-   `resource:///org/gnome/shell/…`, St/Clutter/Meta/Shell, Gtk/Adw, Soup,
-   Secret or ECal. The `system` built-in is allowed (its own process, as the
-   helpers).
+1. *By construction (lint, `eslint.config.js`).* `preview/` may import
+   `core/` (except `judge.js`, `plan.js`, `alertState.js`) and, from `app/`,
+   only `app/verdicts.js`. Only `preview/main.js` may import the adapters
+   `shell/store.js` (the reader: importing `StoreWriter` is a lint error),
+   `shell/calendarFeed.js`, `shell/aiHelperClient.js`,
+   `shell/helperProcess.js`, `shell/ticker.js`, `gi://` Gio, GLib and
+   GLibUnix, and the `system` built-in (its own process, as the helpers); it
+   may not name `Gio.Subprocess` (spawning goes through `spawnHelper`). The
+   other `preview/` files are linted like `app/`. No `preview/` file may use
+   a dynamic `import()`, which lint could not see. Everything else is
+   forbidden, including `ui/`, `helper/`, `ai/`, `extension.js`, `prefs.js`
+   and `resource://`.
 2. *Unit (Node).* A parity test builds the alert controller and the preview's
    gi-free presenter over the same fake inputs — rules mode, occurrence and
    series overrides, travel, current and stale stored AI answers, and an
    engine-down state that exercises the withheld second pass — and asserts
    that every meeting the controller judged appears in the preview output with
    the same key, verdict, reason code, reason, mode and overridden flag.
-3. *Integration (the helper layer's isolated EDS).* The preview, run with
-   `--json` from a built pack layout against the helper tests' fixture
-   calendars and a keyfile GSettings backend, gives the verdicts expected for
-   those fixtures.
+3. *Integration (the helper layer's isolated EDS).* The preview, installed
+   from the built zip into a throwaway home and run with `--json` against the
+   helper tests' fixture calendars and a keyfile GSettings backend, gives the
+   verdicts expected for those fixtures (`tests/helper/preview.test.js`;
+   `testing-and-build.md` Layer 2c).
 4. *Never writes.* The same run with `GSETTINGS_BACKEND=keyfile` in a
    throwaway config directory leaves the keyfile byte-identical, and in AI
    mode (against the fake engine) the throwaway keyring's items are unchanged.

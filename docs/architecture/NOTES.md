@@ -771,3 +771,38 @@ Append only. Newest at the bottom.
 - **Why:** A signal-counting check passes whether or not the code wrote, so it cannot guard the reader's read-only promise or the writer's no-op re-write.
 - **Source:** tests/smoke/store-check.js:162-188; caller (PG-8b build).
 - **Touches:** testing-and-build.md "Pitfalls" — folded.
+
+## 2026-09-27 — PG-8c preview surface folded into §7.2 and §7.3
+- **Kind:** interface
+- **Fact:** `Verdicts.aiProgress(now)` → `{pending, byRules}` (via `aiProgressOf` in `app/aiQueue.js`, over `isWaiting`) is part of the verdict component's contract; the preview prints when `pending` is 0 or 5 min after the first snapshot.
+- **Why:** The preview must wait on the same definition of "waiting" as the AI status, or its footer and the extension's "AI unavailable" would disagree; calling it also drives the AI pump, which a reader of the contract would not guess.
+- **Source:** extension/app/verdicts.js:137-149 (aiProgress at :145); extension/app/aiQueue.js:108-132 (aiProgressOf at :120); extension/preview/session.js (step); inbox PG-8c plan notes.
+- **Touches:** interfaces.md §7.2, §7.3 — folded.
+
+## 2026-09-27 — Preview exit codes and JSON rules
+- **Kind:** interface
+- **Fact:** Stopped by a signal the preview exits 128 + signum (130 SIGINT, 129 SIGHUP, 143 SIGTERM); its JSON is ASCII-only with `cleanText` on title, reason and calendar strings but never on `key`/`seriesKey`; `overridden` is `verdictOverridden`; `generatedAt` is the moment the list was computed.
+- **Why:** gjs `print()` converts to the locale charset, so raw UTF-8 could corrupt the one machine-readable output; keys must stay byte-identical to stored override keys; a mode override is not "your choice" of verdict.
+- **Source:** extension/preview/cli.js:8-24; extension/preview/report.js (previewJson, asciiJson); tests/helper/preview.test.js SIGINT case.
+- **Touches:** interfaces.md §7.3 — folded.
+
+## 2026-09-27 — Preview import split: one gi entry, gi-free logic
+- **Kind:** boundary
+- **Fact:** Only `preview/main.js` may import gi (Gio, GLib, GLibUnix), `system` and the five shell adapters; the other preview files are linted like `app/`; from `app/` only `verdicts.js`; `StoreWriter` and dynamic `import()` are lint errors.
+- **Why:** Keeps the preview's logic Node-testable and makes "reads only, never judges on its own" structural (ADR-0012) rather than reviewed; GLibUnix is needed because `GLib.unix_signal_add` moved there.
+- **Source:** eslint.config.js (PREVIEW_COMMON and the two preview blocks).
+- **Touches:** boundaries.md import-rule table — folded; the single-judge-caller guard is now lint-enforced, bullet updated.
+
+## 2026-09-27 — The store runs outside the shell, so no connectObject
+- **Kind:** constraint
+- **Fact:** `shell/store.js` uses plain `connect`/`disconnect` because the preview runs it under plain gjs, where `connectObject` does not exist; `shell/environment.js` and `ui/` still use `connectObject`.
+- **Why:** A shell adapter shared with a non-shell front end cannot rely on the shell's GObject monkey-patches; this is the rule for any future adapter the preview reuses.
+- **Source:** extension/shell/store.js:43,85; commit e30f715; extension/shell/environment.js:17,29.
+- **Touches:** testing-and-build.md "Pitfalls" — folded.
+
+## 2026-09-27 — test:helper depends on a fresh build
+- **Kind:** constraint
+- **Fact:** `tests/helper/preview.test.js` installs `dist/` zip into a throwaway home and refuses to run when the zip is missing or older than `extension/`, so validation step 5 needs step 4 first; the build now packs and checks `preview/`.
+- **Why:** The preview runs only from an installed copy (ADR-0012), so the only honest integration test is against the shipped zip.
+- **Source:** tests/helper/preview.test.js:43-49; scripts/build.sh; package.json `preview` script.
+- **Touches:** testing-and-build.md validation table and new Layer 2c — folded.

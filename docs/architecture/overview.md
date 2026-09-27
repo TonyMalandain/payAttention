@@ -14,30 +14,37 @@ of one in-shell part and one small helper process.
  evolution-data-server (already running; fed by GNOME Online Accounts)
         │ D-Bus, via ECal/EDataServer GObject introspection
         ▼
- ┌────────────────────┐   stdout: one JSON snapshot per line   ┌──────────────────────────── gnome-shell process ───┐
- │ calendar helper    │ ─────────────────────────────────────► │ calendar feed ──► controller ◄── store ◄──► GSettings
- │ (gjs subprocess,   │ ◄───────────────────────────────────── │  (supervises       │  1 s tick,   (typed        (dconf)
- │  read-only)        │   stdin: refresh requests; EOF = exit  │   helper)          │  env signals  access)         ▲
- └────────────────────┘                                        │                    ▼                                │
-                                                               │   core (pure): judge() → plan() → reduce()         │
-                                                               │                    │ Plan                          │
-                                                               │                    ▼                                │
-                                                               │   ui: top-bar indicator + menu, card, takeover,    │
-                                                               │       sound  ── user actions ──► controller        │
-                                                               └────────────────────────────────────────────────────┘
-                                                                  prefs.js (separate GTK4/Adw process) ◄──► GSettings
+ ┌────────────────────┐  stdout: one JSON snapshot per line  ┌─────────────────────────────────────────────────── gnome-shell process ───┐
+ │ calendar helper    │ ───────────────────────────────────► │ calendar feed ──► verdict component ◄── store reader ◄─── GSettings       │
+ │ (gjs subprocess,   │ ◄─────────────────────────────────── │ (shell adapter)   (app/verdicts.js:     (reads, change     (dconf)        │
+ │  read-only)        │  stdin: refresh requests; EOF = exit │                    AI queue, the one     signal)              ▲           │
+ └────────────────────┘                                      │                    judge() caller)                            │           │
+                                                             │                         │ judged list                         │           │
+                                                             │                         ▼                                     │           │
+                                                             │ controller: 1 s tick, env signals, plan(), reduce() ──► store writer      │
+                                                             │                         │ Plan                                            │
+                                                             │                         ▼                                                 │
+                                                             │ ui: top-bar indicator + menu, card, takeover, sound                       │
+                                                             │     ── user actions ──► controller                                        │
+                                                             └───────────────────────────────────────────────────────────────────────────┘
+                                                               prefs.js (separate GTK4/Adw process) ◄──► GSettings
 
- Only in AI mode (ADR-0010):
- controller ── stdin: configure, judge{bounded invite} ──► AI helper (gjs subprocess) ── HTTPS/HTTP ──► engine (local or cloud)
-            ◄─ stdout: verdict | failed{code} ────────       │ reads key from the GNOME keyring (ADR-0009)
- answers → store (ai-verdicts) → judge(…, aiVerdicts) ; the tick and plan() never wait for it
+ Only in AI mode (ADR-0010), owned by the verdict component:
+ AI queue ── stdin: configure, judge{bounded invite} ──► AI helper (gjs subprocess) ── HTTPS/HTTP ──► engine (local or cloud)
+          ◄─ stdout: verdict | failed{code} ────────       │ reads key from the GNOME keyring (ADR-0009)
+ answers → writeAnswers (extension: store writer, ai-verdicts) → judge(…, aiVerdicts) ; the tick and plan() never wait for it
+
+ The verdict preview (ADR-0012), a second front end in its own gjs process, run from a terminal:
+ preview/main.js ── builds ──► its own calendar feed + calendar helper, verdict component, AI helper (in AI mode)
+                                store reader only (settings in delay-apply mode); answers kept in memory; never alerts or writes
+                    prints the judged list as text or --json, then exits
 ```
 
 **Ports and adapters (ADR-0011).** The rules (`core/`) and the orchestration
 (`app/`) are GNOME-free; each GNOME part is an adapter behind a named port
 (`boundaries.md`). A second front end, the terminal verdict preview (R-20,
-ADR-0012, `interfaces.md` §7), is designed to reuse the verdict pipeline, the
-calendar helper and the AI helper, and never to write or alert.
+ADR-0012, `interfaces.md` §7.3, built in PG-8c), reuses the verdict
+component, the calendar helper and the AI helper, and never writes or alerts.
 
 ## Subsystems and what each is for
 

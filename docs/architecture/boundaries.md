@@ -73,7 +73,7 @@ in PG-8b) calls `core/judge.js`.
 | `shell/` | `app/`, `core/` except `judge.js`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/`, `helper/`, `ai/`, `core/judge.js`, the `system` built-in |
 | `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `shell/` (so the store too), `app/`, `helper/`, `ai/`, the rest of `core/`, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `app/` | other `app/` modules, `core/` (`core/judge.js` from `app/verdicts.js` only) | as `core/`: anything `gi://` or `resource://`, any Node built-in, the `system` built-in; `shell/`, `ui/`, `helper/`, `ai/`, `preview/`; `core/judge.js` outside `app/verdicts.js` |
-| `preview/` (from PG-8, §7.3) | `core/` except `judge.js`, `plan.js`, `alertState.js`; the verdict component in `app/`; `shell/store.js`, `shell/calendarFeed.js`, `shell/aiHelperClient.js`, `shell/helperProcess.js`, `shell/ticker.js`; `gi://` Gio, GLib; the `system` built-in | `app/aiQueue.js`, `ui/`, `shell/environment.js`, `shell/launcher.js`, `helper/`, `ai/`, `resource:///org/gnome/shell/...`, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, Soup, Secret, ECal/EDataServer/ICalGLib |
+| `preview/` (PG-8c, §7.3) | One gi entry, `preview/main.js` (composition only): `core/` except `judge.js`, `plan.js`, `alertState.js`; `app/verdicts.js`; `shell/store.js` (`StoreReader` only), `shell/calendarFeed.js`, `shell/aiHelperClient.js`, `shell/helperProcess.js`, `shell/ticker.js`; `gi://` Gio, GLib, GLibUnix (signal handlers); the `system` built-in. Every other `preview/` file is logic, linted like `app/` so Node tests it: `core/` (same three exceptions), `app/verdicts.js`, other `preview/` files | every other `app/` module (`aiQueue.js` included), the `StoreWriter` import, the rest of `shell/` (`environment.js`, `launcher.js`…), `ui/`, `helper/`, `ai/`, `extension.js`, `prefs.js`, `resource://`, any other `gi://` namespace, Node built-ins, `Gio.Subprocess` (spawn through `spawnHelper`), dynamic `import()`; in the logic files also any `gi://`, `shell/` and `system` |
 | `extension.js` | `shell/`, `app/`, `ui/`, the Extension base class | `core/`, `helper/`, `ai/`, ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, the endpoint rules, the key rule in `aiEngine.js`, and every Settings decision in `aiSetup.js`) | Clutter, Meta, St, Shell, Soup, `shell/`, `app/`, `ui/`, `helper/`, `ai/`, `core/judge.js` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
@@ -83,14 +83,14 @@ by lint and are held by review only: `shell/` using St/Clutter, and `ui/`
 creating a `Gio.Settings`.
 
 - **One caller of `core/judge.js` (ADR-0011; decided 2026-09-27).** Only
-  `app/verdicts.js` may import it. Lint guard carried by PG-8c (which already
-  adds the `preview/` block that forbids `judge.js`); until it lands, review
-  holds it, and `app/controller.js` is the one caller until PG-8b replaces
-  it. ESLint flat config *replaces* a rule's options when two blocks match
-  the same file, so the guard is a pattern inside each directory's existing
-  `no-restricted-imports` list (and an `app/` pattern that `verdicts.js`
-  escapes), not a separate block, or it would silently disable the
-  per-directory rules. `tests/` may import `judge.js`.
+  `app/verdicts.js` may import it. Lint-enforced since PG-8c
+  (`eslint.config.js`: a pattern in the `core/`, `shell/`, `prefs.js` and
+  `preview/` lists, and a second `app/` block, which `verdicts.js` escapes,
+  that repeats the whole `app/` list plus the guard). ESLint flat config
+  *replaces* a rule's options when two blocks match the same file, so the
+  guard is never a block of its own: it is a pattern inside a list that
+  already carries the directory's rules, or it would silently disable them.
+  `tests/` may import `judge.js`.
 
 - **`GioUnix` in the helper (allowed 2026-09-26).** Since GLib 2.80 the Unix
   stream classes live in `GioUnix`; the old `Gio.Unix*Stream` names still work
