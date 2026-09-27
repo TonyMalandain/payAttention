@@ -359,3 +359,10 @@ Append only. Newest at the bottom.
 - **Fact:** No code defects were found. Three §6.5 rows had no test that bites, so a test-only fix round was ordered. It also carries the benchmark measurement change, the tautological assertions, and the pruning of the retry and failed-key maps. Product rule sent to the architect: one invite that crashes the helper must never block AI answers for other meetings.
 - **Source:** reviewer, PG-4c round 1.
 - **Touches:** decisions.md D-031
+
+## 2026-09-27 — PG-4d built; page texts accepted
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The Verdicts page is built. All user-visible texts were reviewed by the product manager and accepted as written: plain, honest, and each failure says what to do. The "all-day" row in the field list is kept, although all-day meetings are never sent (D-023), because it lists the invite's fields. The loopback-proxy carry-over was not in this build and goes into the review fix round.
+- **Source:** software engineer, PG-4d.
+- **Touches:** solution.md R-19

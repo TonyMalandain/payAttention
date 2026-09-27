@@ -7,7 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     AI_TIMEOUT_MS, normaliseEndpoint, endpointClass, isUsableEndpoint, mayCarryKey, requestTimeoutMs,
-    normaliseModel, aiEngine, ENGINE_KEY_SCHEMA_NAME, ENGINE_KEY_ATTRIBUTE,
+    normaliseModel, aiEngine, ENGINE_KEY_SCHEMA_NAME, ENGINE_KEY_ATTRIBUTE, MAX_KEY_LENGTH, isSendableKey,
 } from '../../extension/core/aiEngine.js';
 import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
 
@@ -182,4 +182,28 @@ describe('engine key schema (ADR-0009)', () => {
         assert.equal(ENGINE_KEY_SCHEMA_NAME, 'org.gnome.shell.extensions.payattention.EngineKey');
         assert.equal(ENGINE_KEY_ATTRIBUTE, 'endpoint');
     });
+});
+
+describe('isSendableKey', () => {
+    test('MAX_KEY_LENGTH is 4096', () => {
+        assert.equal(MAX_KEY_LENGTH, 4096);
+    });
+
+    const sendable = [['sk-test', 'sk-test'], ['a'.repeat(4096), '4096 × a'], ['!', '!'], ['~', '~']];
+    for (const [key, label] of sendable) {
+        test(`${label} may be sent`, () => {
+            assert.equal(isSendableKey(key), true);
+        });
+    }
+
+    const refused = [
+        ['', "''"], ['a'.repeat(4097), '4097 × a'], ['a b', 'a space'], ['a\tb', 'a tab'], ['a\nb', 'a newline'],
+        ['é', 'non-ASCII'], ['a\u007f', 'DEL'], [' ', 'a lone space'],
+        [null, 'null'], [undefined, 'undefined'], [42, 'a number'], [['k'], 'an array'],
+    ];
+    for (const [key, label] of refused) {
+        test(`${label} is never sent`, () => {
+            assert.equal(isSendableKey(key), false);
+        });
+    }
 });

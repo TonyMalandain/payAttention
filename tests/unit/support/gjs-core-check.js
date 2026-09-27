@@ -17,6 +17,7 @@ import { plan, actionFor } from '../../../extension/core/plan.js';
 import { testAlert } from '../../../extension/core/testAlert.js';
 import { formatClock, formatSince } from '../../../extension/core/display.js';
 import { aiEngine } from '../../../extension/core/aiEngine.js';
+import { probeInput } from '../../../extension/core/aiSetup.js';
 import { validateInvite, cleanText, parseAiHelperLine, formatAiHelperMessage } from '../../../extension/core/aiProtocol.js';
 import { parseReply } from '../../../extension/core/aiPrompt.js';
 import { buildInvite } from '../../../extension/core/invite.js';
@@ -73,6 +74,7 @@ try {
 
     // AI mode (PG-4a): toWellFormed, \p{Cc} and Object.hasOwn must work under gjs.
     check(aiEngine({ ...DEFAULT_SETTINGS, verdictSource: 'ai', aiModel: 'm' }) !== null, 'aiEngine');
+    check(probeInput('http://127.0.0.1:11434/v1', 'm').ok, 'aiSetup');
     const ai = { ...DEFAULT_SETTINGS, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
     const aiJudged = judge(parsed.message, ai, { verdict: {}, mode: {} }, {}, {});
     check(aiJudged[0].aiAsk !== undefined && validateInvite(aiJudged[0].aiAsk.invite).ok, 'judge: aiAsk with a valid invite');

@@ -5,16 +5,15 @@
 // sent, which key may go in the header, and what a response means. No I/O and
 // no gi:// import, so it runs under Node and gjs alike.
 import { SYSTEM_PROMPT, REPLY_JSON_SCHEMA, parseReply } from '../core/aiPrompt.js';
+import { isSendableKey } from '../core/aiEngine.js';
+
+export { MAX_KEY_LENGTH } from '../core/aiEngine.js';
 
 /** max_tokens in every request (interfaces §6.7). */
 export const MAX_TOKENS = 400;
-/** The longest stored key sent as a bearer token, in characters. */
-export const MAX_KEY_LENGTH = 4096;
 
 const MAX_RETRY_AFTER_S = 86400;
 const RETRY_AFTER_SECONDS = /^\s*\d{1,9}\s*$/;
-// Visible ASCII only: a space, a control character or a non-ASCII character could split or corrupt the header.
-const SENDABLE_KEY = new RegExp(`^[\\x21-\\x7E]{1,${MAX_KEY_LENGTH}}$`);
 
 /**
  * @param {string} endpoint already normalised (configure was validated)
@@ -54,8 +53,8 @@ export function chatRequestBody(model, invite, withResponseFormat) {
 /**
  * What a key lookup means for the request.
  *   found, key ''                          -> {bearer: null}   (an empty key is a keyless engine, ADR-0010)
- *   found, key of 1..MAX_KEY_LENGTH chars,
- *          every char in U+0021..U+007E    -> {bearer: key}
+ *   found, isSendableKey(key) (core: 1..MAX_KEY_LENGTH chars,
+ *          every char in U+0021..U+007E)   -> {bearer: key}
  *   found, any other key                   -> {failure: 'config'}   (never sent: it could split a header)
  *   absent                                 -> {bearer: null}
  *   unavailable                            -> {failure: 'no-key'}
@@ -68,7 +67,7 @@ export function bearerFrom(lookup) {
     case 'found':
         if (lookup.key === '')
             return { bearer: null };
-        return SENDABLE_KEY.test(lookup.key) ? { bearer: lookup.key } : { failure: 'config' };
+        return isSendableKey(lookup.key) ? { bearer: lookup.key } : { failure: 'config' };
     case 'absent':
         return { bearer: null };
     default:

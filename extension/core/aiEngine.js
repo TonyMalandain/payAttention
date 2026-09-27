@@ -13,6 +13,22 @@ export const ENGINE_KEY_SCHEMA_NAME = 'org.gnome.shell.extensions.payattention.E
 /** The schema's one attribute. Its value is always normaliseEndpoint(endpoint). */
 export const ENGINE_KEY_ATTRIBUTE = 'endpoint';
 
+/** The longest API key that is ever sent, in characters (interfaces.md §6.7). */
+export const MAX_KEY_LENGTH = 4096;
+// Visible ASCII only: a space, a control character or a non-ASCII character could split or corrupt the header.
+const SENDABLE_KEY = new RegExp(`^[\\x21-\\x7E]{1,${MAX_KEY_LENGTH}}$`);
+
+/**
+ * Whether a stored key may be sent as a bearer token: a string of 1..MAX_KEY_LENGTH
+ * characters, every one in U+0021..U+007E. Anything else could split a header.
+ *
+ * @param {*} key
+ * @returns {boolean}
+ */
+export function isSendableKey(key) {
+    return typeof key === 'string' && SENDABLE_KEY.test(key);
+}
+
 const ENDPOINT = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)$/;
 const DEFAULT_PORTS = { http: 80, https: 443 };
 const HOST_NAME = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;

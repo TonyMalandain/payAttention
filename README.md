@@ -64,6 +64,22 @@ The first rule that matches wins:
 
 Meeting rooms are not counted as guests. The full rules are in [`docs/prd/meeting-guardian.md`](docs/prd/meeting-guardian.md).
 
+## AI mode (optional)
+
+By default the rules above decide. In **Settings → Verdicts** you can let an AI engine decide instead.
+
+Enter the engine's address and model. For Ollama on this computer, the address is already filled in (`http://127.0.0.1:11434/v1`); enter a model you have pulled, for example one that `ollama list` shows. For a cloud service, enter its `https://` address, its model and your API key.
+
+Press **Test connection**. It sends a made-up test meeting, never one of yours, and says Yes, or No with the reason.
+
+The API key is kept in your desktop keyring (Passwords and Keys), one per address, never in the settings. The key field never shows a saved key.
+
+> In AI mode the whole invite is sent to this engine. With a cloud engine it leaves your computer. Passcodes and dial-in numbers are removed first, on a best-effort basis.
+
+The Verdicts page shows whether the address you entered is on this computer or not, and lists every field that is sent.
+
+If the engine cannot be reached, the rules decide, and the menu says "AI unavailable — using rules".
+
 ## The alert ladder
 
 | Step | Online (before start) | In person (before leave-by time) | What you see |
