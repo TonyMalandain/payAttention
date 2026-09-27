@@ -366,3 +366,16 @@ Append only. Newest at the bottom.
 - **Fact:** The Verdicts page is built. All user-visible texts were reviewed by the product manager and accepted as written: plain, honest, and each failure says what to do. The "all-day" row in the field list is kept, although all-day meetings are never sent (D-023), because it lists the invite's fields. The loopback-proxy carry-over was not in this build and goes into the review fix round.
 - **Source:** software engineer, PG-4d.
 - **Touches:** solution.md R-19
+
+## 2026-09-27 — PG-4d review taken
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** Two defects go to a fix round: the greying test cannot fail for the key row and Remove, and the loopback proxy rule is missing. Product calls added to the same round:
+  - a typed key that has not been saved is cleared when the address changes, so it is never saved to the wrong address;
+  - "Saved key" is blank while its lookup is pending;
+  - Remove is enabled whenever a key exists for the applied address, because removal is always safe;
+  - "Not tested yet." and "Testing…" move into core with the other texts.
+
+  Accepted: saving into a locked password store may show GNOME's own unlock prompt, because the owner pressed the button. The "never prompt" rule applies to the background helper.
+- **Source:** reviewer, PG-4d round 1.
+- **Touches:** solution.md R-19
