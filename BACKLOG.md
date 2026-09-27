@@ -37,10 +37,9 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
       It also adds: HTML to plain text first, entities and `%xx` decoded, and one shared list of invisible marks. Done when every variant from the PG-4a2 review is removed by a test, and the agenda text survives.
     - **PG-4b — AI helper (M). ACCEPTED** (review round 1 fix: the 60 s socket timeout). A separate process that talks to the engine and reads the key from the password store. Done when tests against a fake engine pass, with no real cloud call.
-    - **PG-4c — Shell side (M).** The queue, keeping old answers while asking again, the fallback, the budget, and "AI:" / "AI unavailable" in the menu. Done when no alert ever waits on the AI (tested). Also: both helper spawns (calendar and AI) drop `G_MESSAGES_DEBUG` from the child environment per `interfaces.md` §1 "Environment", tested.
+    - **PG-4c — Shell side (M). ACCEPTED** (review round 1: test-only fixes). The queue, keeping old answers while asking again, the fallback, the budget, and "AI:" / "AI unavailable" in the menu. Done when no alert ever waits on the AI (tested). Also: both helper spawns (calendar and AI) drop `G_MESSAGES_DEBUG` from the child environment per `interfaces.md` §1 "Environment", tested.
     - **Carry-overs to fold into review fix rounds:**
       - PG-4d: a loopback engine is reached directly, never through a proxy (`interfaces.md` §6.7; `extension/ai/transport.js:45`, `proxy_resolver: null`).
-      - PG-4c: `tests/unit/budget.test.js` measures the fastest of ≥10 timed runs after warm-up instead of the mean (testing-and-build.md Layer 1).
     - **PG-4c2 — One bad invite never blocks the others (S).** In `extension/shell/aiQueue.js` (the `lost` branch), from the second `lost` in a row on the same meeting, that meeting backs off (1 min, doubling up to 30) and joins `failedKeys`, so the queue moves on. Spec: `interfaces.md` §6.5 "Lost streak". Done when unit tests prove a meeting whose invite always crashes the helper does not stop other meetings getting AI answers. Runs after the PG-4c fix round (same file).
     - **PG-4d — Settings page (S).** Mode switch, endpoint, model, key, "Test connection", and the warning. The warning must include the D-030 wording: "Passcodes and dial-in numbers are removed first, on a best-effort basis." "Test connection" also drops `G_MESSAGES_DEBUG` from the helper it spawns (§1 "Environment").
     - **PG-4e — Uninstall `--purge` (S).** Also erases the key and the stored AI answers.
@@ -106,6 +105,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - Two lint rules the architect logged as debt: forbid St/Clutter in `shell/`, and forbid creating settings in `ui/`.
 - `buildInvite` accepts a start time beyond the range of a date (above 8.64e15 ms) and produces an invalid invite. Widen the check (PG-4a leftover).
 - The PG-4a plan still says text passcodes are out of scope; D-025/D-027 superseded that.
+- AiQueue `_retry`/`_failedKeys` are never pruned of past meetings (small, slow growth over a long session). Pruning needs a §6.5 retention rule first; dropped as a preference for now.
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)
