@@ -26,9 +26,10 @@ const TEXT_PASSCODE = /\b(passcodes?|passwords?|pwd|pins?)\b(?=((?:[\s:=#-]|\b(?
 
 // D-029, D-030: a phone dial-in string is a phone number (an optional "tel:" and "+",
 // then at least 7 digits, groups split by up to 3 of space, tab, ".", "-", "(" or ")")
-// followed by a code: "#" or "*", or a pause ("," or ";", after up to 3 spaces) with a
-// digit, "#" or "*" right after it. The whole string, codes included, goes. A plain
-// number, or one followed by ", " as in a list, stays.
+// followed by a code: "#" or "*" right after the last digit, or a pause ("," or ";",
+// after up to 3 spaces or tabs) with a digit, "#" or "*" right after it. The whole
+// string, codes included, goes. A plain number, one followed by ", " as in a list, or
+// one followed by a space and then "#" or "*" ("Order 1234567 #urgent") stays.
 // Short plain codes ("ext #12", "Room 4#", a bare "812345#") are not caught: with
 // fewer than 7 digits they cannot be told from room numbers, amounts and extensions,
 // and a labelled code is caught by TEXT_PASSCODE instead. Removal is best effort (D-030).
@@ -36,7 +37,7 @@ const TEXT_PASSCODE = /\b(passcodes?|passwords?|pwd|pins?)\b(?=((?:[\s:=#-]|\b(?
 // run is read once, and a number after a list marker or a digit ("1. +1 646…",
 // "2 (+1) 646…") is still found; DIAL_CODE is then tried where the number ends.
 const DIAL_NUMBER = /(?:\btel:)?\+?\d(?:[ \t.()-]{0,3}\d)*/gi;
-const DIAL_CODE = /[ \t]{0,3}(?:[,;]+[\d#*]|[#*])/y;
+const DIAL_CODE = /(?:[ \t]{0,3}[,;]+[\d#*]|[#*])/y;
 const DIAL_REST = /[\d,;#*]*/y;
 const DIAL_MIN_DIGITS = 7;
 
@@ -50,12 +51,23 @@ const HYPHENS = /[\u2010\u2011]/g;
 const PERCENT_DIAL = /[\d,;#*](?:%(?:2C|3B|23|2A)[\d,;#*]*)+/gi;
 const PERCENT_CHARS = { '2C': ',', '3B': ';', '23': '#', '2A': '*' };
 
-// D-030: HTML to plain text before any removal rule. A line-ending tag becomes a line
-// break, so TEXT_PASSCODE stops there (cleanText turns the break into a space); every
-// other tag goes. A tag name must end at a space, "/" or ">", so "<https://…>" and
-// "a < b" stay as text; stopping at the next "<" keeps the scan linear.
-const HTML_TAG = /<(\/?)([a-z][a-z0-9-]*)(?=[\s/>])[^<>]*>/gi;
+// D-030: HTML to plain text before any removal rule. Comments, and <style> and <script>
+// with their contents, go first; then conditional comment markers. A line-ending tag
+// becomes a line break, so TEXT_PASSCODE stops there (cleanText turns the break into a
+// space); every other tag, namespaced ones such as <o:p> too, goes. A tag name must end
+// at a space, "/" or ">", and a namespace needs a letter after the ":", so
+// "<https://…>" and "a < b" stay as text; stopping at the next "<" keeps the scan linear.
+const HTML_TAG = /<(\/?)([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?)(?=[\s/>])[^<>]*>/gi;
 const LINE_END_CLOSERS = new Set(['p', 'li', 'div', 'tr', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+const LINE_END_OPENERS = new Set(['br', 'p', 'div', 'li']);
+const CONDITIONAL_MARK = /<!\[(?:if\b[^<>]*|endif)\]>/gi;
+
+// D-030: blocks dropped with their contents. Each opener is paired with its closer. An
+// unclosed one is left as text for the removal rules to read (its tag then goes as any
+// tag). Once a kind is found unclosed no later one of that kind can close either, so it
+// is not searched for again: that keeps the scan linear.
+const BLOCK_OPEN = /<!--|<(style|script)(?=[\s/>])[^<>]*>/gi;
+const BLOCK_CLOSE = { '<!--': /-->/g, 'style': /<\/style\s*>/gi, 'script': /<\/script\s*>/gi };
 
 // D-030: entities decoded after the tags are gone, in one pass, so "&lt;br&gt;" is text
 // and "&amp;#8203;" stays "&#8203;". One that names no character stays as written.
@@ -64,7 +76,28 @@ const NAMED_ENTITIES = { nbsp: '\u00A0', shy: '\u00AD', amp: '&', lt: '<', gt: '
 
 function lineEndOrNothing(tag, closing, name) {
     const n = name.toLowerCase();
-    return (closing ? LINE_END_CLOSERS.has(n) : n === 'br') ? '\n' : '';
+    return (closing ? LINE_END_CLOSERS : LINE_END_OPENERS).has(n) ? '\n' : '';
+}
+
+function withoutBlocks(text) {
+    const unclosed = new Set();
+    let out = '';
+    let from = 0;
+    BLOCK_OPEN.lastIndex = 0;
+    for (let m = BLOCK_OPEN.exec(text); m !== null; m = BLOCK_OPEN.exec(text)) {
+        const kind = m[1]?.toLowerCase() ?? m[0];
+        if (unclosed.has(kind))
+            continue;
+        const close = BLOCK_CLOSE[kind];
+        close.lastIndex = BLOCK_OPEN.lastIndex;
+        if (!close.test(text)) {
+            unclosed.add(kind);
+            continue;
+        }
+        out += text.slice(from, m.index);
+        from = BLOCK_OPEN.lastIndex = close.lastIndex;
+    }
+    return out + text.slice(from);
 }
 
 function decodeEntity(entity, decimal, hex, name) {
@@ -75,7 +108,10 @@ function decodeEntity(entity, decimal, hex, name) {
 }
 
 function plainText(text) {
-    return text.replace(HTML_TAG, lineEndOrNothing).replace(HTML_ENTITY, decodeEntity);
+    return withoutBlocks(text)
+        .replace(CONDITIONAL_MARK, '')
+        .replace(HTML_TAG, lineEndOrNothing)
+        .replace(HTML_ENTITY, decodeEntity);
 }
 
 function withoutDialStrings(text) {

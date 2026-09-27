@@ -463,6 +463,71 @@ describe('buildInvite: D-030 plain text first', () => {
         assert.equal(build({ location: 'Room&nbsp;4<br class="x">P<b>I</b>N:&nbsp;7788<br>Floor 2' }).place,
             'Room 4 PIN: [removed] Floor 2');
     });
+
+    test('namespaced tags such as <o:p> and </o:p> are dropped', () => {
+        assert.equal(desc('Agenda: budget<o:p></o:p>'), 'Agenda: budget');
+        assert.equal(desc('Pass<o:p>code</o:p>: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('<w:Sdt id="1">Agenda</w:Sdt>'), 'Agenda');
+    });
+
+    test('a "<" before a scheme or address is still text, not a namespaced tag', () => {
+        assert.equal(desc('Join<https://example.test/x> or <mailto:a@b.test>'), 'Join<https://example.test/x> or <mailto:a@b.test>');
+    });
+
+    test('HTML comments are dropped with their contents, across lines', () => {
+        assert.equal(desc('Agenda<!-- hidden -->: budget'), 'Agenda: budget');
+        assert.equal(desc('Pass<!-- x\n y -->code: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('<!--[if gte mso 9]><xml><o:x>1</o:x></xml><![endif]-->Agenda'), 'Agenda');
+    });
+
+    test('conditional comment markers <![if …]> and <![endif]> are dropped; what they wrap stays', () => {
+        assert.equal(desc('<![if !supportLists]>1.<![endif]> Q3 numbers'), '1. Q3 numbers');
+        assert.equal(desc('Pass<![IF x]>code<![ENDIF]>: 654321'), 'Passcode: [removed]');
+    });
+
+    test('an unclosed comment is text, so the removal rules still read it', () => {
+        assert.equal(desc('Agenda <!-- Passcode: 654321'), 'Agenda <!-- Passcode: [removed]');
+    });
+
+    test('<style> and <script> are dropped with their contents, in any case and with attributes', () => {
+        assert.equal(desc('<style>p.MsoNormal {margin: 0}</style>Agenda'), 'Agenda');
+        assert.equal(desc('<STYLE type="text/css"><!-- a {b: c} --></STYLE >Agenda'), 'Agenda');
+        assert.equal(desc('<script>var pin = 1;</script>Agenda: budget'), 'Agenda: budget');
+        assert.equal(desc('<Script src="x">a < b</sCript>Agenda'), 'Agenda');
+    });
+
+    test('an unclosed <style> loses only its tag; the rest is text the removal rules read', () => {
+        assert.equal(desc('<style>Passcode: 654321'), 'Passcode: [removed]');
+    });
+
+    test('opening <p …>, <div …> and <li …>, in any case, end the line', () => {
+        for (const tag of ['<p>', '<P class="x">', '<div>', '<DIV style="a">', '<li>', '<li value=2>'])
+            assert.equal(desc(`Passcode: 654321${tag}Agenda: budget`), 'Passcode: [removed] Agenda: budget', tag);
+    });
+
+    test('an Outlook-style HTML invite: styles, comments and <o:p> go, the agenda stays, the passcode goes', () => {
+        const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office"><head>'
+            + '<meta http-equiv=Content-Type content="text/html; charset=utf-8">'
+            + '<style><!-- /* Font Definitions */ @font-face {font-family:"Cambria Math";} '
+            + 'p.MsoNormal, li.MsoNormal, div.MsoNormal {margin:0in; font-size:11.0pt;} --></style>'
+            + '<!--[if gte mso 9]><xml><o:shapedefaults v:ext="edit" spidmax="1026" /></xml><![endif]-->'
+            + '</head><body lang=EN-US><div class=WordSection1>'
+            + '<p class=MsoNormal>Agenda: budget review and hiring plan<o:p></o:p></p>'
+            + '<p class=MsoNormal><o:p>&nbsp;</o:p></p>'
+            + '<ul><li class=MsoListParagraph><![if !supportLists]><span>-<span>&nbsp;</span></span><![endif]>Q3 numbers<o:p></o:p></li></ul>'
+            + '<div><p class=MsoNormal>Microsoft Teams meeting<o:p></o:p></p>'
+            + '<p class=MsoNormal>Meeting ID: 234 567 890 123<o:p></o:p></p>'
+            + '<p class=MsoNormal>Passcode: aB3cD4<o:p></o:p></p>'
+            + '<p class=MsoNormal>+1 323-849-4874,,123456789#<o:p></o:p></p></div>'
+            + '<p class=MsoNormal>Wrap-up: action items and owners<o:p></o:p></p>'
+            + '</div></body></html>';
+        const d = desc(html);
+        for (const kept of ['Agenda: budget review and hiring plan', 'Q3 numbers', 'Meeting ID: 234 567 890 123',
+            'Passcode: [removed]', 'Wrap-up: action items and owners'])
+            assert.ok(d.includes(kept), `${kept} lost: ${d}`);
+        for (const gone of ['aB3cD4', '123456789', 'Cambria', 'MsoNormal', 'supportLists', 'shapedefaults', 'o:p', '<', '{'])
+            assert.ok(!d.includes(gone), `${gone} survived: ${d}`);
+    });
 });
 
 describe('buildInvite: D-030 one shared list of invisible marks, stripped before matching', () => {
@@ -501,6 +566,13 @@ describe('buildInvite: D-030 dial-in strings, round 2', () => {
     test('a space before the pause', () => {
         assert.equal(desc('+1 646-876-9923 ,,812345#'), '[removed]');
         assert.equal(desc('Call +1 646-876-9923 ;4321# now'), 'Call [removed] now');
+    });
+
+    test('a space is allowed only before a pause: a number then a space and "#" or "*" is ordinary text', () => {
+        for (const text of ['Sprint review 2026-09-27 #team', 'Q3 2026 - 2027 #goals', 'Order 1234567 #urgent',
+            'Call Bob on 555 123 4567 *after 5pm*', 'Call 1-800-555-1234 * 2'])
+            assert.equal(desc(text), text);
+        assert.equal(desc('+1 646-876-9923 ,,812345#'), '[removed]');
     });
 
     test('a number after a list marker or a digit is still caught; the label before it stays', () => {
@@ -671,6 +743,13 @@ describe('buildInvite: no catastrophic backtracking on 1 000 000 characters', ()
         'percent codes after a digit': fill('1%2C'),
         'no-break spaces between digits': fill('1\u00A0'),
         'spaces before pauses': fill('1234567 ,'),
+        'an unclosed comment': '<!--' + fill('a'),
+        'comments that never close': fill('<!--'),
+        'an unclosed <style>': '<style>' + fill('a'),
+        '<style> tags that never close': fill('<style>'),
+        '<script> tags that never close': fill('<script>'),
+        'conditional markers that never close': fill('<![if '),
+        'namespaced tag names that never end': fill('<o:p'),
         'a mixed invite repeated': fill('Passcode: 654321<br>+16699006833,,81234567890#,,,,*654321# PIN\n'),
     };
 

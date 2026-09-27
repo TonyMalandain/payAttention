@@ -26,8 +26,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   - Build order (each: plan → build → review):
     - **PG-4a — Core AI pieces (M). ACCEPTED** (review round 2).
       - Scope was: Settings keys and defaults, endpoint rules, the invite builder with its limits (D-020, D-022, D-023, D-024), fingerprint, prompt text, reply and protocol checks, and `judge` taking stored AI answers. Done when unit tests prove each rule in the addendum that core owns.
-    - **PG-4a2 — Passcode follow-up (S)** (D-029): dial-in strings removed; HTML line breaks treated as line ends; plural keywords and hidden marks inside a keyword handled; `buildInvite` doc comment refreshed. Done when unit tests cover a standard Zoom, Meet, Teams and Webex invite in plain text and HTML, and nothing that looks like a passcode or dial string survives. Runs after PG-6 (which touches the same file).
-    - **PG-4a3 — Plain text first, passcode removal round 2 (S)** (D-030). It fixes the review defects:
+    - **PG-4a2 — Passcode follow-up (S). DONE** (D-029): dial-in strings removed; HTML line breaks treated as line ends; plural keywords and hidden marks inside a keyword handled; `buildInvite` doc comment refreshed. Done when unit tests cover a standard Zoom, Meet, Teams and Webex invite in plain text and HTML, and nothing that looks like a passcode or dial string survives. Runs after PG-6 (which touches the same file).
+    - **PG-4a3 — Plain text first, passcode removal round 2 (S). DONE**, and passcode work is closed (D-030). It fixes the review defects:
       - direction marks inside a keyword;
       - no-break spaces and non-breaking hyphens in dial strings;
       - a space before the pause;

@@ -294,3 +294,9 @@ Append only. Newest at the bottom.
   Accepted as best effort: link addresses in HTML are not sent, and exotic dial or entity formats (notes 3–5) are not handled. No further passcode work.
 - **Source:** reviewer, PG-4a3 round 1.
 - **Touches:** decisions.md D-030
+
+## 2026-09-27 — PG-4a3 closed; passcode work closed
+- **Kind:** decision
+- **Fact:** The PG-4a3 fix round landed. Dial codes no longer eat dates, hashtags or order numbers, and Outlook leftovers are dropped. An unclosed comment or style block keeps its text, so later rules still read it. This was accepted: the agenda of a malformed invite survives. PG-4a3 is accepted and no more passcode work is planned (D-030).
+- **Source:** software engineer, PG-4a3 round 1 fixes.
+- **Touches:** decisions.md D-030
