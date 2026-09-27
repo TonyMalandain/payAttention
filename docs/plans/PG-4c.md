@@ -1,11 +1,16 @@
-# Plan — PG-4c: the shell side of AI mode (ask the AI helper about each meeting, one at a time, soonest first; keep old answers while re-asking; fall back to the rules; retries, budget, stored answers, the helper's lifetime, and "AI:" / "AI unavailable — using rules" on screen)
+# Plan — PG-4c: the shell side of AI mode (ask the AI helper about each meeting, one at a time, soonest first; keep old answers while re-asking; fall back to the rules; retries, engine pauses, budget, stored answers, the helper's lifetime, "AI:" and a truthful "AI unavailable — using rules" on screen; both helper spawns drop `G_MESSAGES_DEBUG`)
 
-Spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode" (R-18: AI mode judges every meeting; R-19: the owner connects the engine of their choice). Product decisions D-019 to D-030. Architecture: ADR-0010 (and what it carried over from ADR-0008), `interfaces.md` §6.1–§6.6 (above all §6.5, "Controller behaviour", which is binding), `data.md` ("AI answers", "Pruning"), `constraints.md` (Timing rows for AI), `testing-and-build.md` (Layer 1 "The controller is tested with fake AI clients", Layer 2b, Layer 3 item 8). The AI helper's protocol is exactly `interfaces.md` §6.6 and `docs/plans/PG-4b.md`.
+*Revised 2026-09-27 for D-031 (`interfaces.md` §6.5 as revised) and the spawn environment rule (`interfaces.md` §1 "Environment"). This revision replaces the earlier text; nothing needs reconciling against it.*
+
+Spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode" (R-18: AI mode judges every meeting; R-19: the owner connects the engine of their choice). Product decisions D-019 to D-031 (D-031: the "AI unavailable" line is truthful, and AI answers resume within 5 minutes of an unreachable engine returning). Architecture: ADR-0010 (with its D-031 amendment), `interfaces.md` §1 "Environment", §6.1–§6.6 (above all §6.5, "Controller behaviour", which is binding, including its outcome table), `data.md` ("AI answers", "Pruning"), `constraints.md` (Timing rows for AI, including "AI engine pause" and "AI recovery"), `testing-and-build.md` (Layer 1 "The controller is tested with fake AI clients", including the D-031 recovery and truthfulness tests; Layer 2b; Layer 3 item 8). The AI helper's protocol is exactly `interfaces.md` §6.6 and `docs/plans/PG-4b.md`.
+
+PG-4b is committed (2020d09). A small fix round is in progress in `extension/ai/transport.js` only (the Soup timeout set to 0). It changes no interface, and nothing in this plan depends on it.
 
 **Sensitive: personal data.**
 - Every `judge` line this code writes to the AI helper's stdin carries other people's names, email addresses and meeting text (D-020).
 - `ai-verdicts` stores a model-written reason that may paraphrase a title or a name (`data.md`).
 - Nothing in this ticket may log an invite, a title, a reason, the endpoint or anything read from a reply. Logs carry short codes only. The API key never passes through the shell (the helper reads it itself).
+- The spawn environment rule exists because GLib debug output carries the endpoint URL onto the helper's stdout. Step 10 closes that for both shell spawns.
 
 **The absolute rule of this ticket: no alert ever waits on the AI.** Built in by structure (the alert tick makes no call to the AI queue or the AI helper; see "Seams") and proven by the tests in Step 9.
 
@@ -15,9 +20,12 @@ Spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode" (R-18: A
   - each meeting that can be judged is asked about once, soonest first, one at a time;
   - its menu row and alerts read "AI: <reason>" once the answer arrives;
   - a changed invite keeps its previous AI answer while it is asked again;
-  - when the engine fails, is slow, is over budget or cannot start, the rules decide and the menu says "AI unavailable — using rules";
+  - when an ask fails, is slow, is over budget or the helper cannot start, the rules decide the affected meetings;
+  - the menu says "AI unavailable — using rules" **only while at least one waiting meeting is decided by the rules because of a failure** (the engine is down, or that meeting's own last ask failed). When every waiting meeting has a current answer, or is simply not asked yet with the engine fine, the line is hidden (D-031);
+  - when an unreachable engine comes back, AI answers resume within 5 minutes, even after an hour of outage (D-031);
   - answers survive a lock and unlock, so meetings are not asked again.
-- **Rules mode** (the default): nothing changes. No process is started, no timer is added, nothing is sent, and `ai-verdicts` is not written (unless it holds entries older than 7 days, which are pruned as `data.md` says).
+- **Every mode:** the calendar helper, and in AI mode the AI helper, are started without `G_MESSAGES_DEBUG` in their environment (`interfaces.md` §1). Nothing visible changes in a normal session.
+- **Rules mode** (the default): nothing else changes. No AI process is started, no timer is added, nothing is sent, and `ai-verdicts` is not written (unless it holds entries older than 7 days, which are pruned as `data.md` says).
 
 ## The component
 
@@ -27,7 +35,8 @@ Spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode" (R-18: A
   1. **`Store` has one hand-written write coalescer, tied to `alert-state`** (`store.js:12-13, 29-31, 78-87, 146-165`). `data.md` asks for `ai-verdicts` to be "coalesced, like alert state". Copying the timer and fields a second time would put two copies of the same mechanism in one class. Step 1 turns it into one per-key coalescer, with no change in behaviour.
   2. **The controller's Node test harness lives inside `controller.test.js`** (`tests/unit/controller.test.js:32-181, 580-592`). The AI tests need the same fakes. The repo splits tests by concern (`judge.test.js`, `judge.ai.test.js`, `judge.rulesMode.test.js`). Step 2 moves the harness into `tests/unit/support/`, with no change to any test.
   3. **Stored `ai-verdicts` has no reader or validator.** `judge` checks each entry it reads. But nothing parses, prunes or writes the stored value. The architect put this in core for PG-4c (`docs/architecture/NOTES.md`, "Parsing stored ai-verdicts belongs in core (PG-4c)"). Step 3 adds it, beside `alertState.js`, which is the same kind of thing.
-- **This change belongs here because:** §6.5 assigns the queue, the withholding, the retries, the budget, the status and the helper's lifecycle to the controller. `boundaries.md` makes the store the only writer of `ai-verdicts`, on the controller's request. `view.js` owns every "what to show" decision, and `ui/` only draws. Core owns stored formats. Nothing here changes a boundary, adds a dependency, or touches a contract outside the repository.
+  4. **The one helper spawn is a bare `Gio.Subprocess.new`** (`calendarFeed.js:100-101`). A second spawner is arriving, and §1 now binds every spawner to the same environment rule. Two bare spawns would be two places to forget it. Step 10 gives the shell one spawn function that applies the rule, and a lint guard so no shell file can spawn around it.
+- **This change belongs here because:** §6.5 assigns the queue, the withholding, the retries, the pauses, the budget, the status and the helper's lifecycle to the controller. §1 "Environment" binds the shell's spawners. `boundaries.md` makes the store the only writer of `ai-verdicts`, on the controller's request. `view.js` owns every "what to show" decision, and `ui/` only draws. Core owns stored formats and the one environment list. Nothing here changes a boundary, adds a dependency, or touches a contract outside the repository.
 
 ## Design in one page
 
@@ -36,25 +45,65 @@ Spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode" (R-18: A
                           │                                                   │
 Controller._tick ─► _render ─► _judgeAll(now) ─► plan ─► view      Controller._aiTick ─► AiQueue.pump(judged, cutoffMs)
                           ▲  reads this._ai (published data)                  │  sends ≤ 1 ask ─► AiHelperClient ─► gjs ai/main.js
-                          │                                                   │
-                          └──────── this._ai = state; _judgeDirty = true ◄── AiQueue.onChange(state)   (answer, failure, status change)
+                          │                                                   │                    (spawned by spawnHelper,
+                          │                                                   │                     without G_MESSAGES_DEBUG)
+                          └──── this._ai = state; _judgeDirty if inputs moved ◄── AiQueue.onChange(state)
 ```
 
 - **The alert tick never calls the AI queue or the AI helper client.**
-  - It reads one controller field, `this._ai`: plain frozen data (status, stored answers, failed keys), like `this._overrides`.
+  - It reads one controller field, `this._ai`: plain frozen data (status, stored answers, failed keys, engine down), like `this._overrides`.
   - The queue replaces that field through `onChange`. So nothing the AI does can delay, block or throw into `plan()` or the render.
-  - The one exception is the daily prune (`_prune`), which already runs from the tick. It calls `AiQueue.prune()`, which is a pure in-memory filter plus a coalesced store write. It is wrapped so that it cannot throw. This is stated here so the reviewer sees it; it never talks to the helper.
+  - The one exception is the daily prune (`_prune`), which already runs from the tick. It calls `AiQueue.prune()`, which is a pure in-memory filter plus a coalesced store write. It is wrapped so that it cannot throw. This is stated here so the reviewer sees it (and `constraints.md` says the same); it never talks to the helper.
 - **The AI tick never renders or plans.** It hands the latest judged list to the queue. It does nothing while a re-judge is pending (`_judgeDirty`). So it never asks about an invite that an answer or a new snapshot has just made obsolete.
+- **Two pieces of failure state, kept apart (D-031).** `engineDown` (the engine cannot be asked now, or its last ask did not reach it) and `failedKeys` (keys whose own most recent ask failed). Both drive withholding. The status is derived from them **and** from which meetings are waiting, so a failure about a meeting that is no longer waiting shows nothing.
 - **Withholding (§6.5) is exact, with a second `judge` pass only when needed.**
   - Pass 1 gives every stored answer to `judge` and learns which keys carry `aiAsk`.
-  - Pass 2 runs only if one of those keys must be withheld: the AI is unavailable, or that key's own last ask failed. It gets the answers minus those keys.
-  - Withholding never changes which keys carry `aiAsk` (with or without its entry, such a key still gets an `aiAsk`). So two passes always suffice.
-  - Cost: a second pass only while something is withheld. That is while the AI is failing, when answers are not arriving, so re-judges are rare (a snapshot every 5 min, plus local edits). At the designed 2 000 occurrences that is at most 2 × the 200 ms AI-mode `judge` budget (`tests/unit/budget.test.js`). At the owner's 26 occurrences it is well under a millisecond.
-- **Deciding apart from doing.** `AiQueue` decides what to ask, when, and what an outcome means. It takes `now` and an injected client, and it is tested under Node. `AiHelperClient` only spawns, writes, reads and reports. The watchdog is a decision (a timeout after `timeoutMs + 10 s`), so it lives in the queue and is tested under Node. The client only obeys `kill()`.
+  - Pass 2 runs only if one of those keys must be withheld: `engineDown` is set, or that key is in `failedKeys`. It gets the answers minus those keys.
+  - Withholding never changes which keys carry `aiAsk` (with or without its entry, such a key still gets an `aiAsk`). So two passes always suffice, and status and `judge` never feed each other.
+  - Cost: a second pass only while something is withheld, that is while answers are failing, so re-judges are rare (a snapshot every 5 min, plus local edits, plus outcomes). At the designed 2 000 occurrences that is at most 2 × the 200 ms AI-mode `judge` budget (`tests/unit/budget.test.js`). At the owner's 26 occurrences it is well under a millisecond.
+  - A published state whose answers, `failedKeys` and `engineDown` are unchanged (a status-only change) does **not** mark a re-judge: the render reads `status` on the next tick anyway (§6.5 "a change of status alone needs only a render").
+- **Recovery (D-031) is built from three rules**, each in the queue: an unreachable failure pauses the whole engine for 30 s, doubling, capped at 90 s; a probe sent while the engine was already down never pushes a meeting's retry further out; and the spend of every unreachable or `lost` ask is refunded. So after an outage the soonest waiting meeting is asked by the end of the pause in force (≤ 90 s), and the budget is what answered traffic alone left.
+- **Deciding apart from doing.** `AiQueue` decides what to ask, when, what an outcome means and what the status is. It takes `now` and an injected client, and it is tested under Node. `AiHelperClient` only spawns, writes, reads and reports. The watchdog is a decision (a timeout after `timeoutMs + 10 s`), so it lives in the queue and is tested under Node. The client only obeys `kill()`.
 
 ## Seams
 
-New files start with the two SPDX lines every source file carries (`// SPDX-License-Identifier: Apache-2.0`, `// SPDX-FileCopyrightText: 2026 Tony Malandain`). PG-6 has landed; the PG-4b plan's "no SPDX header" line is out of date.
+New files start with the two SPDX lines every source file carries (`// SPDX-License-Identifier: Apache-2.0`, `// SPDX-FileCopyrightText: 2026 Tony Malandain`). `tests/unit/licensing.test.js` checks this.
+
+### `extension/core/protocol.js` (changed) — the one list of variables a helper never inherits
+
+```js
+/**
+ * Environment variables every helper spawner removes from the child's environment
+ * (interfaces.md §1 "Environment"): with G_MESSAGES_DEBUG set, GLib writes library
+ * DEBUG/INFO lines, the AI endpoint among them, to the helper's stdout. Frozen.
+ */
+export const HELPER_ENV_UNSET = Object.freeze(['G_MESSAGES_DEBUG']);
+```
+
+- It goes in `protocol.js` because that is the §1 module, and §1 states the rule. The module imports nothing, and every spawner may import core (`shell/` now, `prefs.js` in PG-4d).
+- **Misuse designed out:** the spawners cannot disagree on the list, because there is one.
+
+### `extension/shell/helperProcess.js` (new, gi: `gi://Gio`)
+
+Imports `gi://Gio` and `../core/protocol.js` (`HELPER_ENV_UNSET`) only.
+
+**Responsible for:** starting a helper program the way §1 says every helper is started.
+
+```js
+/**
+ * Start a helper program: stdin and stdout piped, stderr inherited (so its code-only
+ * diagnostics reach the journal), and every variable in HELPER_ENV_UNSET removed
+ * from its environment (interfaces.md §1 "Environment"). The rest of the environment
+ * is the shell's own.
+ * @param {string[]} argv
+ * @returns {Gio.Subprocess}
+ * @throws {GLib.Error} whatever Gio.SubprocessLauncher.spawnv throws (the caller logs its message)
+ */
+export function spawnHelper(argv)
+```
+
+- Body, decided: `const launcher = new Gio.SubprocessLauncher({ flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE });`, then `launcher.unsetenv(name)` for each name in `HELPER_ENV_UNSET`, then `return launcher.spawnv(argv);`. A launcher copies the shell's environment when it is made, so only the listed variables change.
+- **Misuse designed out:** a shell spawner cannot forget the rule. Spawning and stripping are one call, and a lint rule (Step 10) refuses `Gio.Subprocess` and `Gio.SubprocessLauncher` in any other `shell/` file.
 
 ### `extension/core/aiAnswers.js` (new, pure core) — the stored `ai-verdicts` format
 
@@ -155,24 +204,40 @@ export class RequestBudget {
      * @returns {boolean} true when spent (the request may be sent); false when over budget, and nothing is spent
      */
     trySpend(engineTag, now)
+    /**
+     * Give back the one spend recorded for this engine at exactly `sentAt` (the ask's token.sentAt),
+     * for an ask that did not reach the engine (§6.5 table: unreachable codes and `lost`).
+     * Removes at most one spend. Does nothing when there is no spend at `sentAt` for that engine
+     * (it aged out, it was already refunded, or it was never made).
+     * @param {string} engineTag
+     * @param {number} sentAt epoch ms
+     */
+    refund(engineTag, sentAt)
 }
 ```
 
-**Misuse designed out:** there is no separate `allows()` and `record()`, which could be called apart or in the wrong order. Checking and spending are one call.
+**Misuse designed out:**
+- There is no separate `allows()` and `record()`, which could be called apart or in the wrong order. Checking and spending are one call.
+- A refund cannot create budget out of nothing: it only removes a spend that exists, one per call.
 
 ### `extension/shell/aiQueue.js` (new, gi-free, Node-tested)
 
 Imports `../core/aiAnswers.js` and `./aiBudget.js` only. No `gi://` and no `resource://` import, so it runs under Node (`boundaries.md`, "Node-tested shell modules").
 
-**Responsible for:** turning the judged meetings' AI asks into one request at a time. It keeps what the outcomes mean (stored answers, failures, status) for the controller to pass to `judge`.
+**Responsible for:** turning the judged meetings' AI asks into one request at a time. It keeps what the outcomes mean (stored answers, failed keys, engine down, status) for the controller to pass to `judge` and to the view.
 
 ```js
 /** First wait after a failed ask for one occurrence; it doubles up to ASK_RETRY_MAX_MS (constraints.md). */
 export const ASK_RETRY_FIRST_MS = 60_000;
 export const ASK_RETRY_MAX_MS = 1_800_000;
-/** Engine pause after 'auth', 'config' or 'no-key'. */
-export const ENGINE_PAUSE_MS = 1_800_000;
-/** Engine pause after 'rate-limited' without retryAfterS; with it, retryAfterS s capped at ENGINE_PAUSE_MS. */
+/** The failure codes that mean the engine could not be reached (§6.5). Frozen. */
+export const ENGINE_UNREACHABLE_CODES = Object.freeze(['network', 'timeout', 'tls', 'server']);
+/** Engine pause after an unreachable failure: the first, and the cap (D-031, constraints.md). */
+export const UNREACHABLE_PAUSE_FIRST_MS = 30_000;
+export const UNREACHABLE_PAUSE_MAX_MS = 90_000;
+/** Engine pause after 'auth', 'config' or 'no-key' (the engine or its setup refused us). */
+export const ENGINE_REFUSED_PAUSE_MS = 1_800_000;
+/** Engine pause after 'rate-limited' without retryAfterS; with it, retryAfterS s capped at ENGINE_REFUSED_PAUSE_MS. */
 export const RATE_LIMIT_PAUSE_MS = 300_000;
 /** The shell's watchdog: an ask unanswered for engine.timeoutMs + this is a 'timeout'. */
 export const WATCHDOG_GRACE_MS = 10_000;
@@ -195,12 +260,14 @@ export const WATCHDOG_GRACE_MS = 10_000;
  * @property {() => void} destroy stops the helper for good; no callback afterwards
  */
 /**
- * What the controller passes to judge, published by the queue on every change. Frozen; never mutated.
+ * What the controller passes to judge and to the view, published by the queue on every change. Frozen; never mutated.
  * @typedef {Readonly<{status:'off'|'ok'|'unavailable',
  *   answers: import('../core/types.js').AiAnswers,
- *   failedKeys: ReadonlySet<string>}>} AiState
- *   answers: the stored items (entries carry `at`, which judge ignores);
- *   failedKeys: occurrence keys whose own most recent ask failed
+ *   failedKeys: ReadonlySet<string>,
+ *   engineDown: boolean}>} AiState
+ *   answers: the stored items (entries carry `at`, which judge ignores). The same object until the answers change.
+ *   failedKeys: occurrence keys whose own most recent ask failed. The same Set object until its contents change.
+ *   engineDown: §6.5 "engine down".
  */
 
 /**
@@ -208,6 +275,30 @@ export const WATCHDOG_GRACE_MS = 10_000;
  * @returns {number} ASK_RETRY_FIRST_MS for null, else min(previousMs * 2, ASK_RETRY_MAX_MS)
  */
 export function nextAskRetryMs(previousMs)
+
+/**
+ * The engine pause after an unreachable failure (§6.5).
+ * @param {number|null} previousMs the last unreachable pause, or null when the backoff is reset
+ * @returns {number} UNREACHABLE_PAUSE_FIRST_MS for null, else min(previousMs * 2, UNREACHABLE_PAUSE_MAX_MS)
+ */
+export function nextEnginePauseMs(previousMs)
+
+/**
+ * §6.5 "waiting meeting": the queue's pick test without the retry check. The one definition;
+ * the pick and the status both use it.
+ * @param {import('../core/types.js').JudgedOccurrence} j
+ * @returns {boolean} j.aiAsk !== undefined && j.start !== null && j.start >= now − cutoffMs
+ */
+export function isWaiting(j, cutoffMs, now)
+
+/**
+ * §6.5 "Status for the View".
+ * @param {{hasEngine:boolean, engineDown:boolean, failedKeys:ReadonlySet<string>}} failure
+ * @param {ReadonlyArray<import('../core/types.js').JudgedOccurrence>} judged
+ * @returns {'off'|'ok'|'unavailable'} 'off' when !hasEngine; 'unavailable' when some j in judged
+ *   has isWaiting(j, cutoffMs, now) and (engineDown or failedKeys.has(j.key)); else 'ok'
+ */
+export function aiStatusOf(failure, judged, cutoffMs, now)
 
 /**
  * judge's config.ai for this engine (interfaces.md §6.4).
@@ -220,7 +311,7 @@ export function aiJudgeConfig(engine, now)
 
 /**
  * The answers judge's second pass gets (§6.5): the entry of every key in `judged` that carries aiAsk and has
- * an entry is withheld when ai.status is 'unavailable', or when ai.failedKeys has that key.
+ * an entry is withheld when ai.engineDown is true, or when ai.failedKeys has that key.
  * @param {ReadonlyArray<import('../core/types.js').JudgedOccurrence>} judged the output of a judge pass given ai.answers
  * @param {AiState} ai
  * @returns {import('../core/types.js').AiAnswers|null} null when nothing is withheld (the first pass stands);
@@ -246,15 +337,17 @@ export class AiQueue {
 
     /**
      * The engine to use, from aiEngine(settings). The same engineTag (or null again) does nothing.
-     * Otherwise it destroys the client, forgets the ask in flight, every per-occurrence retry, the
-     * engine pause, the unavailable flag and the once-only log set, and creates a client for the new
-     * engine (none for null). The budget is kept (it is per engineTag). Publishes the new state.
+     * Otherwise it destroys the client, forgets the ask in flight, every per-occurrence retry record,
+     * failedKeys, engineDown, the engine pause and the unreachable backoff, and the once-only log set,
+     * and creates a client for the new engine (none for null). The budget is kept (it is per engineTag).
+     * Recomputes the status and publishes.
      * @param {AiEngine|null} engine
      */
     setEngine(engine)
 
     /**
-     * One step of the queue, called every second by the AI ticker. It sends at most one ask. See "pump" below.
+     * One step of the queue, called every second by the AI ticker. It sends at most one ask,
+     * and always recomputes the status. See "pump" below. Never throws.
      * @param {ReadonlyArray<import('../core/types.js').JudgedOccurrence>} judged the latest judge output, in judge order
      * @param {number} cutoffMs timing.cutoffMs
      */
@@ -268,62 +361,73 @@ export class AiQueue {
 }
 ```
 
-**`pump(judged, cutoffMs)`, in this order** (`now = this._now()` once):
-1. Return if destroyed, if there is no engine, or if there is no client (its creation failed).
-2. **Watchdog.** If an ask is in flight, and `now − sentAt ≥ engine.timeoutMs + WATCHDOG_GRACE_MS`: call `client.kill()`, then settle that ask as `{type:'failed', code:'timeout'}` (below). In either case, return.
-3. Return if `now < pausedUntil`.
-4. **Pick.** Walk `judged` in its order (judge sorts by start, then key, so the first match is the soonest). Take the first `j` where:
-   - `j.aiAsk !== undefined`;
-   - `j.start !== null && j.start >= now − cutoffMs`;
-   - there is no retry record for `j.key`, or its `retryAt ≤ now`.
+**Private state of `AiQueue`, all decided:** `_engine` (AiEngine|null); `_client` (AiClientPort|null); `_answers` (StoredAiAnswers); `_inFlight` (token|null); `_retry` (`Map` key → `{waitMs, retryAt}`); `_failedKeys` (`Set`) with `_failedKeysChanged` (boolean); `_engineDown` (boolean, false); `_pausedUntil` (0); `_enginePauseMs` (the last unreachable pause, or null); `_budget` (`new RequestBudget()`, for the queue's life, not reset by `setEngine`); `_logged` (`Set` of once-only log keys, reset by `setEngine`); `_lastJudged` (`[]`) and `_lastCutoffMs` (0), the arguments of the last pump; `_state`; `_destroyed`. The initial `_state` is `Object.freeze({status:'off', answers: answers.items, failedKeys: new Set(), engineDown: false})`.
 
-   Return if there is none.
-5. Return if `!client.ready`. Nothing is spent, and the status does not change.
-6. `budget.trySpend(engine.engineTag, now)`. On `false`: if not already unavailable, set unavailable and publish; return.
+A **token** is `{key, fp, engineTag, sentAt, downAtSend}`, where `downAtSend` is `_engineDown` at the moment of sending (§6.5).
+
+**`pump(judged, cutoffMs)`**:
+- Return if destroyed. `now = this._now()` once. Set `_lastJudged = judged`, `_lastCutoffMs = cutoffMs`.
+- Run the **step** below inside `try/catch`. On an exception: log once per engine (`console.error('payattention: ai-failed pump', e)`) and set `_engineDown = true`. This is the §6.5 row "the client could not be created, or settling threw", applied to a client that throws from `ready` or `kill`.
+- Then, whatever path the step took, **update** (below) with `now`.
+
+**The step, in this order:**
+1. Return if there is no engine, or no client (its creation failed).
+2. **Watchdog.** If an ask is in flight: if `now − sentAt ≥ engine.timeoutMs + WATCHDOG_GRACE_MS`, call `client.kill()`, then settle that token as `{type:'failed', code:'timeout'}`. In either case, return.
+3. Return if `now < _pausedUntil`.
+4. **Pick.** Walk `judged` in its order (judge sorts by start, then key, so the first match is the soonest). Take the first `j` with `isWaiting(j, cutoffMs, now)` and either no retry record for `j.key` or its `retryAt ≤ now`. Return if there is none.
+5. Return if `!client.ready`. Nothing is spent, and nothing changes.
+6. `_budget.trySpend(engine.engineTag, now)`. On `false`: set `_engineDown = true`; return.
 7. **Send.**
-   - `token = {key: j.key, fp: j.aiAsk.fp, sentAt: now}`;
-   - `inFlight = token`;
+   - `token = {key: j.key, fp: j.aiAsk.fp, engineTag: engine.engineTag, sentAt: now, downAtSend: _engineDown}`;
+   - `_inFlight = token`;
    - `client.ask(j.aiAsk.invite, outcome => this._settle(token, outcome))`.
-   - If `ask` throws: log once (`payattention: ai-failed ask`), then settle the token as `{type:'lost'}`.
+   - If `ask` throws: log once per engine (`payattention: ai-failed ask`), then settle the token as `{type:'lost'}`.
 
-**Settling an outcome (`_settle(token, outcome)`)** does nothing if destroyed or if `token !== inFlight`. Otherwise it sets `inFlight = null` and continues. The whole body is in `try/catch`. On an exception it logs once (`payattention: ai-failed settle`), sets unavailable and publishes.
-- **`verdict`:**
-  - `answers = recordAiAnswer(answers, token.key, {fp: token.fp, verdict, reason}, now)`;
-  - `writeAnswers(answers)`;
-  - delete the retry record of `token.key`;
-  - clear unavailable;
-  - publish.
-- **`failed`:**
-  - the retry record of `token.key` becomes `{waitMs: w, retryAt: now + w}`, where `w = nextAskRetryMs(previous waitMs or null)`;
-  - if the code is `auth`, `config` or `no-key`: `pausedUntil = max(pausedUntil, now + ENGINE_PAUSE_MS)`;
-  - if the code is `rate-limited`: `pausedUntil = max(pausedUntil, now + (retryAfterS === undefined ? RATE_LIMIT_PAUSE_MS : min(retryAfterS * 1000, ENGINE_PAUSE_MS)))`;
-  - set unavailable;
-  - `console.warn('payattention: ai-request-failed <code>')`, once per code per engine;
-  - publish.
-- **`lost`:**
-  - set unavailable, with no retry record;
-  - `console.warn('payattention: ai-helper-lost')`, once per engine;
-  - publish.
-  - Why no retry record: the client's restart delay (1 s, doubling to 5 min) already limits the next ask, and a lost helper is not an answer about this invite.
+**Settling an outcome (`_settle(token, outcome)`)** does nothing if destroyed or if `token !== _inFlight`. Otherwise `_inFlight = null`, `now = this._now()`, and the body below runs in `try/catch`. On an exception: log once per engine (`payattention: ai-failed settle`) and set `_engineDown = true`. Then, always, **update** with `now`. The body is exactly the §6.5 table:
 
-**Status:** `'off'` when there is no engine, `'unavailable'` while the unavailable flag is set, else `'ok'`.
-- The flag is set by a failure, a lost helper, a client that could not be created, or a budget refusal.
-- It is cleared only by a verdict or by `setEngine`. This is §6.5's "and nothing has succeeded since", word for word.
+| Outcome | `_engineDown` | `_failedKeys` | retry record of `token.key` | engine pause | spend |
+|---|---|---|---|---|---|
+| `verdict` | false | delete `token.key` | delete | `_enginePauseMs = null` | kept |
+| `failed`, code in `ENGINE_UNREACHABLE_CODES` | true | add `token.key` | advance **only if `!token.downAtSend`**, else leave as it was | `w = nextEnginePauseMs(_enginePauseMs)`; `_enginePauseMs = w`; `_pausedUntil = max(_pausedUntil, now + w)` | `_budget.refund(token.engineTag, token.sentAt)` |
+| `failed`, `auth` / `config` / `no-key` | true | add | advance | `_pausedUntil = max(_pausedUntil, now + ENGINE_REFUSED_PAUSE_MS)` | kept |
+| `failed`, `rate-limited` | true | add | advance | `_pausedUntil = max(_pausedUntil, now + (retryAfterS === undefined ? RATE_LIMIT_PAUSE_MS : min(retryAfterS * 1000, ENGINE_REFUSED_PAUSE_MS)))` | kept |
+| `failed`, `bad-reply` | false | add | advance | `_enginePauseMs = null` | kept |
+| `failed`, `bad-request`, or any other code | unchanged | add | advance | none | kept |
+| `lost` | true | unchanged | none | none | `_budget.refund(token.engineTag, token.sentAt)` |
 
-**Publish:** `state = Object.freeze({status, answers: answers.items, failedKeys: new Set(retryRecords.keys())})`, then `onChange(state)`.
+- **verdict** also does: `_answers = recordAiAnswer(_answers, token.key, {fp: token.fp, verdict, reason}, now)`, then `writeAnswers(_answers)`.
+- **Advance** means: the record becomes `{waitMs: w, retryAt: now + w}`, with `w = nextAskRetryMs(previous waitMs or null)`.
+- "Any other code" cannot arrive today (the client passes only validated codes, plus `bad-request` and the watchdog's `timeout`). It takes the `bad-request` row so a new code can never pause or unpause the engine by accident.
+- `_failedKeysChanged = true` whenever an `add` inserts an absent key or a `delete` removes a present one.
+- **Logs,** codes only: `failed` → `console.warn('payattention: ai-request-failed <code>')`, once per code per engine; `lost` → `console.warn('payattention: ai-helper-lost')`, once per engine.
+- Why `lost` gets no retry record: the client's restart delay (1 s, doubling to 5 min) already limits the next ask, and a lost helper is not an answer about this invite.
+- `pausedUntil` is not changed by a verdict: nothing is sent during a pause, so a verdict never arrives inside one.
 
-**Client creation** in `setEngine` is in `try/catch`. On an exception it logs once (`payattention: ai-failed client`), leaves the client null and sets unavailable. There is no retry until the engine changes.
+**Update (`_update(now)`)**, the only place that publishes:
+- `status = aiStatusOf({hasEngine: _engine !== null, engineDown: _engineDown, failedKeys: _failedKeys}, _lastJudged, _lastCutoffMs, now)`;
+- `failedKeys = _failedKeysChanged ? new Set(_failedKeys) : _state.failedKeys`;
+- if `status`, `_answers.items`, `_engineDown` and `failedKeys` are all identical (`===`) to `_state`'s, return: nothing is published;
+- otherwise `_failedKeysChanged = false`, `_state = Object.freeze({status, answers: _answers.items, failedKeys, engineDown: _engineDown})`, `onChange(_state)`.
+
+So the status is recomputed at the end of every pump and every settle, and published only when something changed (§6.5).
+
+**`setEngine`, `prune`, `destroy`:**
+- `setEngine`: the old client's `destroy()` and the new `createClient(engine)` each run in `try/catch`. A `destroy` exception is logged once (`payattention: ai-failed destroy`) and ignored. A `createClient` exception logs once (`payattention: ai-failed client`), leaves the client null and sets `_engineDown = true`; there is no retry until the engine changes. Clearing a non-empty `_failedKeys` sets `_failedKeysChanged`. Then update with `now`.
+- `prune`: `pruned = pruneAiAnswers(_answers, now)`; if `pruned !== _answers`, set it, `writeAnswers(pruned)`, update with `now`.
+- `destroy`: the client's `destroy()` in `try/catch`; `_destroyed = true`. Idempotent.
 
 **Misuse designed out:**
 - **Configure before judge** is gone from this seam: a client is made per engine, and it configures itself.
-- **Two asks at once** cannot happen: the queue holds `inFlight`, and the client refuses `ask` while not `ready`.
+- **Two asks at once** cannot happen: the queue holds `_inFlight`, and the client refuses `ask` while not `ready`.
 - **An answer for an old engine or a killed ask** is ignored by the token check.
 - **A forgotten watchdog** cannot happen: the watchdog is part of `pump`, so nothing else needs to arm it.
-- **Budget check and spend** are one call.
+- **Budget check and spend** are one call; a refund is keyed by the token's own `sentAt` and `engineTag`, so it cannot return a spend of another engine or another ask.
+- **A stale status** cannot be shown: there is one place that computes it, and every path through `pump` and `_settle` ends there.
+- **Two definitions of "waiting"** cannot drift: the pick and the status both call `isWaiting`.
 
 ### `extension/shell/aiHelperClient.js` (new, gi: `gi://Gio`, `gi://GLib`)
 
-Imports `../core/aiProtocol.js` (`AI_PROTOCOL_VERSION`, `parseAiHelperLine`, `formatAiShellMessage`) and `./backoff.js` (`nextRestartDelayMs`). It spawns `ai/main.js` by path; it never imports `ai/` (lint forbids that).
+Imports `../core/aiProtocol.js` (`AI_PROTOCOL_VERSION`, `parseAiHelperLine`, `formatAiShellMessage`), `./backoff.js` (`nextRestartDelayMs`) and `./helperProcess.js` (`spawnHelper`). It spawns `ai/main.js` by path; it never imports `ai/` (lint forbids that).
 
 **Responsible for:** keeping one AI helper process for one engine, and carrying one ask at a time to it and its outcome back.
 
@@ -355,7 +459,7 @@ Behaviour, all decided:
   5. Record `{id, onDone}` as outstanding, and write `line`.
 - **Spawning:**
   1. Format the `configure` line: `{type:'configure', protocol: AI_PROTOCOL_VERSION, endpoint: engine.endpoint, model: engine.model, timeoutMs: engine.timeoutMs}`. If that throws, log `payattention: ai-invalid-configure`, stop the client for good (`ready` is false forever) and report failure.
-  2. `Gio.Subprocess.new(argv, STDIN_PIPE | STDOUT_PIPE)`. stderr is inherited, so the helper's code-only diagnostics reach the journal, as for the calendar helper. If it throws, log `payattention: ai-spawn-failed <e.message>`, schedule a restart (below) with `ranForMs = 0`, and report failure.
+  2. `spawnHelper(argv)` (stdin and stdout piped, stderr inherited, `G_MESSAGES_DEBUG` removed). If it throws, log `payattention: ai-spawn-failed <e.message>`, schedule a restart (below) with `ranForMs = 0`, and report failure.
   3. Record `spawnedAt`, make a new `Gio.Cancellable`, and start reading and waiting exactly as `CalendarFeed._spawn` does.
   4. Write the `configure` line. It is queued before the `judge` line, so the helper always sees `configure` first. `hello` is not waited for; it is checked when it arrives.
 - **Writing:** one write in flight per process.
@@ -390,14 +494,18 @@ Behaviour, all decided:
 - **Never logged:** an invite, a line's content, a reason, the endpoint or the model. The codes above are the complete list.
 - **Idle helper:** once spawned, the helper keeps running until `kill()`, `destroy()`, an exit or a mode or engine change. §6.5 lists those as the kill triggers. It does not kill an idle helper, so neither does this plan.
 
+### `extension/shell/calendarFeed.js` (changed)
+
+- `_spawn()`: `this._proc = Gio.Subprocess.new(this._argv, STDIN_PIPE | STDOUT_PIPE)` (`calendarFeed.js:100-101`) becomes `this._proc = spawnHelper(this._argv)`, imported from `./helperProcess.js`. The comment "Stderr is inherited…" moves to `spawnHelper`'s JSDoc. The `catch`, its log code `helper-spawn-failed` and everything else in the file are unchanged.
+
 ### `extension/shell/view.js` (changed)
 
 ```js
-/** The menu line while the AI cannot be used (PRD addendum, "When the engine cannot be reached"). */
+/** The menu line while a waiting meeting is decided by the rules because of an AI failure (PRD addendum, D-031). */
 export const AI_UNAVAILABLE_TEXT = 'AI unavailable — using rules';   // U+2014 em dash
 ```
 
-- `buildView(p)` takes one more field, **`p.aiStatus: 'off'|'ok'|'unavailable'`**. `View.menu` gains **`aiStatus: string|null`**: `AI_UNAVAILABLE_TEXT` when `p.aiStatus === 'unavailable'`, else `null`.
+- `buildView(p)` takes one more field, **`p.aiStatus: 'off'|'ok'|'unavailable'`**. `View.menu` gains **`aiStatus: string|null`**: `AI_UNAVAILABLE_TEXT` when `p.aiStatus === 'unavailable'`, else `null`. The view decides nothing more: the truthfulness rule is the queue's `aiStatusOf`.
 - **The reason line.** A new private `reasonLine(j)` gives `j.reason` unchanged when `j.reasonCode` is `'ai-must'` or `'ai-ignore'`, and `` `Why: ${j.reason}` `` otherwise.
   - Core already writes AI reasons as `"AI: " + reason` (`verdict.js` `aiVerdict`), so the row and the alert read exactly "AI: <reason>", as the spec words it, and never "Why: AI: …".
   - It is used for `MeetingRow.reason` (`view.js:93`) and `AlertView.reason` (`view.js:69`). Rule reasons are unchanged.
@@ -446,14 +554,20 @@ export const AI_UNAVAILABLE_TEXT = 'AI unavailable — using rules';   // U+2014
   - return if destroyed or `this._judgeDirty`;
   - otherwise `this._aiSafely('pump', () => this._aiQueue.pump(this._judged, this._timing.cutoffMs))`.
 - **`_onAiChange(state)`** (new):
-  - return if destroyed;
-  - `this._ai = state; this._judgeDirty = true`.
-  - No immediate tick: the next alert tick, within 1 s, re-judges and renders.
+  ```js
+  if (this._destroyed)
+      return;
+  const previous = this._ai;
+  this._ai = state;
+  if (state.answers !== previous.answers || state.failedKeys !== previous.failedKeys || state.engineDown !== previous.engineDown)
+      this._judgeDirty = true;
+  ```
+  - No immediate tick: the next alert tick, within 1 s, re-judges if needed and renders (it renders every tick, so a status-only change shows on the next tick).
 - **`_aiSafely(what, fn)`** (new):
   - runs `fn` in `try/catch`;
   - on an exception, `console.error('payattention: ai-failed ' + what, e)`, once per distinct `what + String(e)` for the controller's life;
   - never rethrows.
-- **`_render(now)`** (`controller.js:205-208`): replace the `judge(...)` line with `this._judged = this._judgeAll(now);`.
+- **`_render(now)`** (`controller.js:205-208`): replace the `judge(...)` expression with `this._judged = this._judgeAll(now);`. The `_judgedByKey` line and the rest are unchanged.
 - **`_judgeAll(now)`** (new):
   ```js
   const snapshot = this._feed.snapshot;
@@ -480,13 +594,29 @@ createAiClient: engine => new AiHelperClient({ argv: ['gjs', '-m', `${this.path}
 createAiTicker: onTick => new Ticker(1000, onTick),
 ```
 
+### `eslint.config.js` (changed) — the spawn guard
+
+A new block right after the `extension/shell/**/*.js` block:
+
+```js
+{
+    files: ['extension/shell/**/*.js'],
+    ignores: ['extension/shell/helperProcess.js'],
+    rules: {
+        'no-restricted-properties': ['error',
+            { object: 'Gio', property: 'Subprocess', message: 'start helpers with spawnHelper() from shell/helperProcess.js (interfaces.md §1 "Environment")' },
+            { object: 'Gio', property: 'SubprocessLauncher', message: 'start helpers with spawnHelper() from shell/helperProcess.js (interfaces.md §1 "Environment")' }],
+    },
+},
+```
+
+The shell block has no `no-restricted-properties` today, so this replaces nothing. `Gio.SubprocessFlags` stays allowed (it is another property).
+
 ## Steps
 
-Land each step as its own commit, in this order. Steps 1 and 2 are **repair and must not change behaviour**. `npm run lint`, `npm test` and `npm run smoke` are green before and after each, with the same test count. Steps 3 to 10 are the feature, each test first.
+Land each step as its own commit, in this order. Steps 1 and 2 are **repair and must not change behaviour**. `npm run lint`, `npm test` and `npm run smoke` are green before and after each, with the same test count. Steps 3 to 11 are the feature, each test first.
 
-Baseline before Step 1:
-- run the full sequence and note the counts (`npm test` total and passes);
-- PG-4b must be merged (see "Stop and escalate if").
+Baseline before Step 1: run the full sequence and note the counts (`npm test` total and passes). PG-4b is committed (2020d09); if the `extension/ai/transport.js` fix round is still uncommitted when you start, leave it alone (it is not part of this ticket).
 
 ### Step 1 — One write coalescer per GSettings key in `Store`  [repair]
 - **Test first:** none new. `tests/smoke/store-check.js` already proves the behaviour this step must keep: "no write before the delay", "exactly one alert-state write", "the last state was written", and "destroy flushes". Run `npm run smoke` (its first stage is the store check) before and after.
@@ -544,7 +674,7 @@ Baseline before Step 1:
 - **Why here:** the store is the only GSettings writer (`boundaries.md`).
 - **Behaviour change:** none visible yet. Nothing calls it.
 
-### Step 5 — The request budget  [feature]
+### Step 5 — The request budget, with refunds  [feature]
 - **Test first:** `tests/unit/aiBudget.test.js`. Use its own `T` base; do not reuse `budget.test.js`, which is the tick-time budget.
   1. The constants are 120 and 1000.
   2. 120 spends at `T` are all `true`. The 121st at `T` and at `T + HOUR − 1` is `false`. At `T + HOUR` it is `true`.
@@ -554,34 +684,48 @@ Baseline before Step 1:
      - the next, at `T + 1000 × 40 s`, is `false`;
      - at `T + DAY` one is `true`.
   5. Two engine tags have separate budgets: 120 on `a` does not refuse `b`.
-- **Then:** `extension/shell/aiBudget.js` to the seam: a `Map` from engineTag to a sorted array of spend times, trimmed of spends older than 24 h on each call.
+  6. **Refund** (D-031):
+     - 120 spends at `T + i` ms (i = 0…119), then `refund('a', T + 7)`: one more spend at `T + 200` is `true`, and the next is `false`;
+     - `refund('a', T + 7)` a second time does nothing: the next spend is still `false`;
+     - `refund('a', T + 5000)` (no such spend) and `refund('b', T + 8)` (another engine) do nothing;
+     - a spend at `T`, then `refund('a', T)` at a clock past `T + DAY` (after a `trySpend` at `T + DAY + 1` has forgotten it) does nothing and does not throw;
+     - equal times: 118 spends at `T + i` ms (i = 0…117) and two at `T + 500` (120 in all); one `refund('a', T + 500)` frees exactly one slot: the next spend is `true`, the one after is `false`.
+- **Then:** `extension/shell/aiBudget.js` to the seam: a `Map` from engineTag to a sorted array of spend times, trimmed of spends older than 24 h on each `trySpend`. `refund` removes the first element equal to `sentAt` (`indexOf` then `splice`), if any.
 - **Why here:** the budget is a shell policy (`constraints.md`), gi-free and in memory.
 - **Behaviour change:** none visible yet.
 
 ### Step 6 — The queue's pure helpers  [feature]
 - **Test first:** `tests/unit/aiQueue.test.js`, with `process.env.TZ = 'UTC'` set before a dynamic import, as `view.test.js` does. The first block:
   1. `nextAskRetryMs`: from null, repeated calls give 60, 120, 240, 480, 960, 1800 and 1800 seconds.
-  2. `aiJudgeConfig(null, T0) === null`. For `aiEngine({...DEFAULT_SETTINGS, verdictSource:'ai', aiModel:'m'})` it gives `{engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: 0}`, and `Object.is(result.utcOffsetMinutes, 0)` holds (no −0).
-  3. `withholdAnswers`, with `judged()` from `builders.js` plus `aiAsk` where needed:
-     - `status:'ok'` and no failed keys → `null`;
-     - `status:'unavailable'` → keys with `aiAsk` and an entry are withheld; a key with an entry and no `aiAsk` (a current answer) is kept; a key with `aiAsk` and no entry changes nothing; the result is frozen;
-     - `status:'ok'` with `failedKeys` `{k1}` → only `k1` is withheld, and only when `k1` carries `aiAsk`;
-     - `status:'off'` → `null`.
-- **Then:** the constants, the typedefs and the three functions in `extension/shell/aiQueue.js`.
-- **Why here:** they turn the queue's state into `judge` input, which is §6.5's rule. The module is gi-free, so the rule is unit-tested.
+  2. `nextEnginePauseMs`: from null, repeated calls give 30, 60, 90 and 90 seconds; `nextEnginePauseMs(null)` after that is 30 s again.
+  3. `ENGINE_UNREACHABLE_CODES` deep-equals `['network', 'timeout', 'tls', 'server']` and is frozen; every one is in `AI_FAILURE_CODES` from `core/aiProtocol.js`.
+  4. `aiJudgeConfig(null, T0) === null`. For `aiEngine({...DEFAULT_SETTINGS, verdictSource:'ai', aiModel:'m'})` it gives `{engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: 0}`, and `Object.is(result.utcOffsetMinutes, 0)` holds (no −0).
+  5. `isWaiting` with cutoff 10 min at `T0`: `true` for an `aiAsk` item starting at `T0 − 10 min` and at `T0 + HOUR`; `false` at `T0 − 10 min − 1`, for `start: null`, and for an item without `aiAsk`.
+  6. `aiStatusOf`:
+     - `hasEngine:false` → `'off'`, whatever else;
+     - engine fine, nothing failed, one waiting item → `'ok'` (not yet asked is not a failure);
+     - `engineDown:true` with one waiting item → `'unavailable'`; with no waiting item (an empty list, or only items past the cutoff, or only items without `aiAsk`) → `'ok'`;
+     - `failedKeys {k1}`, `k1` waiting → `'unavailable'`; `k1` past the cutoff, or `k1` with no `aiAsk` (it has a current answer) → `'ok'`.
+  7. `withholdAnswers`, with `judged()` from `builders.js` plus `aiAsk` where needed:
+     - `engineDown:false` and no failed keys → `null`;
+     - `engineDown:true` → keys with `aiAsk` and an entry are withheld; a key with an entry and no `aiAsk` (a current answer) is kept; a key with `aiAsk` and no entry changes nothing; the result is frozen;
+     - `engineDown:false` with `failedKeys` `{k1}` → only `k1` is withheld, and only when `k1` carries `aiAsk`;
+     - the `'off'` initial state (`engineDown:false`, empty `failedKeys`) → `null`.
+- **Then:** the constants, the typedefs and the six functions in `extension/shell/aiQueue.js`.
+- **Why here:** they turn the queue's state into `judge` input and into the status, which are §6.5's rules. The module is gi-free, so the rules are unit-tested.
 - **Behaviour change:** none visible yet.
 
 ### Step 7 — The queue  [feature]
 - **Test first:** the next blocks in `tests/unit/aiQueue.test.js`. Use a fake clock `t`, and a fake client made by a `createClient` that records every engine and returns an object with:
   - `readyValue` (default true);
   - a `ready` getter: `readyValue && !destroyed && no open ask`;
-  - `ask(invite, onDone)`, which records `{invite, onDone, open: true}`;
+  - `ask(invite, onDone)`, which records `{invite, onDone, open: true, at: t}` in `asks`;
   - `kill()`, which counts and marks open asks closed;
   - `destroy()`;
-  - a test-side `answer(outcome)` that calls the oldest open ask's `onDone`.
+  - a test-side `answer(outcome)` that calls the oldest open ask's `onDone` and marks it closed.
 
-  The judged lists are `judged()` objects with `aiAsk: {fp, invite: {n: i}}` (the queue treats the invite as opaque). Capture `console.warn` and `console.error` in `beforeEach`, as `controller.test.js` does. The cases:
-  1. **Off:** the constructor calls neither `createClient` nor `onChange`. `state.status === 'off'`. `pump` does nothing. `setEngine(null)` again publishes nothing.
+  Engine `E1` has `timeoutMs` 90 000. The judged lists are `judged()` objects with `aiAsk: {fp, invite: {n: i}}` (the queue treats the invite as opaque). A helper `judgedFor(items, state)` stands in for the re-judge: it returns the items with `aiAsk` removed from every key whose entry in `state.answers` has the same `fp` (what `judge` does for a current answer). Every pump in these tests is given `judgedFor(items, queue.state)`. A helper `run(from, to, onAsk)` pumps once per second from `from` to `to` (moving `t`), and after each pump calls `onAsk(ask)` for a newly opened ask. Capture `console.warn` and `console.error` in `beforeEach`, as `controller.test.js` does. The cases:
+  1. **Off:** the constructor calls neither `createClient` nor `onChange`. `state.status === 'off'`. `pump` does nothing and publishes nothing. `setEngine(null)` again publishes nothing.
   2. **Engines:**
      - `setEngine(E1)` creates one client and publishes `ok`;
      - `setEngine(E1)` again does nothing;
@@ -591,23 +735,43 @@ Baseline before Step 1:
   4. **One at a time:** with one ask open, ten pumps send nothing more.
   5. **Verdict:**
      - `writeAnswers` gets a state whose `items[key]` deep-equals `{fp, verdict:'ignore', reason:'fake', at: t}`;
-     - `onChange` gets `status:'ok'` and `answers[key]` with that entry;
+     - `onChange` gets `status:'ok'`, `engineDown:false` and `answers[key]` with that entry;
      - an outcome delivered twice is applied once.
-  6. **Retries per occurrence:** the same key failing with `network` again and again is re-asked at 1, 2, 4, 8, 16, 30 and 30 min after each failure, never sooner. Pumping at `retryAt − 1` sends nothing. A verdict resets it: the next failure waits 1 min again. `failedKeys` holds the key after a failure and not after the success.
-  7. **Engine pause:**
-     - after `auth` (then `config`, then `no-key`, each in a fresh queue), a different key is not asked until 30 min later;
+  6. **Retries per occurrence** (with `bad-reply`, which leaves the engine up): the same key failing again and again is re-asked at 1, 2, 4, 8, 16, 30 and 30 min after each failure, never sooner. Pumping at `retryAt − 1` sends nothing. `engineDown` stays false throughout. A verdict resets it: the next failure waits 1 min again. `failedKeys` holds the key after a failure and not after the success.
+  7. **Refused and rate-limited pauses:**
+     - after `auth` (then `config`, then `no-key`, each in a fresh queue), `engineDown` is true, and a different key is not asked until 30 min later;
      - `rate-limited` with `retryAfterS: 7` pauses 7 s; without it, 5 min; with 7200, 30 min;
-     - `setEngine(E2)` during a pause asks at once on the next pump.
-  8. **Watchdog** (engine `timeoutMs` 90 000): a pump at `sentAt + 99 999` does not kill. At `sentAt + 100 000` it calls `kill()` once, the state is `unavailable`, the key has a 1 min retry, and a late `answer()` on the dropped ask changes nothing.
-  9. **Lost:** `unavailable`, with no retry record. The same key is asked on the next pump once `ready` is true.
-  10. **Budget:** 121 keys answered one by one, all at the same `t`. Exactly 120 asks are sent. The pump that meets the 121st publishes `unavailable` once; later pumps publish nothing. At `t + HOUR` the 121st is sent, and its verdict publishes `ok`.
-  11. **Not ready:** with `readyValue = false`, pumps send nothing, spend no budget (after `readyValue = true`, 120 asks still go in the hour) and do not change the status.
-  12. **Stale outcomes:** an outcome for an ask made before `setEngine(E2)`, or after `destroy()`, does nothing: no write, no publish.
-  13. **Throwing client:** `ask` throws → one `console.error` (`payattention: ai-failed ask`) over 5 pumps, and the status is `unavailable`. `createClient` throws → the status is `unavailable`, `pump` does nothing, and `setEngine(E2)` with a working factory recovers.
-  14. **Prune:** constructed with `occ:old|<now − 8 days>` and `occ:new|<now − 6 days>`, `prune()` writes once, without the old key, and publishes once. A second `prune()` writes nothing and publishes nothing.
-  15. **Constructor checks:** a missing function or an `answers` without `v:1` throws `TypeError`.
-- **Then:** the `AiQueue` class to the seam and the "pump" and "settle" rules above. Budget: `new RequestBudget()`, owned for the queue's life (not reset by `setEngine`). Retry records: `Map` key → `{waitMs, retryAt}`. Once-only logs: a `Set`, reset by `setEngine`.
-- **Why here:** these are §6.5's queue, retry, budget and status rules, as values in and values out, with the process behind a port.
+     - `setEngine(E2)` during a pause asks at once on the next pump, and publishes `engineDown:false` with empty `failedKeys`.
+  8. **Unreachable engine** (D-031), for each of `network`, `timeout`, `tls` and `server`, in a fresh queue with two waiting keys `A` (sooner) and `B`, every ask answered with that code at once:
+     - the first ask (for `A`, sent with the engine up) sets `engineDown`, adds `A` to `failedKeys`, and gives `A` a 1 min retry;
+     - asks are then sent only at the end of each pause: the gaps between consecutive asks, in seconds, start `[30, 60, 90, 90, 90]` (the probe at 30 s is for `B`, because `A` is held by its own 1 min retry; the probe at 90 s is for `A`, the soonest again);
+     - no probe after the first advances any retry: over 30 min of outage `A` is asked at every probe once its 1 min has passed, and never waits longer than the pause;
+     - `failedKeys` is `{A, B}` and `status` is `'unavailable'`.
+  9. **Probes return their spends** (D-031): 119 keys answered with verdicts at `t`, then one more waiting key `Z` whose asks fail `network` for 60 min (about 40 probes). Then the engine answers: `Z`'s verdict arrives, and in the next hour 120 further keys are all sent (none refused). Without refunds the 120th of those would be refused.
+  10. **Recovery within 5 minutes** (D-031), 30 waiting keys, `E1`:
+      - **nothing in flight at R:** every ask fails `network` at once for 60 min; at R (chosen mid-pause, 45 s after the last probe) the fake switches to answering `verdict` at once. The first ask after R is sent at ≤ R + 90 s and is for the soonest waiting key. All 30 keys have a stored answer by R + 90 s + 30 s. After the 30th, `status` is `'ok'`, `engineDown` is false and `failedKeys` is empty;
+      - **a failing ask in flight at R:** as above, but the probe sent just before R is never answered (the engine hung). The watchdog settles it as `timeout` at `sentAt + 100 s`, a pause of at most 90 s follows, and the next ask is sent at ≤ R + 191 s. The fake answers it with a verdict 90 s after it is sent (the engine's longest answer time). That verdict is settled at ≤ R + 281 s, which is under R + 300 s.
+  11. **Watchdog:** a pump at `sentAt + 99 999` does not kill. At `sentAt + 100 000` it calls `kill()` once; `engineDown` is true, the key is in `failedKeys` with a 1 min retry (the engine was up when it was sent), the next ask waits for the 30 s pause, and a late `answer()` on the dropped ask changes nothing.
+  12. **Lost:** `engineDown` is true, the key gets no retry record, `failedKeys` is unchanged, and the spend is returned. The same key is asked on the next pump once `ready` is true (no pause).
+  13. **Budget:** 121 keys answered one by one, all at the same `t`. Exactly 120 asks are sent. The pump that meets the 121st publishes `status:'unavailable'` and `engineDown:true` once; later pumps publish nothing. At `t + HOUR` the 121st is sent, and its verdict publishes `ok`.
+  14. **Not ready:** with `readyValue = false`, pumps send nothing, spend no budget (after `readyValue = true`, 120 asks still go in the hour) and do not change the state.
+  15. **Stale outcomes:** an outcome for an ask made before `setEngine(E2)`, or after `destroy()`, does nothing: no write, no publish.
+  16. **Throwing client:**
+      - `ask` throws → one `console.error` (`payattention: ai-failed ask`) over 5 pumps; `engineDown` is true and the status is `'unavailable'` (a key is waiting);
+      - the `ready` getter throws → `pump` does not throw, one `console.error` (`payattention: ai-failed pump`) over 5 pumps, and `engineDown` is true;
+      - `createClient` throws → after one pump with a waiting key, the status is `'unavailable'`; `pump` sends nothing; `setEngine(E2)` with a working factory recovers.
+  17. **Truthful status** (D-031), keys `A` (start `T0 + 5 min`) and `B` (start `T0 + HOUR`), cutoff 10 min:
+      - before any ask, with the engine up: `'ok'`;
+      - `A` fails `bad-reply`: `'unavailable'` (engine up, `A` waiting and failed);
+      - `B` gets a verdict: still `'unavailable'`, because `A` still waits on a failure;
+      - `A`'s retry is answered with a verdict: `'ok'`;
+      - in a fresh queue, `A` fails `bad-reply` and `B` gets a verdict; then pumping with the clock at `T0 + 15 min + 1` and a judged list where `A` is past the cutoff publishes `'ok'`, with no outcome in between;
+      - in a fresh queue, `A` fails `network` (`engineDown` true); a pump with an empty judged list publishes `'ok'` while `state.engineDown` stays `true`;
+      - a pump in which nothing changes calls `onChange` zero times; a status-only change publishes a state whose `answers` and `failedKeys` are the same objects (`===`) as before.
+  18. **Prune:** constructed with `occ:old|<now − 8 days>` and `occ:new|<now − 6 days>`, `prune()` writes once, without the old key, and publishes once. A second `prune()` writes nothing and publishes nothing.
+  19. **Constructor checks:** a missing function or an `answers` without `v:1` throws `TypeError`.
+- **Then:** the `AiQueue` class to the seam, with the "pump", "settle" and "update" rules above.
+- **Why here:** these are §6.5's queue, retry, pause, budget and status rules, as values in and values out, with the process behind a port.
 - **Behaviour change:** none visible yet.
 
 ### Step 8 — The view shows "AI: …" and "AI unavailable — using rules"  [feature]
@@ -637,6 +801,7 @@ Baseline before Step 1:
     - `h.client` returns the last client;
     - `h.aiTick(t)` moves the clock to `t` and fires the AI ticker, when one exists.
   - `setupInto` passes `createAiClient: () => { throw new Error('unused'); }` and `createAiTicker: () => ({ destroy() {} })`.
+  - `aiQueue.test.js` then imports `makeAiClient` from the harness instead of its own copy.
 
   The existing `controller.test.js` must pass **unchanged** (rules mode).
 - **Test first (behaviour):** `tests/unit/controller.ai.test.js`.
@@ -653,7 +818,7 @@ Baseline before Step 1:
     2. **A helper that never answers.** In AI mode with `SNAP`, deliver at `T0 − 2 h`, then call `h.aiTick` once. Exactly one ask is open, for `MEETING`. Then, for each `t` in `LADDER`, `h.aiTick(t)` and then `h.at(t)`. The step sequence deep-equals the rules-mode `steps` for the same snapshot. The watchdog fires on the way (100 s after the ask) and changes nothing on screen: the verdict is the rule's `must` throughout.
     3. **The alert tick never calls the AI helper.** In AI mode, deliver, then call `h.at(t)` for 200 times from `T0 − 40 min` (every 12 s), never firing the AI ticker. Then run `steps(h)`, still without an AI tick. `h.client.asks.length === 0` (the client exists: `setEngine` made it), and the steps deep-equal rules mode.
     4. **A broken AI side cannot stop alerts.** Give the AI client a `ready` getter, `ask`, `kill` and `destroy` that all throw. Construction does not throw. The ladder with `h.aiTick` before each `h.at` equals rules mode. `errors` contains `payattention: ai-failed …` entries, each distinct text once. `h.controller.destroy()` does not throw, and the store is still destroyed.
-    5. **The helper cannot be created.** With `createAiClient` throwing, construction succeeds, the ladder equals rules mode, and `menu.aiStatus === 'AI unavailable — using rules'`.
+    5. **The helper cannot be created.** With `createAiClient` throwing, construction succeeds and the ladder equals rules mode. After the first `h.aiTick` (a pump with `MEETING` waiting) and `h.at`, `menu.aiStatus === 'AI unavailable — using rules'`.
     6. **An answer joins at the current step.**
        - For a meeting the rules call ignorable: `meeting({uid:'lunch', summary:'Lunch placeholder', organizer: null, attendees: []})`, a personal block (D-015), judged `ignore`. Deliver at `T0 − 2 h`, and `h.aiTick` so its ask is open. At `T0 − 4 min` there is no alert. Answer `{type:'verdict', verdict:'must', reason:'client lunch'}`. The next `h.at(T0 − 4 min + 1 s)` shows step 2, never step 1, and `alert.reason === 'AI: client lunch'`.
        - For `MEETING`, with step 3 on screen at `T0 − 3 min`, an `ignore` answer removes the alert on the next alert tick (the D-019 cost).
@@ -664,11 +829,11 @@ Baseline before Step 1:
        - a new controller built with `aiAnswers: h.store.aiAnswers` (a lock and unlock) sends nothing, and its row reason is `'AI: …'`.
     8. **No re-ask before the re-judge.** Right after a verdict, `h.aiTick` before any `h.at` sends nothing (`_judgeDirty`).
     9. **The old answer is kept while re-asking.** Stored: `KEY → {fp:'00000000000000', verdict:'ignore', reason:'optional sync', at}`, which is stale.
-       - At `T0 − 25 min` (step-1 time) there is no alert, the row reads `'AI: optional sync'`, and one ask for `KEY` is open.
+       - At `T0 − 25 min` (step-1 time) there is no alert, the row reads `'AI: optional sync'`, `menu.aiStatus === null` (a re-ask with the engine up is not a failure), and one ask for `KEY` is open.
        - Stepping `LADDER` while the ask stays open: no alert at any step.
   - **The fallback to the rules:**
-    10. From case 9's state at `T0 − 10 min`, the client answers `{type:'failed', code:'network'}`. The next `h.at` shows step 2 from the rules (the rule verdict `must`), and `menu.aiStatus` is the unavailable text. `h.aiTick` at failure + 59 s sends nothing; at failure + 60 s it asks `KEY` again. A verdict then gives `menu.aiStatus === null`.
-    11. **Per-key withholding.** Two meetings, both with stale `ignore` entries. `A`'s ask fails, and then `B` succeeds, so the status is `ok`. `A` is still decided by the rules (its entry is withheld), and `B` shows its new AI verdict.
+    10. From case 9's state at `T0 − 10 min`, the client answers `{type:'failed', code:'network'}`. The next `h.at` shows step 2 from the rules (the rule verdict `must`), and `menu.aiStatus` is the unavailable text. `h.aiTick` at failure + 59 s sends nothing (the 30 s engine pause is over, but `KEY`'s own retry is 1 min); at failure + 60 s it asks `KEY` again. A verdict then gives `menu.aiStatus === null`.
+    11. **Per-key withholding.** Two meetings, both with stale `ignore` entries. `A`'s ask fails with `bad-reply` (the engine is up), and then `B` succeeds. `A` is still decided by the rules (its entry is withheld), `B` shows its new AI verdict, and `menu.aiStatus` is the unavailable text, because `A` still waits on a failure.
     12. **Overrides and silent-by-fact meetings are never sent.**
        - `MEETING` with an occurrence `must` override;
        - a cancelled meeting;
@@ -681,37 +846,70 @@ Baseline before Step 1:
        - loop: `h.aiTick`, answer the open ask, `h.at` (re-judge);
        - exactly 120 asks, then `menu.aiStatus` is the unavailable text;
        - one hour after the first ask, the 121st is sent.
+  - **The truthful line and recovery (D-031):**
+    14. **Truthful line.** `SNAP` plus `LATER = meeting({uid:'later', start: T0 + 2 h, end: T0 + 2 h 30 min})`, delivered at `T0 − 3 h`.
+        - Before any AI tick: `menu.aiStatus === null` (meetings wait for their first answer, the engine is fine).
+        - `MEETING` is asked and fails `bad-reply`: after `h.at`, the unavailable text.
+        - `LATER` is asked and gets a verdict: still the unavailable text.
+        - `MEETING`'s retry (1 min later) gets a verdict: `menu.aiStatus === null`.
+        - A second run up to the `bad-reply` and `LATER`'s verdict, then the client's `readyValue = false`, then `h.at` and `h.aiTick` every 30 s up to `T0 + 10 min + 30 s`: the line is shown until the first pump after `T0 + 10 min` and hidden from then on, with no outcome in between.
+    15. **Recovery within 5 minutes.** `SNAP`, delivered at `T0 − 3 h`. From `T0 − 3 h` to `T0 − 2 h`, every second `h.at(t)` then `h.aiTick(t)`, and every open ask is answered `{type:'failed', code:'network'}` at once. The line shows throughout the hour after the first failure. At `R = T0 − 2 h` the client starts answering verdicts. The next ask is sent at ≤ R + 90 s, its verdict is stored, and after the next `h.at` `menu.aiStatus === null` and `MEETING`'s row reads `'AI: …'`. Over the hour, the gaps between consecutive asks, in seconds, start `[60, 60, 90]` and every later gap is 90 (probes only at the end of each pause; the first 60 is `MEETING`'s own 1 min retry, which the 30 s pause ends before).
   - **Lifecycle:**
-    14. **Engine change.**
+    16. **Engine change.**
         - After an `auth` failure (paused), set `h.store.settings.aiModel = 'other'` and call `h.store.onChange()`;
         - the old client is destroyed, a new client gets an engine with `engineTag` `'…|other'`, and the next `h.at` then `h.aiTick` sends an ask at once (the pause is over);
         - all stored entries are stale for the new engine, and still apply while re-asked (`interfaces.md` §6.3).
-    15. **Mode off.**
+    17. **Mode off.**
         - Set `verdictSource = 'rules'`, then `onChange()`;
         - the client and the AI ticker are destroyed, `menu.aiStatus === null`, and rows read `'Why: …'`;
         - the judged list deep-equals a rules-mode controller's for the same snapshot;
         - no AI ticker fires afterwards.
-    16. **Destroy in AI mode.**
+    18. **Destroy in AI mode.**
         - `h.log` order is `ticker.destroy`, `aiTicker.destroy`, `aiClient.destroy`, `ui.destroy`, `feed.destroy`, `environment.destroy`, `store.writeHealthClocks`, `store.destroy`;
         - an outcome delivered after `destroy()` writes nothing and renders nothing.
-    17. **Prune.**
+    19. **Prune.**
         - Constructed with stored `occ:old|<EN − 8 days>` and `occ:new|<EN − 6 days>`: exactly one `aiWrites` entry, without the old key.
         - In rules mode with an empty store: `aiWrites.length === 0`, after construction and after a day of ticks (`h.at(EN + DAY)`).
-    18. **Missing factories:** `new Controller({...deps without createAiTicker})` throws `TypeError` before any part is built (no `h.log` entries).
+    20. **Missing factories:** `new Controller({...deps without createAiTicker})` throws `TypeError` before any part is built (no `h.log` entries).
 - **Then:** the controller changes listed under "Seams". Import `aiEngine` from `../core/aiEngine.js`, and `AiQueue`, `aiJudgeConfig` and `withholdAnswers` from `./aiQueue.js`.
 - **Why here:** §6.5 makes the controller the one that feeds `judge` and owns every part's lifetime. The AI decisions stay in `aiQueue.js`, and the controller only wires them.
 - **Behaviour change:** AI mode works end to end against a fake client. Rules mode is unchanged: `controller.test.js` passes without changing any assertion.
 
-### Step 10 — The real client, the composition root, the menu line and the smoke checks  [feature]
+### Step 10 — Every shell helper spawn drops `G_MESSAGES_DEBUG`  [feature]
+- **Test first:**
+  1. `tests/unit/protocol.test.js`: `HELPER_ENV_UNSET` deep-equals `['G_MESSAGES_DEBUG']` and is frozen. Fails first: no such export.
+  2. `tests/unit/spawnHelper.test.js` (Node), modelled on `gjs.test.js` (skip when gjs is missing). It runs `gjs -m tests/unit/support/gjs-spawn-check.js` from the repo root with `env: {...process.env, G_MESSAGES_DEBUG: 'all'}` and a 20 s timeout. The gjs script (test support, SPDX header, a comment saying so):
+     - prints `PARENT <GLib.getenv('G_MESSAGES_DEBUG') ?? 'UNSET'>`;
+     - calls `spawnHelper(['sh', '-c', 'printf "%s\n" "${G_MESSAGES_DEBUG-UNSET}"; read -r line; printf "%s\n" "$line"'])`;
+     - calls `proc.communicate_utf8('ping\n', null)` and prints `CHILD <first line>` and `ECHO <second line>`;
+     - prints `SPAWN-CHECK OK`.
+
+     Node asserts exit 0, `PARENT all` (the variable really was set), `CHILD UNSET`, `ECHO ping` (stdin and stdout are piped) and `SPAWN-CHECK OK`. Fails first: `shell/helperProcess.js` does not exist.
+  3. `tests/unit/boundaries.test.js`, four new `CASES`:
+     - `['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const p = Gio.Subprocess.new(['x'], 0);", 'error']`;
+     - `['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const l = new Gio.SubprocessLauncher({});", 'error']`;
+     - `['extension/shell/helperProcess.js', "import Gio from 'gi://Gio'; export const l = new Gio.SubprocessLauncher({});", 'ok']`;
+     - `['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const f = Gio.SubprocessFlags.STDIN_PIPE;", 'ok']`.
+
+     The first two fail first: no rule refuses them.
+- **Then:**
+  - `HELPER_ENV_UNSET` in `core/protocol.js`;
+  - `extension/shell/helperProcess.js` to the seam;
+  - `calendarFeed.js` `_spawn()` uses `spawnHelper` (Seams);
+  - the eslint block (Seams). `npm run lint` must then pass: `calendarFeed.js` no longer names `Gio.Subprocess`.
+- **Why here:** §1 "Environment" binds every spawner. The shell's two spawners share one function that applies it, the list lives in core so prefs (PG-4d) uses the same one, and lint keeps any future shell spawn from going around it.
+- **Behaviour change:** the calendar helper starts without `G_MESSAGES_DEBUG`. Nothing else changes: `npm run smoke` still finds exactly one calendar helper and a passing ladder.
+
+### Step 11 — The real client, the composition root, the menu line and the smoke checks  [feature]
 - **Test first (client, Layer 2b):** `tests/ai/shellClient.test.js` (Node) and `tests/ai/gjs/shellClient.js` (gjs). They reuse PG-4b's harness as it is: `createAiSession(name)` from `tests/ai/session.js` and `startFakeEngine()` from `tests/ai/fakeEngine.js`.
-  - The Node test starts a session and a fake engine. For each scenario it runs `gjs -m tests/ai/gjs/shellClient.js <scenario> <endpoint>` with `session.env` and cwd at the repo root, and waits (20 s cap) for a `DONE` line.
+  - The Node test starts a session and a fake engine. For each scenario it runs `gjs -m tests/ai/gjs/shellClient.js <scenario> <endpoint>` with `session.env` (plus the scenario's extra variables) and cwd at the repo root, and waits (20 s cap) for a `DONE` line.
   - The gjs script:
     - builds `engine = aiEngine({...DEFAULT_SETTINGS, verdictSource:'ai', aiEndpoint: endpoint, aiModel:'fake-model'})`;
     - builds `new AiHelperClient({argv: ['gjs', '-m', '<repo>/extension/ai/main.js'], engine, now: () => Date.now()})`;
     - runs a `GLib.MainLoop`;
     - prints `ASKED`, `OUTCOME <json>` and `READY <bool>` lines as the scenario says, then `DONE`.
 
-    It refuses any endpoint not matching `^http://127\.0\.0\.1:\d+/v1$` (PG-4b's "never a real engine" rule).
+    It refuses any endpoint not matching `^http://127\.0\.0\.1:\d+/v1$` (PG-4b's "never a real engine" rule). Its own pid is `GLib.file_read_link('/proc/self')`. Its children are the processes whose `/proc/<pid>/stat` parent pid (the second field after the last `)`) is its own pid; their cmdline is read from `/proc` as `tests/smoke/alert-ladder.js` `helperPids` does.
   - Scenarios and assertions:
     1. `verdict`: ask `PROBE_INVITE` → exactly one `OUTCOME {"type":"verdict","verdict":"must","reason":"fake engine"}`. The engine recorded one request, whose user message `=== JSON.stringify(PROBE_INVITE)`. stderr has no `configure-again` and no `not-configured`.
     2. `sequence`: two asks, the second after the first outcome → two verdicts. The engine recorded two requests. stderr has no `configure-again` (one helper, configured once).
@@ -725,9 +923,10 @@ Baseline before Step 1:
     5. `exit`: argv `['gjs', '-m', '<repo>/tests/ai/gjs/missing-entry.js']` (no such file) → `OUTCOME {"type":"lost"}`; `READY false` at once, `READY true` after 1.2 s.
     6. `spawn-failed`: argv `['<repo>/.test-home/no-such-binary']` → the output is `ASKED`, then `OUTCOME {"type":"lost"}`, in that order (never synchronous).
     7. `bad-invite`: ask `{...PROBE_INVITE, uid: 'x'}` → `OUTCOME {"type":"failed","code":"bad-request"}`. The engine recorded nothing, and no child process was started.
-    8. `destroy`: the engine holds; ask, wait 1 s, `destroy()`, wait 1.5 s. There is no `OUTCOME`, and no process whose `/proc/<pid>/stat` parent is the script's own pid has `ai/main.js` in its cmdline (read `/proc` as `tests/smoke/alert-ladder.js` `helperPids` does).
+    8. `destroy`: the engine holds; ask, wait 1 s, `destroy()`, wait 1.5 s. There is no `OUTCOME`, and no child of the script has `ai/main.js` in its cmdline.
+    9. `debug-env` (the spawn environment rule): run with `G_MESSAGES_DEBUG: 'all'` added to `session.env`. Ask `PROBE_INVITE`; after the `OUTCOME`, and before `destroy()`, print `CHILDREN <n>` (children with `ai/main.js` in their cmdline) and `CHILD-ENV clean` when none of their `/proc/<pid>/environ` entries (split on `\0`) starts with `G_MESSAGES_DEBUG=`, else `CHILD-ENV dirty`. Assert: exactly one verdict `OUTCOME`, `CHILDREN 1`, `CHILD-ENV clean`, and stderr has no `ai-invalid-line` (no library line reached the protocol channel).
 
-    In every scenario, stderr contains neither `Connection test` nor `fake engine` (no invite or reason text is logged).
+    In every scenario, stderr contains neither `Connection test` nor `fake engine` (no invite or reason text is logged), and in `debug-env` the script's stdout and stderr do not contain the endpoint's port as `127.0.0.1:<port>`.
 - **Test first (smoke, Layer 3 item 8):** in `tests/smoke/alert-ladder.js`:
   - add `aiHelperPids(home)`, like `helperPids` with the needle `…/${UUID}/ai/main.js`;
   - check it is 0 in `checkIndicator`, after the ladder, and in `checkDisabled`;
@@ -735,12 +934,12 @@ Baseline before Step 1:
 
   In `scripts/smoke.sh`, add `ai-failed|ai-protocol-mismatch|ai-spawn-failed` to the failure-code pattern (`smoke.sh:106`). Rules mode must never log them.
 - **Then:**
-  - `extension/shell/aiHelperClient.js` to the seam;
+  - `extension/shell/aiHelperClient.js` to the seam (it spawns with `spawnHelper` from Step 10);
   - the `extension.js` wiring;
   - the indicator's AI status item.
   - If the gjs-globals block in `eslint.config.js` does not already list `tests/ai/gjs/**/*.js`, add it there (it does at the time of writing).
 - **Why here:** the process belongs in `shell/` beside `calendarFeed.js`, and the root only wires. The indicator draws what the view says.
-- **Behaviour change:** in a real session with AI mode set up, meetings get "AI:" verdicts, and a stopped engine shows "AI unavailable — using rules". Rules mode starts no AI helper (proven by the smoke).
+- **Behaviour change:** in a real session with AI mode set up, meetings get "AI:" verdicts, and while a waiting meeting is decided by the rules because of a failure the menu shows "AI unavailable — using rules". Rules mode starts no AI helper (proven by the smoke).
 
 ### Validation
 In this order:
@@ -750,7 +949,7 @@ In this order:
 4. `npm run test:helper` (it runs `tests/ai/**`, `shellClient.test.js` included);
 5. `npm run smoke`.
 
-Report the real output. Then run the Layer 4 AI checklist in `testing-and-build.md` by hand, if a local engine is available. It is not needed to accept the build.
+Report the real output. Then run the Layer 4 AI checklist in `testing-and-build.md` by hand, if a local engine is available (stop the engine, see the line; start it again, see answers resume within 5 minutes). It is not needed to accept the build.
 
 ## Callers to update
 
@@ -760,7 +959,10 @@ Report the real output. Then run the Layer 4 AI checklist in `testing-and-build.
 - **`View.menu`** (+`aiStatus`): read by `ui/indicator.js` `update`. `ui/ui.js:55` passes `view.menu` through unchanged.
 - **`MeetingRow.reason` / `AlertView.reason` text for `ai-*` codes:** drawn as-is by `ui/indicator.js:125` and `ui/alertContent.js:64, 99`. No code change.
 - **`judge`:** unchanged. Its only production caller is the controller, which now passes `config.ai` and the fifth argument.
-- **New modules and their only callers:**
+- **The calendar helper spawn:** `shell/calendarFeed.js` `_spawn()` now calls `spawnHelper`. Its argv, pipes, stderr and error handling are unchanged; the helper sees one variable fewer.
+- **New exports and their only callers:**
+  - `core/protocol.js` `HELPER_ENV_UNSET` → `shell/helperProcess.js`, `tests/unit/protocol.test.js`; PG-4d's prefs "Test connection" will import it too (its plan is revised separately);
+  - `shell/helperProcess.js` → `shell/calendarFeed.js`, `shell/aiHelperClient.js`, `tests/unit/support/gjs-spawn-check.js`;
   - `core/aiAnswers.js` → `shell/store.js`, `shell/aiQueue.js`, tests, `gjs-core-check.js`;
   - `shell/aiBudget.js` → `shell/aiQueue.js`;
   - `shell/aiQueue.js` → `shell/controller.js`;
@@ -770,20 +972,24 @@ Report the real output. Then run the Layer 4 AI checklist in `testing-and-build.
 
 ## Out of scope
 
-- **Anything in `extension/ai/`** (PG-4b), prefs and "Test connection" (PG-4d), and `--purge` (PG-4e).
-- **Any change to core's `judge`, `invite.js`, `fingerprint.js`, `aiProtocol.js`, `aiPrompt.js` or `aiEngine.js`.** If one seems needed, stop.
-- **Sharing the spawn, read and exit code between `CalendarFeed` and `AiHelperClient`.** It is tempting, because the new client copies about 40 lines of that pattern. But `CalendarFeed` has no test below the smoke, so a refactor of it cannot be proven behaviour-preserving in this ticket. The two lifecycles also differ: the feed respawns on a timer, and the client respawns lazily. It is noted as a known duplicate for later.
-- **Killing an idle AI helper**; an engine-level pause on `network`, `tls`, `timeout` or `server`; persisting the budget; asking two meetings at once; batching. Each is a change to §6.5, not an implementation choice (see the findings).
+- **Anything in `extension/ai/`** (PG-4b and its fix round in `transport.js`), prefs and "Test connection" (PG-4d, including its own spawn's environment), and `--purge` (PG-4e).
+- **Any change to core's `judge`, `invite.js`, `fingerprint.js`, `aiProtocol.js`, `aiPrompt.js` or `aiEngine.js`.** If one seems needed, stop. The only core changes are the new `aiAnswers.js`, its typedefs, and `HELPER_ENV_UNSET` in `protocol.js`.
+- **Sharing the read, write and exit code between `CalendarFeed` and `AiHelperClient`.** Only the spawn call is shared (`spawnHelper`), because §1 binds it. The rest is tempting, because the new client copies about 40 lines of that pattern. But `CalendarFeed` has no test below the smoke, so a refactor of it cannot be proven behaviour-preserving in this ticket, and the two lifecycles differ (the feed respawns on a timer, the client lazily). It is a known duplicate for later.
+- **Killing an idle AI helper; persisting the budget; asking two meetings at once; batching; a separate engine health check** (a `/models` or ping request: the architect chose real asks as the probes). Each is a change to §6.5, not an implementation choice.
+- **Any other engine-pause shape** than §6.5's table (for example resetting the unreachable backoff on `auth` or `rate-limited`): the table is binding.
 - **Any mark on screen for a stale answer**; any change to the panel warning icon; any sound or step change for AI verdicts.
+- **Removing any other environment variable,** or changing how the helpers themselves log.
 - **Editing any document** under `docs/` other than this plan, and the README.
 - **Adding a smoke run in AI mode against a fake engine.** Layer 4 covers the real session.
 
 ## Stop and escalate if
 
-- **PG-4b is not merged,** or `extension/ai/main.js` behaves differently from `interfaces.md` §6.6 and `docs/plans/PG-4b.md`. That covers: `hello` first, `configure` then `judge`, one reply per request, the id rule, the failure codes and `retryAfterS`, exit on stdin EOF, and `failed: config` for a `judge` before `configure`.
+- **`extension/ai/main.js` behaves differently from `interfaces.md` §6.6 and `docs/plans/PG-4b.md`** (as committed in 2020d09, or after the `transport.js` fix round lands). That covers: `hello` first, `configure` then `judge`, one reply per request, the id rule, the failure codes and `retryAfterS`, exit on stdin EOF, and `failed: config` for a `judge` before `configure`.
 - **`tests/ai/session.js` or `tests/ai/fakeEngine.js` have other names or semantics** than the PG-4b plan gives (`createAiSession`, `startFakeEngine`, `queue`, `{hold:true}`, `requests`). Adapt to a renamed export only when its behaviour is the same; otherwise stop.
-- **`judge`'s AI output differs from `interfaces.md` §6.3,** for example a stale entry not applied, or `aiAsk` present on a key with a current entry. The withholding design depends on that table.
+- **`judge`'s AI output differs from `interfaces.md` §6.3,** for example a stale entry not applied, or `aiAsk` present on a key with a current entry. The withholding and status designs depend on that table.
+- **A D-031 bound cannot be met as tested** (Step 7 cases 8 to 10, Step 9 cases 14 and 15): for example, the first ask after recovery comes later than R + 91 s with nothing in flight. Do not tune the constants; the 90 s cap and the table are the architect's.
 - **Any existing assertion in `controller.test.js`, `view.test.js` or `store-check.js` has to change** (other than the harness import in Step 2 and the `view()` helper's new option in Step 8). That means rules-mode behaviour moved.
-- **Gio refuses the planned write pattern** (for example, `write_bytes_async` on the subprocess stdin pipe behaves differently from `calendarFeed.js:67`), or `Gio.Subprocess` needs a flag this plan does not name. Do not switch to a blocking write in the shell process.
+- **`Gio.SubprocessLauncher` does not behave as planned**: `unsetenv` does not remove the variable from the child, `spawnv` needs other flags to pipe stdin and stdout, or stderr is not inherited. Do not work around it with `env -u` in argv or a shell wrapper.
+- **Gio refuses the planned write pattern** (for example, `write_bytes_async` on the subprocess stdin pipe behaves differently from `calendarFeed.js:67`), or the subprocess needs a flag this plan does not name. Do not switch to a blocking write in the shell process.
 - **A test seems to need a real engine, the owner's keyring, the owner's bus, or network beyond `127.0.0.1`.**
 - **The AI-mode `judge` benchmark** (`tests/unit/budget.test.js`, "judge in AI mode over 2 000 events") fails after Step 9. The controller must not be made to call `judge` more often than this plan says.
