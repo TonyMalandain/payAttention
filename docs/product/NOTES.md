@@ -184,3 +184,9 @@ Append only. Newest at the bottom.
 - **Fact:** Both open questions were product calls, not the owner's. They are closed as D-023 (cancelled, declined and all-day stay silent in AI mode) and D-024 (the calendar name is sent). The owner pointed out that neither needed him.
 - **Source:** the owner, 2026-09-27.
 - **Touches:** decisions.md, docs/prd/meeting-guardian.md
+
+## 2026-09-27 — PG-4a plan: prompt accepted, text passcodes closed
+- **Kind:** decision
+- **Fact:** The AI prompt in docs/plans/PG-4a.md was accepted as written. It says "when unsure, answer must" (D-004 carried into AI mode), and it names family commitments as must-attend. Text passcodes were closed as D-025. The architecture findings were filed in the inbox.
+- **Source:** senior engineer, PG-4a plan.
+- **Touches:** decisions.md D-025

@@ -146,3 +146,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** It is the strongest clue that separates family logistics from work meetings, which is the case that led to AI mode. It falls within "the whole invite" (D-020).
 **Costs accepted:** The owner's calendar names reach the engine, including a cloud one.
 **Source:** the product manager, closing an architect finding.
+
+### D-025 — Passcodes written as text are also removed before sending — 2026-09-27
+**Decision:** We extended D-022. In the description and the place, the value after "passcode", "password", "pwd" or "PIN" is replaced with "[removed]" before the invite is sent.
+**Why:** Zoom and Teams invites usually repeat the passcode as plain text. Removing it only from links (D-022) left it going to the engine anyway.
+**Costs accepted:** A description that uses one of these words for something else loses the word after it. The verdict does not depend on it.
+**Source:** the product manager, closing a senior-engineer finding.
