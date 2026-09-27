@@ -165,3 +165,9 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** Text after the keyword on the same line is lost, even when it is not part of the code. The verdict does not depend on it.
 **Source:** the product manager, closing a reviewer finding.
 
+
+### D-028 — payAttention follows GNOME's alert-sound choice, including "None" — 2026-09-27
+**Decision:** We chose to play the alert sound selected in GNOME Settings. When the owner selects "None", payAttention's alerts are silent as well. The on-screen escalation is unchanged.
+**Why:** "None" is a deliberate, desktop-wide choice by the owner. Overriding it would make payAttention the one app that ignores their sound settings. The takeover is unmissable without sound.
+**Costs accepted:** An owner who picks "None" but wants payAttention to beep gets no sound. They would have to choose an alert sound in GNOME Settings.
+**Source:** the product manager, closing a senior-engineer finding (PG-7 plan).

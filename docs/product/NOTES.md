@@ -233,3 +233,9 @@ Append only. Newest at the bottom.
 - **Fact:** Google Meet PINs and spaced passcodes leaked past D-025's "next word" rule. Closed as D-027: removal runs to the end of the line.
 - **Source:** reviewer, PG-4a round 1.
 - **Touches:** decisions.md D-025, D-027
+
+## 2026-09-27 — PG-6 and PG-7 plans taken
+- **Kind:** decision
+- **Fact:** Both plans are accepted. GNOME's "None" alert sound is respected (D-028). The planner's probes briefly polluted the owner's sound lookup cache; it repaired the cache and verified both sounds resolve. The owner was told.
+- **Source:** senior engineer, PG-6 and PG-7 plans.
+- **Touches:** decisions.md D-028, BACKLOG.md
