@@ -171,3 +171,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** "None" is a deliberate, desktop-wide choice by the owner. Overriding it would make payAttention the one app that ignores their sound settings. The takeover is unmissable without sound.
 **Costs accepted:** An owner who picks "None" but wants payAttention to beep gets no sound. They would have to choose an alert sound in GNOME Settings.
 **Source:** the product manager, closing a senior-engineer finding (PG-7 plan).
+
+### D-029 — Phone dial-in strings are removed, and HTML line breaks count as line breaks — 2026-09-27
+**Decision:** We chose three changes. (1) Before sending, phone dial-in strings in the description and place are replaced with "[removed]". These are numbers with pause or extension codes, such as `+16699006833,,81234567890#,,,,*654321#`. (2) HTML line breaks (`<br>`, the end of a paragraph or list item) count as the end of a line for D-027. (3) Plural keywords ("passcodes", "passwords", "PINs") and invisible marks hidden inside a keyword do not stop removal.
+**Why:** Zoom's "one tap" lines carry the passcode with no keyword before it, so D-027 missed them (found in review). The engine does not need phone numbers to judge a meeting. HTML descriptions would otherwise lose everything after a passcode, not just the rest of the line.
+**Costs accepted:** Dial-in phone numbers never reach the engine, even where they would hint at a meeting's type.
+**Source:** the product manager, closing reviewer findings (PG-4a round 2).

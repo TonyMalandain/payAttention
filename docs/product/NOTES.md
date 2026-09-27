@@ -255,3 +255,9 @@ Append only. Newest at the bottom.
 - **Fact:** The AI helper plan is accepted. When the owner's password store is locked, the helper never prompts. It reports no key, the rules decide, and the menu shows "AI unavailable — using rules". A keyless engine at a private address needs no key lookup. The headless keyring test was proven on this machine.
 - **Source:** senior engineer, PG-4b plan.
 - **Touches:** solution.md R-19
+
+## 2026-09-27 — PG-4a accepted; passcode follow-up
+- **Kind:** decision
+- **Fact:** PG-4a was accepted in review round 2. Reviewer findings were closed as D-029: Zoom one-tap dial strings leaked the passcode; HTML descriptions over-removed; plurals and hidden marks inside a keyword slipped through. The follow-up ticket is PG-4a2.
+- **Source:** reviewer, PG-4a round 2.
+- **Touches:** decisions.md D-029, BACKLOG.md
