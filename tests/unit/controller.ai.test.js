@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 
 // Time formatting depends on the zone; fix it before the modules are loaded.
 process.env.TZ = 'UTC';
-const { Controller } = await import('../../extension/shell/controller.js');
-const { AI_UNAVAILABLE_TEXT } = await import('../../extension/shell/view.js');
+const { Controller } = await import('../../extension/app/controller.js');
+const { AI_UNAVAILABLE_TEXT } = await import('../../extension/app/view.js');
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { occurrenceKey } = await import('../../extension/core/keys.js');

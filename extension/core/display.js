@@ -3,7 +3,7 @@
 
 // Display strings: numbers and raw calendar text turned into what the owner
 // reads, and the comma lists typed in settings parsed back. Pure, shared by
-// shell/view.js and prefs.js (boundaries.md).
+// app/view.js and prefs.js (boundaries.md).
 
 // Built once: formatting options are static data, and the zone is the process's.
 const CLOCK = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });

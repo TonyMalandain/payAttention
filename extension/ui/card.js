@@ -16,7 +16,7 @@ export class Card {
     /**
      * Its key, step and isTest are fixed for its lifetime.
      *
-     * @param {import('../shell/view.js').AlertView} alert
+     * @param {import('../app/view.js').AlertView} alert
      * @param {(action: object) => void} dispatch
      */
     constructor(alert, dispatch) {
@@ -63,7 +63,7 @@ export class Card {
         return this._root;
     }
 
-    /** @param {import('../shell/view.js').AlertView} alert */
+    /** @param {import('../app/view.js').AlertView} alert */
     update(alert) {
         this._content.update(alert);
     }

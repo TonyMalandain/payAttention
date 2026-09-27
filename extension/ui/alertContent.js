@@ -23,7 +23,7 @@ function setText(actor, text) {
 /** Builds the content shared by a card and each takeover panel. */
 export class AlertContent {
     /**
-     * @param {import('../shell/view.js').AlertView} alert
+     * @param {import('../app/view.js').AlertView} alert
      * @param {(action: object) => void} dispatch
      * @param {'card'|'takeover'} size
      */
@@ -86,7 +86,7 @@ export class AlertContent {
     /**
      * Sets text only where it changed.
      *
-     * @param {import('../shell/view.js').AlertView} alert
+     * @param {import('../app/view.js').AlertView} alert
      */
     update(alert) {
         setText(this._headline, alert.headline);

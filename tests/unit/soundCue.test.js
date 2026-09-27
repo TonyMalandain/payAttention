@@ -3,7 +3,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldPlaySound } from '../../extension/shell/soundCue.js';
+import { shouldPlaySound } from '../../extension/app/soundCue.js';
 
 const a = step => ({ key: 'occ:a|1', step });
 

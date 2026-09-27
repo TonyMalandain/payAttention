@@ -4,7 +4,7 @@
 // The AI request budget (constraints.md). Not budget.test.js, which is the tick-time budget.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { RequestBudget, AI_REQUESTS_PER_HOUR, AI_REQUESTS_PER_DAY } from '../../extension/shell/aiBudget.js';
+import { RequestBudget, AI_REQUESTS_PER_HOUR, AI_REQUESTS_PER_DAY } from '../../extension/app/aiBudget.js';
 
 const T = Date.UTC(2026, 0, 5, 9, 0, 0);
 const MIN = 60_000;

@@ -49,7 +49,7 @@ export class Ui {
     /**
      * Idempotent: the same view twice changes nothing.
      *
-     * @param {import('../shell/view.js').View} view
+     * @param {import('../app/view.js').View} view
      */
     render(view) {
         this._indicator.update(view.indicator, view.menu);

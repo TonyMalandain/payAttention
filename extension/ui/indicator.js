@@ -68,8 +68,8 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * @param {import('../shell/view.js').View['indicator']} indicator
-     * @param {import('../shell/view.js').View['menu']} menu
+     * @param {import('../app/view.js').View['indicator']} indicator
+     * @param {import('../app/view.js').View['menu']} menu
      */
     update(indicator, menu) {
         this._label.visible = indicator.text !== null;

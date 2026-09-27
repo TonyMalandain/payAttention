@@ -3,7 +3,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIRST_DELAY_MS, MAX_DELAY_MS, HEALTHY_RESET_MS, nextRestartDelayMs } from '../../extension/shell/backoff.js';
+import { FIRST_DELAY_MS, MAX_DELAY_MS, HEALTHY_RESET_MS, nextRestartDelayMs } from '../../extension/app/backoff.js';
 
 describe('helper restart delay', () => {
     test('the constants', () => {

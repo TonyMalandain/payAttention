@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 // Time formatting depends on the zone; fix it before the modules are loaded.
 process.env.TZ = 'UTC';
-const { buildView, TRAVEL_CHOICES_MIN, AI_UNAVAILABLE_TEXT } = await import('../../extension/shell/view.js');
+const { buildView, TRAVEL_CHOICES_MIN, AI_UNAVAILABLE_TEXT } = await import('../../extension/app/view.js');
 const { formatClock, formatSince, formatShort } = await import('../../extension/core/display.js');
 const { plan, actionFor } = await import('../../extension/core/plan.js');
 const { emptyAlertState, reduce } = await import('../../extension/core/alertState.js');

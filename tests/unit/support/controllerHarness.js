@@ -3,8 +3,8 @@
 
 // The controller's fake parts and setup. Test support, not a test file. Import it
 // after fixing process.env.TZ, since time formatting depends on the zone.
-import { Controller } from '../../../extension/shell/controller.js';
-import { recordSync } from '../../../extension/shell/health.js';
+import { Controller } from '../../../extension/app/controller.js';
+import { recordSync } from '../../../extension/app/health.js';
 import { DEFAULT_SETTINGS } from '../../../extension/core/defaults.js';
 import { emptyAlertState } from '../../../extension/core/alertState.js';
 import { emptyAiAnswers } from '../../../extension/core/aiAnswers.js';

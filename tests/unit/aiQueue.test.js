@@ -9,7 +9,7 @@ process.env.TZ = 'UTC';
 const {
     AiQueue, nextAskRetryMs, nextEnginePauseMs, isWaiting, aiStatusOf, aiJudgeConfig, withholdAnswers,
     ENGINE_UNREACHABLE_CODES, LOST_STREAK_LIMIT,
-} = await import('../../extension/shell/aiQueue.js');
+} = await import('../../extension/app/aiQueue.js');
 const { emptyAiAnswers, parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
 const { AI_FAILURE_CODES } = await import('../../extension/core/aiProtocol.js');
 const { aiEngine } = await import('../../extension/core/aiEngine.js');

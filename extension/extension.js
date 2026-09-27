@@ -7,7 +7,7 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { AiHelperClient } from './shell/aiHelperClient.js';
 import { CalendarFeed } from './shell/calendarFeed.js';
-import { Controller } from './shell/controller.js';
+import { Controller } from './app/controller.js';
 import { Environment } from './shell/environment.js';
 import { launchUri } from './shell/launcher.js';
 import { Store } from './shell/store.js';

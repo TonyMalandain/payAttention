@@ -10,7 +10,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import { AI_PROTOCOL_VERSION, parseAiHelperLine, formatAiShellMessage } from '../core/aiProtocol.js';
-import { nextRestartDelayMs } from './backoff.js';
+import { nextRestartDelayMs } from '../app/backoff.js';
 import { spawnHelper } from './helperProcess.js';
 
 export class AiHelperClient {
@@ -19,7 +19,7 @@ export class AiHelperClient {
      *
      * @param {object} p
      * @param {string[]} p.argv ['gjs', '-m', '<extension dir>/ai/main.js']
-     * @param {import('./aiQueue.js').AiEngine} p.engine from aiEngine(settings); fixed for this client's life
+     * @param {import('../app/aiQueue.js').AiEngine} p.engine from aiEngine(settings); fixed for this client's life
      * @param {() => number} p.now
      */
     constructor({ argv, engine, now }) {
@@ -52,7 +52,7 @@ export class AiHelperClient {
      * unless kill() or destroy() comes first.
      *
      * @param {import('../core/types.js').Invite} invite
-     * @param {(outcome: import('./aiQueue.js').AiOutcome) => void} onDone
+     * @param {(outcome: import('../app/aiQueue.js').AiOutcome) => void} onDone
      * @throws {Error} 'ai-helper-client: not ready' when !ready
      */
     ask(invite, onDone) {

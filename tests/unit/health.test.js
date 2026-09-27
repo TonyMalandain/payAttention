@@ -5,7 +5,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     STALE_AFTER_MS, STARTUP_GRACE_MS, isAcceptedSnapshot, isInSync, recordSync, dataHealth, clocksToPersist,
-} from '../../extension/shell/health.js';
+} from '../../extension/app/health.js';
 import { T0, MIN, SOURCE, snapshot } from './support/builders.js';
 
 const EN = T0;               // enabledAt

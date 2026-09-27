@@ -8,8 +8,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import { PROTOCOL_VERSION, parseHelperLine, formatShellMessage } from '../core/protocol.js';
-import { isAcceptedSnapshot, recordSync } from './health.js';
-import { nextRestartDelayMs } from './backoff.js';
+import { isAcceptedSnapshot, recordSync } from '../app/health.js';
+import { nextRestartDelayMs } from '../app/backoff.js';
 import { spawnHelper } from './helperProcess.js';
 
 export class CalendarFeed {

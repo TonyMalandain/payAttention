@@ -34,7 +34,7 @@ export class Takeover {
      * Builds if needed, updates the text on every panel, then takes the grab if
      * it is not held. A failed grab is logged and retried on the next show().
      *
-     * @param {import('../shell/view.js').AlertView} alert
+     * @param {import('../app/view.js').AlertView} alert
      * @param {(action: object) => void} dispatch
      */
     show(alert, dispatch) {
