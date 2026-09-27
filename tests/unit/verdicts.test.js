@@ -12,9 +12,9 @@ const { Verdicts } = await import('../../extension/app/verdicts.js');
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
-const { T0, MIN, HOUR } = await import('./support/builders.js');
+const { T0, MIN, HOUR, snapshot } = await import('./support/builders.js');
 const {
-    EN, KEY, SNAP, makeStore, makeFeed, makeAiClient,
+    EN, KEY, SNAP, WORK, MEETING, meeting, makeStore, makeFeed, makeAiClient,
 } = await import('./support/controllerHarness.js');
 
 // Test data copied from controller.ai.test.js.
@@ -324,6 +324,53 @@ describe('verdicts: the feed', () => {
     });
 });
 
+describe('verdicts: aiProgress', () => {
+    // Two meetings the AI would be asked about.
+    const TWO = snapshot([MEETING, meeting({ uid: 'client-2', start: T0 + HOUR, end: T0 + 90 * MIN })], [WORK]);
+    const t = T0 - 2 * HOUR;
+    const withTwo = () => {
+        const h = setup({ settings: AI });
+        h.now = t;
+        h.feed.deliver(TWO);
+        return h;
+    };
+
+    test('13. rules mode after a snapshot: nothing pending, nothing by the rules', () => {
+        const h = setup();
+        h.deliver(EN);
+        assert.deepEqual(h.verdicts.aiProgress(EN), { pending: 0, byRules: 0 });
+    });
+
+    test('13. AI mode, no answers: both pending, without a judgedList call first', () => {
+        const h = withTwo();
+        const p = h.verdicts.aiProgress(t);
+        assert.deepEqual(p, { pending: 2, byRules: 0 });
+        assert.ok(Object.isFrozen(p));
+    });
+
+    test('13. one answer delivered: one pending', () => {
+        const h = withTwo();
+        h.verdicts.aiProgress(t);
+        h.aiTick(t);
+        h.client.answer(verdict('ignore', 'optional sync'));
+        assert.deepEqual(h.verdicts.aiProgress(t), { pending: 1, byRules: 0 });
+    });
+
+    test('13. a network failure (engine down): every waiting meeting is decided by the rules', () => {
+        const h = withTwo();
+        h.verdicts.aiProgress(t);
+        h.aiTick(t);
+        h.client.answer(failed('network'));
+        assert.deepEqual(h.verdicts.aiProgress(t), { pending: 0, byRules: 2 });
+    });
+
+    test('13. after destroy: nothing', () => {
+        const h = withTwo();
+        h.verdicts.destroy();
+        assert.deepEqual(h.verdicts.aiProgress(t), { pending: 0, byRules: 0 });
+    });
+});
+
 describe('verdicts: destroy', () => {
     test('12. destroys every part in order, once; a late outcome writes nothing; the list is then empty', () => {
         const h = setup({ settings: AI });
@@ -340,5 +387,20 @@ describe('verdicts: destroy', () => {
         const list = h.verdicts.judgedList(T0 - 2 * HOUR);
         assert.deepEqual(list.judged, []);
         assert.equal(list.byKey.size, 0);
+    });
+
+    test('12. after destroy, feedFacts is empty and frozen, and refresh reaches no feed', () => {
+        const h = setup();
+        h.deliver(EN);
+        const feed = h.feed;
+        h.verdicts.destroy();
+        let facts;
+        assert.doesNotThrow(() => (facts = h.verdicts.feedFacts));
+        assert.equal(facts.snapshot, null);
+        assert.equal(facts.acceptedAt, null);
+        assert.equal(facts.syncedAt.size, 0);
+        assert.ok(Object.isFrozen(facts));
+        assert.doesNotThrow(() => h.verdicts.refresh('manual'));
+        assert.deepEqual(feed.refreshes, []);
     });
 });

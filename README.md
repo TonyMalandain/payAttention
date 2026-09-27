@@ -84,6 +84,23 @@ The Verdicts page shows whether the address you entered is on this computer or n
 
 If the engine cannot be reached, the rules decide, and the menu says "AI unavailable — using rules".
 
+## See what it would decide, from a terminal
+
+To check the verdicts without logging out, run this in a terminal on your desktop:
+
+```sh
+gjs -m ~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/preview/main.js
+```
+
+From this folder, `npm run preview` does the same.
+
+It lists your meetings from now to about 36 hours ahead, by day: the time, MUST or ignore, online or in person (with the travel time), the title, and the reason. It uses your saved settings, your choices from the menu, your travel times, and your AI engine when AI mode is on. It never shows an alert and never changes anything: not your settings, not your saved AI answers.
+
+- payAttention must be installed; it does not need to be running. The preview runs the installed copy. After `npm run install:local`, it shows the new version's verdicts before you log out.
+- In AI mode it asks your engine about every meeting that has no saved answer, and waits up to 5 minutes. A meeting still unanswered then shows the verdict payAttention gives now. The preview does not save the answers, so the extension asks again later: with a cloud engine, those meetings are sent, and paid for, twice.
+- Run it on your desktop, not over SSH. Without your desktop session it cannot reach your calendars or your keyring. Times are in the terminal's time zone.
+- For scripts, add `--json` for one JSON object (`"v": 1`): `npm run -s preview -- --json`. Exit status: 0 printed, 1 usage or internal error, 2 not installed, 3 no calendar data within 30 seconds.
+
 ## The alert ladder
 
 | Step | Online (before start) | In person (before leave-by time) | What you see |
@@ -122,7 +139,7 @@ All the timings, the default travel time (30 min), your extra important and igno
 
 ## Development
 
-Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test checks install and uninstall in a throwaway home, then runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md).
+Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test checks install and uninstall in a throwaway home, then runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md). To preview a checkout's verdicts, install it (`npm run install:local`) and run `npm run preview`: the preview always runs the installed copy.
 
 ## License
 

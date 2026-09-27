@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 // The local offset depends on the zone; fix it before the modules are loaded.
 process.env.TZ = 'UTC';
 const {
-    AiQueue, nextAskRetryMs, nextEnginePauseMs, isWaiting, aiStatusOf, aiJudgeConfig, withholdAnswers,
+    AiQueue, nextAskRetryMs, nextEnginePauseMs, isWaiting, aiStatusOf, aiProgressOf, aiJudgeConfig, withholdAnswers,
     ENGINE_UNREACHABLE_CODES, LOST_STREAK_LIMIT,
 } = await import('../../extension/app/aiQueue.js');
 const { emptyAiAnswers, parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
@@ -95,6 +95,38 @@ describe('aiQueue: pure helpers', () => {
             assert.equal(aiStatusOf(failed, [waiting('k2'), waiting('k1')], CUTOFF, T0), 'unavailable');
             assert.equal(aiStatusOf(failed, [waiting('k1', T0 - CUTOFF - 1), waiting('k2')], CUTOFF, T0), 'ok');
             assert.equal(aiStatusOf(failed, [judged({ key: 'k1' }), waiting('k2')], CUTOFF, T0), 'ok');
+        });
+    });
+
+    describe('6b. aiProgressOf', () => {
+        const state = over => Object.freeze({ status: 'ok', answers: {}, failedKeys: new Set(), engineDown: false, ...over });
+        const three = [waiting('k1'), waiting('k2'), waiting('k3')];
+        const cases = [
+            ['no aiAsk anywhere', state(), [judged({ key: 'k1' }), judged({ key: 'k2' })], { pending: 0, byRules: 0 }],
+            ['three waiting, none failed, engine up', state(), three, { pending: 3, byRules: 0 }],
+            ['one in failedKeys', state({ failedKeys: new Set(['k2']) }), three, { pending: 2, byRules: 1 }],
+            ['engine down', state({ engineDown: true }), three, { pending: 0, byRules: 3 }],
+            ['a meeting past the cutoff is not counted', state(),
+                [waiting('k1', T0 - CUTOFF - 1), waiting('k2')], { pending: 1, byRules: 0 }],
+            ['a failed meeting past the cutoff is not counted', state({ failedKeys: new Set(['k1']) }),
+                [waiting('k1', T0 - CUTOFF - 1), waiting('k2')], { pending: 1, byRules: 0 }],
+        ];
+
+        for (const [name, ai, list, expected] of cases) {
+            test(`${name}: ${JSON.stringify(expected)}`, () => {
+                assert.deepEqual(aiProgressOf(ai, list, CUTOFF, T0), expected);
+            });
+        }
+
+        test('the result is frozen', () => {
+            assert.ok(Object.isFrozen(aiProgressOf(state(), three, CUTOFF, T0)));
+        });
+
+        test('with an engine, byRules > 0 exactly when aiStatusOf gives unavailable', () => {
+            for (const [name, ai, list] of cases) {
+                const status = aiStatusOf({ hasEngine: true, engineDown: ai.engineDown, failedKeys: ai.failedKeys }, list, CUTOFF, T0);
+                assert.equal(aiProgressOf(ai, list, CUTOFF, T0).byRules > 0, status === 'unavailable', name);
+            }
         });
     });
 

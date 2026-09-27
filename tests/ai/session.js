@@ -73,6 +73,7 @@ function run(program, args, env, input = '') {
  * @returns {Promise<{home:string, env:object,
  *   storeKey:(endpoint:string, key:string) => Promise<void>,
  *   lockKeyring:() => Promise<void>,
+ *   countKeys:() => Promise<{ours:number, other:number}>,
  *   unreachableEnv:() => object,
  *   stop:() => Promise<void>}>}
  */
@@ -112,6 +113,14 @@ export async function createAiSession(name) {
         },
         lockKeyring: async () => {
             await run('gjs', ['-m', KEYRING_TOOL, 'lock'], env);
+        },
+        /** The keyring items of the engine key schema (ours) and of the test's other schema. */
+        countKeys: async () => {
+            const out = await run('gjs', ['-m', KEYRING_TOOL, 'count'], env);
+            const match = /^KEYRING COUNT (\d+) (\d+)$/m.exec(out);
+            if (!match)
+                throw new Error(`keyring.js count printed no count: ${out}`);
+            return { ours: Number(match[1]), other: Number(match[2]) };
         },
         unreachableEnv: () => ({ ...env, DBUS_SESSION_BUS_ADDRESS: `unix:path=${path.join(home, 'no-bus')}` }),
         stop: async () => {

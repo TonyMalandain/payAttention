@@ -106,6 +106,32 @@ export function aiStatusOf(failure, judged, cutoffMs, now) {
 }
 
 /**
+ * §6.5 "waiting meeting", counted for a front end that waits for the AI (the preview,
+ * interfaces.md §7.3). Uses isWaiting, the one definition.
+ *
+ * @param {AiState} ai
+ * @param {ReadonlyArray<import('../core/types.js').JudgedOccurrence>} judged
+ * @param {number} cutoffMs
+ * @param {number} now
+ * @returns {Readonly<{pending: number, byRules: number}>} over the waiting meetings:
+ *   byRules = those whose own last ask failed (ai.failedKeys) or all of them while ai.engineDown;
+ *   pending = the rest (still to be answered). Frozen.
+ */
+export function aiProgressOf(ai, judged, cutoffMs, now) {
+    let pending = 0;
+    let byRules = 0;
+    for (const j of judged) {
+        if (!isWaiting(j, cutoffMs, now))
+            continue;
+        if (ai.engineDown || ai.failedKeys.has(j.key))
+            byRules++;
+        else
+            pending++;
+    }
+    return Object.freeze({ pending, byRules });
+}
+
+/**
  * judge's config.ai for this engine (interfaces.md §6.4).
  *
  * @param {AiEngine|null} engine from aiEngine(settings)

@@ -9,7 +9,7 @@
 import { judge } from '../core/judge.js';
 import { timingFromSettings } from '../core/timing.js';
 import { aiEngine } from '../core/aiEngine.js';
-import { AiQueue, aiJudgeConfig, withholdAnswers } from './aiQueue.js';
+import { AiQueue, aiJudgeConfig, aiProgressOf, withholdAnswers } from './aiQueue.js';
 
 /**
  * @typedef {object} StoreReaderPort the store's reader facet
@@ -37,6 +37,7 @@ import { AiQueue, aiJudgeConfig, withholdAnswers } from './aiQueue.js';
  */
 
 const EMPTY_LIST = Object.freeze({ judged: Object.freeze([]), byKey: new Map() });
+const NO_PROGRESS = Object.freeze({ pending: 0, byRules: 0 });
 
 const DEP_NAMES = ['createStoreReader', 'createFeed', 'createAiClient', 'createAiTicker', 'writeAnswers', 'now'];
 
@@ -100,8 +101,13 @@ export class Verdicts {
         return this._ai;
     }
 
-    /** @returns {FeedFacts} the calendar feed's facts now, for health and for the clocks; a new frozen object per call */
+    /**
+     * @returns {FeedFacts} the calendar feed's facts now, for health and for the clocks; a new frozen object per call.
+     *   After destroy(), no snapshot, no times and an empty syncedAt.
+     */
     get feedFacts() {
+        if (this._destroyed)
+            return Object.freeze({ snapshot: null, acceptedAt: null, syncedAt: new Map() });
         const feed = this._feed;
         return Object.freeze({ snapshot: feed.snapshot, acceptedAt: feed.acceptedAt, syncedAt: feed.syncedAt });
     }
@@ -112,6 +118,7 @@ export class Verdicts {
      * answers, failed keys or engine down). Otherwise the same object as last time.
      * Empty while there is no snapshot, and after destroy(). Throws only if judge
      * throws; the list is then still marked for recomputation.
+     * AI asks happen only after judgedList is called again following a change.
      *
      * @param {number} now
      * @returns {JudgedList}
@@ -127,6 +134,20 @@ export class Verdicts {
         return this._list;
     }
 
+    /**
+     * How far the AI has got, for a front end that waits for it (interfaces.md §7.3).
+     * Computes judgedList(now) first, so the counts always describe the list as of now.
+     *
+     * @param {number} now
+     * @returns {Readonly<{pending: number, byRules: number}>} aiProgressOf over that list;
+     *   {pending: 0, byRules: 0} without an engine (no aiAsk is ever set) and after destroy()
+     */
+    aiProgress(now) {
+        if (this._destroyed)
+            return NO_PROGRESS;
+        return aiProgressOf(this._ai, this.judgedList(now).judged, this._inputs.timing.cutoffMs, now);
+    }
+
     /** Re-reads overrides and travel times (the owner just changed one) and marks the list for recomputation. */
     reloadOverridesAndTravel() {
         if (this._destroyed)
@@ -136,8 +157,10 @@ export class Verdicts {
         this._dirty = true;
     }
 
-    /** @param {'resume'|'manual'} reason passed to the feed */
+    /** @param {'resume'|'manual'} reason passed to the feed; does nothing after destroy() */
     refresh(reason) {
+        if (this._destroyed)
+            return;
         this._feed.refresh(reason);
     }
 

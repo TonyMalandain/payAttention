@@ -15,7 +15,8 @@
     "test:helper": "node --test \"tests/helper/**/*.test.js\" \"tests/ai/**/*.test.js\"",
     "smoke": "bash scripts/smoke.sh",
     "install:local": "bash scripts/install.sh",
-    "uninstall:local": "bash scripts/uninstall.sh"
+    "uninstall:local": "bash scripts/uninstall.sh",
+    "preview": "gjs -m \"${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/payattention@tonymalandain.github.io/preview/main.js\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

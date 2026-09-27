@@ -27,6 +27,31 @@ const NO_CLOCK_SYNTAX = [
     { selector: "CallExpression[callee.name='Date']", message: TIME_MESSAGE },
 ];
 const SPAWN_MESSAGE = 'start helpers with spawnHelper() from shell/helperProcess.js (interfaces.md §1 "Environment")';
+const GJS_GLOBALS = {
+    global: 'readonly',
+    log: 'readonly',
+    logError: 'readonly',
+    print: 'readonly',
+    printerr: 'readonly',
+    console: 'readonly',
+    TextEncoder: 'readonly',
+    TextDecoder: 'readonly',
+};
+const DYNAMIC_IMPORT = { selector: 'ImportExpression', message: 'no dynamic import() in preview/: lint cannot see what it loads' };
+const PREVIEW_COMMON = [
+    { regex: '^\\.\\./core/(judge|plan|alertState)\\.js$', message: 'the preview never judges, plans or touches alert state (ADR-0012)' },
+    { regex: '^\\.\\./app/(?!verdicts\\.js$)', message: 'the preview gets verdicts only from app/verdicts.js (ADR-0012)' },
+    { regex: '^\\.\\./shell/store\\.js$', importNames: ['StoreWriter'], message: 'the preview is read-only: it never holds the store writer (ADR-0012)' },
+    { regex: '^\\.\\./(ui|helper|ai)/', message: 'the preview may not import ui/, helper/ or ai/: it spawns the helpers (ADR-0012)' },
+    { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'the preview may not import extension.js or prefs.js' },
+];
+const ONE_JUDGE = 'only app/verdicts.js may import core/judge.js (ADR-0011, boundaries.md)';
+const APP_PATTERNS = [
+    { regex: '^(gi|resource|node):', message: 'app/ is GNOME-free: no gi://, resource:// or node: imports (ADR-0011)' },
+    NODE_BUILTINS,
+    NO_SYSTEM,
+    { regex: '^\\.\\./(?!core/)', message: 'app/ may import only app/ and core/ modules (ADR-0011)' },
+];
 
 export default [
     { ignores: ['node_modules/**', 'dist/**', '.test-home/**', '.smoke-home/**'] },
@@ -39,19 +64,8 @@ export default [
         // Code that runs in gjs.
         files: ['extension/**/*.js', 'tests/smoke/**/*.js', 'tests/unit/support/gjs-*.js', 'tests/helper/gjs/**/*.js',
             'tests/ai/gjs/**/*.js'],
-        ignores: ['extension/core/**', 'extension/app/**'],
-        languageOptions: {
-            globals: {
-                global: 'readonly',
-                log: 'readonly',
-                logError: 'readonly',
-                print: 'readonly',
-                printerr: 'readonly',
-                console: 'readonly',
-                TextEncoder: 'readonly',
-                TextDecoder: 'readonly',
-            },
-        },
+        ignores: ['extension/core/**', 'extension/app/**', 'extension/preview/**'],
+        languageOptions: { globals: GJS_GLOBALS },
     },
     {
         // Node code.
@@ -68,6 +82,7 @@ export default [
                     { regex: '^(gi|resource|node):', message: 'core/ is pure: no GNOME or Node imports (ADR-0002)' },
                     NODE_BUILTINS,
                     { regex: '^\\.\\./', message: 'core/ may import only core/ modules (core/ is flat)' },
+                    { regex: '^\\./judge\\.js$', message: ONE_JUDGE },
                 ],
             }],
             'no-restricted-properties': ['error', ...NO_CLOCK_PROPERTIES],
@@ -80,16 +95,20 @@ export default [
         files: ['extension/app/**/*.js'],
         languageOptions: { globals: { console: 'readonly' } },
         rules: {
-            'no-restricted-imports': ['error', {
-                patterns: [
-                    { regex: '^(gi|resource|node):', message: 'app/ is GNOME-free: no gi://, resource:// or node: imports (ADR-0011)' },
-                    NODE_BUILTINS,
-                    NO_SYSTEM,
-                    { regex: '^\\.\\./(?!core/)', message: 'app/ may import only app/ and core/ modules (ADR-0011)' },
-                ],
-            }],
+            'no-restricted-imports': ['error', { patterns: APP_PATTERNS }],
             'no-restricted-properties': ['error', ...NO_CLOCK_PROPERTIES],
             'no-restricted-syntax': ['error', ...NO_CLOCK_SYNTAX],
+        },
+    },
+    {
+        // After the app/ block on purpose: flat config replaces the option list, so this
+        // repeats APP_PATTERNS and adds the judge guard for every app/ file but verdicts.js.
+        files: ['extension/app/**/*.js'],
+        ignores: ['extension/app/verdicts.js'],
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [...APP_PATTERNS, { regex: '^\\.\\./core/judge\\.js$', message: ONE_JUDGE }],
+            }],
         },
     },
     {
@@ -138,6 +157,7 @@ export default [
                 patterns: [
                     NO_SHELL_SIDE_GI,
                     { regex: '^\\.\\./(ui|helper|ai)/', message: 'shell/ may not import ui/, helper/ or ai/' },
+                    { regex: '^\\.\\./core/judge\\.js$', message: ONE_JUDGE },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -187,10 +207,53 @@ export default [
                 patterns: [
                     { regex: '^gi://(Clutter|Meta|St|Shell|Soup)(\\?|$)', message: 'prefs runs outside the shell and never uses the network: no Clutter/Meta/St/Shell/Soup' },
                     { regex: '^\\./(shell|app|ui|helper|ai)/', message: 'prefs may not import shell/, app/, ui/, helper/ or ai/' },
+                    { regex: '^\\./core/judge\\.js$', message: ONE_JUDGE },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
             }],
+        },
+    },
+    {
+        // The preview's entry (ADR-0012, interfaces.md §7.3): its only gi code, composition only.
+        files: ['extension/preview/main.js'],
+        languageOptions: { globals: GJS_GLOBALS },
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [
+                    ...PREVIEW_COMMON,
+                    { regex: '^resource:', message: 'the preview runs outside the shell: no resource:// imports' },
+                    { regex: '^gi://(?!(Gio|GLib|GLibUnix)(\\?|$))', message: 'the preview may use only Gio, GLib and GLibUnix' },
+                    {
+                        regex: '^\\.\\./shell/(?!(store|calendarFeed|aiHelperClient|helperProcess|ticker)\\.js$)',
+                        message: 'from shell/ the preview may use only the store reader, the calendar feed, the AI client, the spawn rule and the ticker (interfaces.md §7.3)',
+                    },
+                    NO_NODE,
+                ],
+            }],
+            'no-restricted-properties': ['error',
+                { object: 'Gio', property: 'Subprocess', message: SPAWN_MESSAGE },
+                { object: 'Gio', property: 'SubprocessLauncher', message: SPAWN_MESSAGE }],
+            'no-restricted-syntax': ['error', DYNAMIC_IMPORT],
+        },
+    },
+    {
+        // The preview's logic: gi-free, linted like app/, so Node tests it.
+        files: ['extension/preview/**/*.js'],
+        ignores: ['extension/preview/main.js'],
+        languageOptions: { globals: { console: 'readonly' } },
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [
+                    ...PREVIEW_COMMON,
+                    { regex: '^(gi|resource|node):', message: 'preview/ logic is GNOME-free so Node can test it; only preview/main.js may use gi:// (ADR-0011)' },
+                    NODE_BUILTINS,
+                    NO_SYSTEM,
+                    { regex: '^\\.\\./(?!(core|app)/)', message: 'preview/ logic may import only core/, app/verdicts.js and preview/ modules' },
+                ],
+            }],
+            'no-restricted-properties': ['error', ...NO_CLOCK_PROPERTIES],
+            'no-restricted-syntax': ['error', ...NO_CLOCK_SYNTAX, DYNAMIC_IMPORT],
         },
     },
 ];
