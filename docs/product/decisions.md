@@ -177,3 +177,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** Zoom's "one tap" lines carry the passcode with no keyword before it, so D-027 missed them (found in review). The engine does not need phone numbers to judge a meeting. HTML descriptions would otherwise lose everything after a passcode, not just the rest of the line.
 **Costs accepted:** Dial-in phone numbers never reach the engine, even where they would hint at a meeting's type.
 **Source:** the product manager, closing reviewer findings (PG-4a round 2).
+
+### D-030 — Invites are turned into plain text first, and passcode removal is best effort — 2026-09-27
+**Decision:** We chose to convert HTML descriptions to plain text before any removal rule runs. Line-ending tags (any `<br …>` with attributes, `</p>`, `</li>`, `</div>`, `</tr>`, `</td>`, `</h1>`–`</h6>`) become line breaks. All other tags are dropped. Entities (`&nbsp;`, `&shy;`, `&#8203;`, `&#x…;`) are decoded. Percent-encoded characters in dial strings (`%2C`, `%23`) are decoded. Every invisible or direction mark the invite cleaning removes is also removed before matching. After this round, the removal of passcodes and dial-in strings is **best effort**, and Settings says so next to the "whole invite is sent" warning.
+**Why:** Rule-by-rule fixes kept finding new formats (reviews of PG-4a and PG-4a2). Plain text first closes whole classes of leak at once. The owner chose to send the whole invite (D-020), so removal is a courtesy that lowers risk, not a promise. Chasing every crafted format has no end.
+**Costs accepted:** An unusual or deliberately disguised passcode may still reach the engine. HTML formatting is not sent, which the engine does not need.
+**Source:** the product manager, closing reviewer findings (PG-4a2 round 1).

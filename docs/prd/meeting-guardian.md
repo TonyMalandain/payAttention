@@ -158,7 +158,7 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
 - **Settings, "Verdicts" section:**
   - **Mode:** Rules (the default) or AI.
   - **AI engine:** endpoint (address), model name, API key, and a "Test connection" button that gives a clear yes or no.
-  - A plain warning: "In AI mode the whole invite is sent to this engine. With a cloud engine it leaves your computer."
+  - A plain warning: "In AI mode the whole invite is sent to this engine. With a cloud engine it leaves your computer. Passcodes and dial-in numbers are removed first, on a best-effort basis." (D-030)
   - The key is kept in the desktop's password store, never in plain settings.
 - **In AI mode:**
   - Every meeting's whole invite goes to the engine: title, time, description, place, video link, organiser, and guests with their names, email addresses and responses (D-020).

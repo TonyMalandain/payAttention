@@ -271,3 +271,10 @@ Append only. Newest at the bottom.
   Known false positives were also accepted: date lists and European million amounts are removed, which removes more and never leaks.
 - **Source:** software engineer, PG-4a2.
 - **Touches:** decisions.md D-027, D-029
+
+## 2026-09-27 — PG-4a2 review: leaks remain; plain-text-first and best effort
+- **Kind:** decision
+- **Fact:** The review found remaining leaks: direction marks, no-break spaces, numbered dial lines, and `<br>` with attributes. Closed as D-030: convert to plain text first, decode entities and `%xx`, share one list of invisible marks, then stop. Removal is best effort, and Settings says so. Ticket PG-4a3.
+- **Why:** The fixes were turning into whack-a-mole. The owner chose the whole invite, so removal lowers risk but is not a guarantee.
+- **Source:** reviewer, PG-4a2 round 1.
+- **Touches:** decisions.md D-030, docs/prd/meeting-guardian.md, BACKLOG.md
