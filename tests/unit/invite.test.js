@@ -387,7 +387,8 @@ describe('buildInvite: D-029 phone dial-in strings are removed', () => {
 
     test('the dial string inside an HTML tel: link goes from both the link and its text', () => {
         const html = '<a href="tel:+16699006833,,81234567890#,,,,*654321#">+16699006833,,81234567890#,,,,*654321#</a>';
-        assert.equal(desc(html), '<a href="[removed]">[removed]</a>');
+        // D-030: the tag goes with its href, the dial string in the text is removed.
+        assert.equal(desc(html), '[removed]');
     });
 });
 
@@ -400,17 +401,138 @@ describe('buildInvite: D-029 HTML line breaks end the line for D-027', () => {
     });
 
     test('a value alone on the next HTML line is removed, and the line after it stays', () => {
-        assert.equal(desc('<p>Passcode:</p><p>654321</p><p>Agenda: budget</p>'), '<p>Passcode: [removed] <p>Agenda: budget');
+        assert.equal(desc('<p>Passcode:</p><p>654321</p><p>Agenda: budget</p>'), 'Passcode: [removed] Agenda: budget');
         assert.equal(desc('Passcode:<br><br>654321<br>Agenda: budget'), 'Passcode: [removed] Agenda: budget');
     });
 
     test('other tags are not line ends', () => {
         assert.equal(desc('Passcode: <b>654321</b> Agenda'), 'Passcode: [removed]');
-        assert.equal(desc('<brand>Passcode: 1</brand>x'), '<brand>Passcode: [removed]');
+        assert.equal(desc('<brand>Passcode: 1</brand>x'), 'Passcode: [removed]');
     });
 
     test('in the place too', () => {
         assert.equal(build({ location: 'Room 4<br>PIN: 7788<br>Floor 2' }).place, 'Room 4 PIN: [removed] Floor 2');
+    });
+});
+
+describe('buildInvite: D-030 plain text first', () => {
+    const desc = text => build({ description: text }).description;
+
+    test('<br> with attributes ends the line; the agenda after it stays', () => {
+        assert.equal(desc('Passcode: 654321<br clear="all">Agenda: budget'), 'Passcode: [removed] Agenda: budget');
+        assert.equal(desc('Passcode: 654321<BR Class=x/>Agenda: budget'), 'Passcode: [removed] Agenda: budget');
+    });
+
+    test('</tr>, </td> and </h1> to </h6>, in any case, end the line', () => {
+        for (const tag of ['</tr>', '</TD>', '</h1>', '</H2>', '</h3>', '</h4>', '</h5>', '</h6 >'])
+            assert.equal(desc(`Passcode: 654321${tag}Agenda: budget`), 'Passcode: [removed] Agenda: budget', tag);
+    });
+
+    test('every other tag is removed, so a tag inside a keyword does not hide it', () => {
+        assert.equal(desc('Pass<span>code</span>: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('<b>PIN</b>: <i class="x">1234</i>'), 'PIN: [removed]');
+        assert.equal(desc('<table><tr><td>Agenda</td><td>budget</td></tr></table>'), 'Agenda budget');
+    });
+
+    test('a "<" that does not open a tag stays as text', () => {
+        assert.equal(desc('a < b and c > d, 3<4'), 'a < b and c > d, 3<4');
+        assert.equal(desc('Join<https://example.test/x>'), 'Join<https://example.test/x>');
+    });
+
+    test('entities are decoded: an invisible or hidden mark written as an entity does not hide a keyword', () => {
+        assert.equal(desc('Pass&#8203;code: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('Pass&shy;code: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('Pass&#x200b;code: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('Pass&#X200B;code: 654321'), 'Passcode: [removed]');
+    });
+
+    test('named and numeric entities become their characters, once', () => {
+        assert.equal(desc('a&nbsp;b &amp; &lt;c&gt; &quot;d&quot; &#39;e&#39; &#233; &#xE9;'), 'a b & <c> "d" \'e\' é é');
+        assert.equal(desc('&amp;#8203; &amp;lt;'), '&#8203; &lt;');
+    });
+
+    test('an entity that names no character, or an unknown name, stays as written', () => {
+        assert.equal(desc('&#99999999; &#x110000; &bogus; & amp;'), '&#99999999; &#x110000; &bogus; & amp;');
+    });
+
+    test('an entity written after the tags are gone is text, not a tag', () => {
+        assert.equal(desc('&lt;br&gt;Passcode: 1'), '<br>Passcode: [removed]');
+    });
+
+    test('in the place too', () => {
+        assert.equal(build({ location: 'Room&nbsp;4<br class="x">P<b>I</b>N:&nbsp;7788<br>Floor 2' }).place,
+            'Room 4 PIN: [removed] Floor 2');
+    });
+});
+
+describe('buildInvite: D-030 one shared list of invisible marks, stripped before matching', () => {
+    const desc = text => build({ description: text }).description;
+
+    test('direction isolates, embeddings, the Arabic letter mark and invisible operators inside a keyword', () => {
+        assert.equal(desc('Pass\u2066code: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('Pass\u202Acode: 654321'), 'Passcode: [removed]');
+        assert.equal(desc('P\u061CIN: 1234'), 'PIN: [removed]');
+        assert.equal(desc('Pass\u2062code: 654321'), 'Passcode: [removed]');
+    });
+
+    test('every mark in the list, and U+034F, inside a keyword', () => {
+        const marks = ['\u00AD', '\u034F', '\u061C', '\u200B', '\u200C', '\u200D', '\u200E', '\u200F',
+            '\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064',
+            '\u2066', '\u2067', '\u2068', '\u2069', '\uFEFF'];
+        for (const mark of marks)
+            assert.equal(desc(`Pass${mark}code: 654321`), 'Passcode: [removed]', `U+${mark.codePointAt(0).toString(16)}`);
+    });
+
+    test('a mark inside a dial string does not hide it', () => {
+        assert.equal(desc('+1 646 876 9923,\u2066,812345#'), '[removed]');
+    });
+});
+
+describe('buildInvite: D-030 dial-in strings, round 2', () => {
+    const desc = text => build({ description: text }).description;
+
+    test('no-break spaces, narrow no-break spaces and non-breaking hyphens as separators', () => {
+        assert.equal(desc('+1\u00A0646\u00A0876\u00A09923,,812345#'), '[removed]');
+        assert.equal(desc('+1\u202F646\u202F876\u202F9923,,812345#'), '[removed]');
+        assert.equal(desc('+1\u2011646\u2011876\u20119923,,812345#'), '[removed]');
+        assert.equal(desc('+1\u2010646\u2010876\u20109923,,812345#'), '[removed]');
+    });
+
+    test('a space before the pause', () => {
+        assert.equal(desc('+1 646-876-9923 ,,812345#'), '[removed]');
+        assert.equal(desc('Call +1 646-876-9923 ;4321# now'), 'Call [removed] now');
+    });
+
+    test('a number after a list marker or a digit is still caught; the label before it stays', () => {
+        assert.equal(desc('1. +1 646-876-9923,,812345#'), '1. [removed]');
+        assert.equal(desc('Option 2 - +16699006833,,812345#'), 'Option 2 - [removed]');
+        assert.equal(desc('2 (+1) 646 876 9923,,4321#'), '2 ([removed]');
+        assert.equal(desc('Room 5,16699006833,,1#'), 'Room 5,[removed]');
+    });
+
+    test('edges: exactly 6 digits stay, exactly 7 go', () => {
+        assert.equal(desc('123456,,1#'), '123456,,1#');
+        assert.equal(desc('12 34 56#'), '12 34 56#');
+        assert.equal(desc('1234567,,1#'), '[removed]');
+        assert.equal(desc('123 45 67#'), '[removed]');
+    });
+
+    test('edges: a pause followed directly by "#" or "*"', () => {
+        assert.equal(desc('+1 646 876 9923,#'), '[removed]');
+        assert.equal(desc('+1 646 876 9923;*55'), '[removed]');
+        assert.equal(desc('+1 646 876 9923,, then'), '+1 646 876 9923,, then');
+    });
+
+    test('percent-encoded pauses and codes in a tel: link and in a dial string are decoded, then removed', () => {
+        assert.equal(desc('<a href="tel:+16699006833,,81234567890%23,,,,*654321%23">Call</a>'), 'Call');
+        assert.equal(desc('tel:+16699006833%2C%2C81234567890%23%2C%2C%2C%2C%2A654321%23 x'), '[removed] x');
+        assert.equal(desc('tel:+1555123456%3B123%23'), '[removed]');
+        assert.equal(desc('+16699006833%2c%2c812345%23'), '[removed]');
+    });
+
+    test('a percent sign not after a digit or pause is left alone; a short number is decoded but kept', () => {
+        assert.equal(desc('100% sure, a%2Cb, x%23y'), '100% sure, a%2Cb, x%23y');
+        assert.equal(desc('50%23 off'), '50# off');
     });
 });
 
@@ -541,6 +663,14 @@ describe('buildInvite: no catastrophic backtracking on 1 000 000 characters', ()
         'a keyword then punctuation to the end': 'Passcode' + fill('.'),
         'keywords on every line': fill('pin\n'),
         'invisible marks': fill('\u200B'),
+        'tags that never close': fill('<a '),
+        'tag names that never end': fill('<abcdefgh'),
+        'entities that never end': fill('&#'),
+        'digits split by a list marker and a plus': fill('1. +'),
+        'digits after one pause each': fill('1,'),
+        'percent codes after a digit': fill('1%2C'),
+        'no-break spaces between digits': fill('1\u00A0'),
+        'spaces before pauses': fill('1234567 ,'),
         'a mixed invite repeated': fill('Passcode: 654321<br>+16699006833,,81234567890#,,,,*654321# PIN\n'),
     };
 

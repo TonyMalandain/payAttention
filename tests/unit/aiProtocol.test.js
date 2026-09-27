@@ -6,7 +6,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    MAX_INVITE_BYTES, INVITE_CAPS, INVITE_FIELDS, cleanText, capText, utf8Length, normaliseReason, validateInvite,
+    MAX_INVITE_BYTES, INVITE_CAPS, INVITE_FIELDS, INVISIBLE_MARKS, cleanText, capText, utf8Length, normaliseReason, validateInvite,
     AI_PROTOCOL_VERSION, MAX_AI_LINE_LENGTH, AI_FAILURE_CODES,
     validateAiShellMessage, parseAiShellLine, formatAiShellMessage,
     validateAiHelperMessage, parseAiHelperLine, formatAiHelperMessage,
@@ -42,6 +42,18 @@ describe('cleanText', () => {
 
     test('bidi controls and marks are removed', () => {
         assert.equal(cleanText('a\u202Eb\u2066c\u200Fd\u061Ce'), 'abcde');
+    });
+
+    test('D-030: the one shared list of invisible marks is removed, the same list the invite builder strips', () => {
+        const marks = ['\u00AD', '\u034F', '\u061C', '\u200B', '\u200C', '\u200D', '\u200E', '\u200F',
+            '\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064',
+            '\u2066', '\u2067', '\u2068', '\u2069', '\uFEFF'];
+        for (const mark of marks) {
+            const hex = `U+${mark.codePointAt(0).toString(16)}`;
+            assert.equal(cleanText(`a${mark}b`), 'ab', hex);
+            assert.equal(`a${mark}b`.replace(INVISIBLE_MARKS, ''), 'ab', hex);
+        }
+        assert.equal('a b c-d'.replace(INVISIBLE_MARKS, ''), 'a b c-d');
     });
 
     test('a lone surrogate becomes U+FFFD', () => {

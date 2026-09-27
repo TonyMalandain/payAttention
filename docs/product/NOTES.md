@@ -278,3 +278,9 @@ Append only. Newest at the bottom.
 - **Why:** The fixes were turning into whack-a-mole. The owner chose the whole invite, so removal lowers risk but is not a guarantee.
 - **Source:** reviewer, PG-4a2 round 1.
 - **Touches:** decisions.md D-030, docs/prd/meeting-guardian.md, BACKLOG.md
+
+## 2026-09-27 — PG-4a3 built; last passcode round
+- **Kind:** decision
+- **Fact:** PG-4a3 is built. All 14 review variants are removed. Accepted: zero-width joiners are dropped from text sent to the engine, which can split emoji or Persian text, and the verdict does not depend on it. The "best effort" Settings wording was added to PG-4d. No further passcode rounds are planned beyond this review (D-030).
+- **Source:** software engineer, PG-4a3.
+- **Touches:** decisions.md D-030, BACKLOG.md PG-4d

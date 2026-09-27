@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Tony Malandain
 
 // Turning one occurrence into the bounded invite the AI engine sees
-// (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027, D-029). Pure.
-import { INVITE_CAPS, MAX_INVITE_BYTES, capText, cleanText, utf8Length } from './aiProtocol.js';
+// (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027, D-029, D-030). Pure.
+import { INVISIBLE_MARKS, INVITE_CAPS, MAX_INVITE_BYTES, capText, cleanText, utf8Length } from './aiProtocol.js';
 import { ownerFacts, ownerResponse, guestAttendees, normaliseAddress } from './owner.js';
 import { detectAttendance } from './attendance.js';
 import { withoutQuery, withoutConferenceQueries } from './links.js';
@@ -24,21 +24,76 @@ const ROLES = { 'chair': 'chair', 'req-participant': 'required', 'opt-participan
 // Run before cleanText, which would join the lines.
 const TEXT_PASSCODE = /\b(passcodes?|passwords?|pwd|pins?)\b(?=((?:[\s:=#-]|\b(?:is|code)\b)*))\2(?=[^\r\n]*[\p{L}\p{N}])[^\r\n]+/giu;
 
-// D-029: a phone dial-in string is a phone number (an optional "tel:" and "+", then at
-// least 7 digits, groups split by up to 3 of space, tab, ".", "-", "(" or ")") directly
-// followed by a code: "#" or "*", or a pause ("," or ";") with a digit, "#" or "*" right
-// after it. The whole string, codes included, goes. A plain number, or one followed by
-// ", " as in a list, stays. The lookbehind lets a match start only at the beginning of
-// a number, so a long digit run is scanned once, not once per digit.
-const DIAL_STRING = /(?:\btel:)?(?<![\d+][ \t.()-]{0,3})\+?\d(?:[ \t.()-]{0,3}\d){6,}(?:[,;]+[\d#*]|[#*])[\d,;#*]*/giu;
+// D-029, D-030: a phone dial-in string is a phone number (an optional "tel:" and "+",
+// then at least 7 digits, groups split by up to 3 of space, tab, ".", "-", "(" or ")")
+// followed by a code: "#" or "*", or a pause ("," or ";", after up to 3 spaces) with a
+// digit, "#" or "*" right after it. The whole string, codes included, goes. A plain
+// number, or one followed by ", " as in a list, stays.
+// Short plain codes ("ext #12", "Room 4#", a bare "812345#") are not caught: with
+// fewer than 7 digits they cannot be told from room numbers, amounts and extensions,
+// and a labelled code is caught by TEXT_PASSCODE instead. Removal is best effort (D-030).
+// DIAL_NUMBER finds each number once and the scan resumes after it, so a long digit
+// run is read once, and a number after a list marker or a digit ("1. +1 646…",
+// "2 (+1) 646…") is still found; DIAL_CODE is then tried where the number ends.
+const DIAL_NUMBER = /(?:\btel:)?\+?\d(?:[ \t.()-]{0,3}\d)*/gi;
+const DIAL_CODE = /[ \t]{0,3}(?:[,;]+[\d#*]|[#*])/y;
+const DIAL_REST = /[\d,;#*]*/y;
+const DIAL_MIN_DIGITS = 7;
 
-// D-029: invisible marks (zero-width space to right-to-left mark, word joiner, BOM,
-// soft hyphen) are dropped from the whole text, so none can hide a keyword.
-const INVISIBLE_MARKS = /[\u200B-\u200F\u2060\uFEFF\u00AD]/g;
+// D-030: separators a dial string may be written with, made plain before matching.
+const NO_BREAK_SPACES = /[\u00A0\u202F]/g;
+const HYPHENS = /[\u2010\u2011]/g;
 
-// D-029: these HTML tags end a line for TEXT_PASSCODE. Each is replaced by a line
-// break, so the tag itself is not sent (cleanText turns the break into a space).
-const HTML_LINE_END = /<br\s*\/?>|<\/(?:p|li|div)\s*>/gi;
+// D-030: percent-encoded pauses and codes ("%2C", "%3B", "%23", "%2A") in a dial
+// string or tel: link, decoded before matching. Only after a digit or another of
+// them, so other text with a "%" is left alone.
+const PERCENT_DIAL = /[\d,;#*](?:%(?:2C|3B|23|2A)[\d,;#*]*)+/gi;
+const PERCENT_CHARS = { '2C': ',', '3B': ';', '23': '#', '2A': '*' };
+
+// D-030: HTML to plain text before any removal rule. A line-ending tag becomes a line
+// break, so TEXT_PASSCODE stops there (cleanText turns the break into a space); every
+// other tag goes. A tag name must end at a space, "/" or ">", so "<https://…>" and
+// "a < b" stay as text; stopping at the next "<" keeps the scan linear.
+const HTML_TAG = /<(\/?)([a-z][a-z0-9-]*)(?=[\s/>])[^<>]*>/gi;
+const LINE_END_CLOSERS = new Set(['p', 'li', 'div', 'tr', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+
+// D-030: entities decoded after the tags are gone, in one pass, so "&lt;br&gt;" is text
+// and "&amp;#8203;" stays "&#8203;". One that names no character stays as written.
+const HTML_ENTITY = /&(?:#(\d{1,8})|#[xX]([0-9a-fA-F]{1,7})|(nbsp|shy|amp|lt|gt|quot|apos));/g;
+const NAMED_ENTITIES = { nbsp: '\u00A0', shy: '\u00AD', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+function lineEndOrNothing(tag, closing, name) {
+    const n = name.toLowerCase();
+    return (closing ? LINE_END_CLOSERS.has(n) : n === 'br') ? '\n' : '';
+}
+
+function decodeEntity(entity, decimal, hex, name) {
+    if (name !== undefined)
+        return NAMED_ENTITIES[name];
+    const code = decimal !== undefined ? Number(decimal) : parseInt(hex, 16);
+    return code > 0 && code <= 0x10FFFF ? String.fromCodePoint(code) : entity;
+}
+
+function plainText(text) {
+    return text.replace(HTML_TAG, lineEndOrNothing).replace(HTML_ENTITY, decodeEntity);
+}
+
+function withoutDialStrings(text) {
+    let out = '';
+    let from = 0;
+    for (const m of text.matchAll(DIAL_NUMBER)) {
+        const end = m.index + m[0].length;
+        DIAL_CODE.lastIndex = end;
+        // end < from: a number inside the codes of a string already removed.
+        if (end < from || !DIAL_CODE.test(text) || m[0].replace(/\D/g, '').length < DIAL_MIN_DIGITS)
+            continue;
+        DIAL_REST.lastIndex = DIAL_CODE.lastIndex;
+        DIAL_REST.test(text);
+        out += text.slice(from, m.index) + '[removed]';
+        from = DIAL_REST.lastIndex;
+    }
+    return out + text.slice(from);
+}
 
 const clean = (text, cap) => capText(cleanText(text), cap);
 
@@ -57,15 +112,18 @@ function lengthMinutes(event) {
 }
 
 /**
- * Description or place text, in this order: invisible marks dropped (D-029),
- * conferencing queries cut (D-022), HTML line breaks made line breaks (D-029), dial-in
- * strings removed (D-029), text passcodes removed (D-025, D-027), cleaned; not capped.
+ * Description or place text, in this order: HTML made plain text (D-030), invisible
+ * marks dropped (D-029, D-030), no-break spaces and hyphens made plain (D-030),
+ * conferencing queries cut (D-022), percent-encoded pauses and codes decoded (D-030),
+ * dial-in strings removed (D-029), text passcodes removed (D-025, D-027), cleaned; not capped.
  */
 function withoutPasscodes(text) {
-    return cleanText(withoutConferenceQueries(text.replace(INVISIBLE_MARKS, ''))
-        .replace(HTML_LINE_END, '\n')
-        .replace(DIAL_STRING, '[removed]')
-        .replace(TEXT_PASSCODE, '$1$2[removed]'));
+    const plain = withoutConferenceQueries(plainText(text)
+        .replace(INVISIBLE_MARKS, '')
+        .replace(NO_BREAK_SPACES, ' ')
+        .replace(HYPHENS, '-'))
+        .replace(PERCENT_DIAL, run => run.replace(/%(2C|3B|23|2A)/gi, (_, h) => PERCENT_CHARS[h.toUpperCase()]));
+    return cleanText(withoutDialStrings(plain).replace(TEXT_PASSCODE, '$1$2[removed]'));
 }
 
 function videoLinkOf(event) {

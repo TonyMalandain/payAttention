@@ -51,8 +51,19 @@ const START = /^\d{4}-\d{2}-\d{2} (Mon|Tue|Wed|Thu|Fri|Sat|Sun)( \d{2}:\d{2})?$/
 const isObject = v => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /**
+ * The one list of invisible marks (D-029, D-030): the soft hyphen, the combining
+ * grapheme joiner, the Arabic letter mark, zero-width spaces and joiners, the
+ * direction marks, embeddings, overrides and isolates, the word joiner, the
+ * invisible operators and the BOM. cleanText removes them, and the invite builder
+ * strips them before any passcode rule runs, so none can hide a keyword.
+ * Global: use it with replace only. U+034F is a combining mark, so it sits outside
+ * the class (no-misleading-character-class).
+ */
+export const INVISIBLE_MARKS = /\u034F|[\u00AD\u061C\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+
+/**
  * The one cleaning rule for invite text and reasons: well-formed, control
- * characters as spaces, bidi controls and marks removed, whitespace collapsed, trimmed.
+ * characters as spaces, INVISIBLE_MARKS removed, whitespace collapsed, trimmed.
  *
  * @param {string} text
  * @returns {string}
@@ -60,7 +71,7 @@ const isObject = v => typeof v === 'object' && v !== null && !Array.isArray(v);
 export function cleanText(text) {
     return text.toWellFormed()
         .replace(/\p{Cc}/gu, ' ')
-        .replace(/[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+        .replace(INVISIBLE_MARKS, '')
         .replace(/\s+/g, ' ')
         .trim();
 }
