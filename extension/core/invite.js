@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Tony Malandain
 
 // Turning one occurrence into the bounded invite the AI engine sees
-// (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027). Pure.
+// (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027, D-029). Pure.
 import { INVITE_CAPS, MAX_INVITE_BYTES, capText, cleanText, utf8Length } from './aiProtocol.js';
 import { ownerFacts, ownerResponse, guestAttendees, normaliseAddress } from './owner.js';
 import { detectAttendance } from './attendance.js';
@@ -14,14 +14,31 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BUSY = { opaque: 'busy', transparent: 'free' };
 const ROLES = { 'chair': 'chair', 'req-participant': 'required', 'opt-participant': 'optional' };
 
-// D-025 as D-027 reads it: after one of these words (whole word, any case), the
-// separators and the filler words "is" and "code" are kept, and the rest of that
-// line goes. The lookahead-and-backreference makes the separator run atomic, so the
-// removed part never starts with a separator. Whitespace in the run includes line
-// breaks, so a value alone on the next line ("Passcode:\n123456") is still removed.
+// D-025 as D-027 reads it: after one of these words (whole word, any case; plurals
+// too, D-029), the separators and the filler words "is" and "code" are kept, and the
+// rest of that line goes. The lookahead-and-backreference makes the separator run
+// atomic, so the removed part never starts with a separator. Whitespace in the run
+// includes line breaks, so a value alone on the next line ("Passcode:\n123456") is
+// still removed.
 // A rest with no letter or digit ("Forgot your password.") holds no code and stays.
 // Run before cleanText, which would join the lines.
-const TEXT_PASSCODE = /\b(passcode|password|pwd|pin)\b(?=((?:[\s:=#-]|\b(?:is|code)\b)*))\2(?=[^\r\n]*[\p{L}\p{N}])[^\r\n]+/giu;
+const TEXT_PASSCODE = /\b(passcodes?|passwords?|pwd|pins?)\b(?=((?:[\s:=#-]|\b(?:is|code)\b)*))\2(?=[^\r\n]*[\p{L}\p{N}])[^\r\n]+/giu;
+
+// D-029: a phone dial-in string is a phone number (an optional "tel:" and "+", then at
+// least 7 digits, groups split by up to 3 of space, tab, ".", "-", "(" or ")") directly
+// followed by a code: "#" or "*", or a pause ("," or ";") with a digit, "#" or "*" right
+// after it. The whole string, codes included, goes. A plain number, or one followed by
+// ", " as in a list, stays. The lookbehind lets a match start only at the beginning of
+// a number, so a long digit run is scanned once, not once per digit.
+const DIAL_STRING = /(?:\btel:)?(?<![\d+][ \t.()-]{0,3})\+?\d(?:[ \t.()-]{0,3}\d){6,}(?:[,;]+[\d#*]|[#*])[\d,;#*]*/giu;
+
+// D-029: invisible marks (zero-width space to right-to-left mark, word joiner, BOM,
+// soft hyphen) are dropped from the whole text, so none can hide a keyword.
+const INVISIBLE_MARKS = /[\u200B-\u200F\u2060\uFEFF\u00AD]/g;
+
+// D-029: these HTML tags end a line for TEXT_PASSCODE. Each is replaced by a line
+// break, so the tag itself is not sent (cleanText turns the break into a space).
+const HTML_LINE_END = /<br\s*\/?>|<\/(?:p|li|div)\s*>/gi;
 
 const clean = (text, cap) => capText(cleanText(text), cap);
 
@@ -39,9 +56,16 @@ function lengthMinutes(event) {
     return Math.max(0, Math.round((event.end - event.start) / MINUTE));
 }
 
-/** Description or place text: conferencing queries cut (D-022), text passcodes removed (D-025, D-027), cleaned; not capped. */
+/**
+ * Description or place text, in this order: invisible marks dropped (D-029),
+ * conferencing queries cut (D-022), HTML line breaks made line breaks (D-029), dial-in
+ * strings removed (D-029), text passcodes removed (D-025, D-027), cleaned; not capped.
+ */
 function withoutPasscodes(text) {
-    return cleanText(withoutConferenceQueries(text).replace(TEXT_PASSCODE, '$1$2[removed]'));
+    return cleanText(withoutConferenceQueries(text.replace(INVISIBLE_MARKS, ''))
+        .replace(HTML_LINE_END, '\n')
+        .replace(DIAL_STRING, '[removed]')
+        .replace(TEXT_PASSCODE, '$1$2[removed]'));
 }
 
 function videoLinkOf(event) {
@@ -59,8 +83,9 @@ const person = p => ({
 });
 
 /**
- * The bounded invite for one occurrence (interfaces §6.2 with D-022, D-024 and
- * D-025). Pure; never throws on content.
+ * The bounded invite for one occurrence (interfaces §6.2 with D-022, D-024, D-025,
+ * D-027 and D-029). Pure. Never throws on the meeting's text; throws only on a bad
+ * start, calendar name or offset (below).
  *
  * @param {import('./types.js').OccurrenceDTO} event the kept copy
  * @param {{addresses:Set<string>, domains:Set<string>}} identity from ownerIdentity()

@@ -261,3 +261,13 @@ Append only. Newest at the bottom.
 - **Fact:** PG-4a was accepted in review round 2. Reviewer findings were closed as D-029: Zoom one-tap dial strings leaked the passcode; HTML descriptions over-removed; plurals and hidden marks inside a keyword slipped through. The follow-up ticket is PG-4a2.
 - **Source:** reviewer, PG-4a round 2.
 - **Touches:** decisions.md D-029, BACKLOG.md
+
+## 2026-09-27 — PG-4a2 edges accepted
+- **Kind:** decision
+- **Fact:** Two edges were accepted:
+  - "Reset PIN" at the end of a Teams line removes the next line (D-027's next-line rule). In real invites that line is a footer.
+  - Percent-encoded dial strings (`%2C%2C`) are not caught. This is rare in calendar text, and it is a known gap.
+
+  Known false positives were also accepted: date lists and European million amounts are removed, which removes more and never leaks.
+- **Source:** software engineer, PG-4a2.
+- **Touches:** decisions.md D-027, D-029

@@ -295,8 +295,23 @@ describe('buildInvite: D-025 and D-027 passcodes written as text are removed to 
     });
 
     test('whole words only: "spinning" does not match "pin"', () => {
-        const text = 'spinning class, Spin class at 6, backspin: 3, pinned note, passwords.txt, xpwd=1, pwdx=1';
+        const text = 'spinning class, Spin class at 6, backspin: 3, pinned note, pinsetter, passwordsx, xpwd=1, pwdx=1';
         assert.equal(desc(text), text);
+    });
+
+    test('D-029: plural keywords trigger removal too', () => {
+        assert.equal(desc('Passcodes: 111 and 222'), 'Passcodes: [removed]');
+        assert.equal(desc('passwords = hunter2'), 'passwords = [removed]');
+        assert.equal(desc('pins: 1234'), 'pins: [removed]');
+        assert.equal(desc('PINs: 1234 / 5678'), 'PINs: [removed]');
+        // A plural before "." is followed by a letter, so the rest of the line goes (the D-027 cost).
+        assert.equal(desc('passwords.txt'), 'passwords[removed]');
+    });
+
+    test('D-029: invisible marks inside a keyword do not stop removal', () => {
+        for (const mark of ['\u200B', '\u200C', '\u200D', '\u200E', '\u200F', '\u2060', '\uFEFF', '\u00AD'])
+            assert.equal(desc(`Pass${mark}code: 654321`), 'Passcode: [removed]', `U+${mark.codePointAt(0).toString(16)}`);
+        assert.equal(desc('P\u200Bi\u00ADN: 1234'), 'PiN: [removed]');
     });
 
     test('the word with nothing after it, or followed by other punctuation, is left alone', () => {
@@ -339,6 +354,204 @@ describe('buildInvite: D-025 and D-027 passcodes written as text are removed to 
         assert.ok(!JSON.stringify(inv).includes('Zq9xT7'));
         assert.ok(inv.description.includes('Meeting ID: 812 34'));
     });
+});
+
+describe('buildInvite: D-029 phone dial-in strings are removed', () => {
+    const desc = text => build({ description: text }).description;
+
+    test('the three shapes in D-029: Zoom one tap, spaced and dashed, tel:', () => {
+        assert.equal(desc('+16699006833,,81234567890#,,,,*654321# US (San Jose)'), '[removed] US (San Jose)');
+        assert.equal(desc('Dial +1 646-876-9923,,812345# now'), 'Dial [removed] now');
+        assert.equal(desc('Tap tel:+15551234567,,123# to join'), 'Tap [removed] to join');
+    });
+
+    test('in the place too', () => {
+        assert.equal(build({ location: 'Bridge +1 323-849-4874,,123456789#' }).place, 'Bridge [removed]');
+    });
+
+    test('Webex "##", a semicolon wait, a star code and parentheses', () => {
+        assert.equal(desc('+1-415-655-0001,,25531234567## US Toll'), '[removed] US Toll');
+        assert.equal(desc('+44 20 7946 0958;4321#'), '[removed]');
+        assert.equal(desc('+1 (646) 876-9923*55'), '[removed]');
+    });
+
+    test('a plain phone number with no codes stays', () => {
+        const text = '+1 669 900 6833 US (San Jose), +1 646-876-9923 US (New York), tel:+15551234567';
+        assert.equal(desc(text), text);
+    });
+
+    test('short numbers, amounts, and a number followed by ", " stay', () => {
+        const text = 'Rooms 3, 4, and 5; budget $1,000,000; ext #12; call 555-1234, then 555-9876; ID 812 3456 7890';
+        assert.equal(desc(text), text);
+    });
+
+    test('the dial string inside an HTML tel: link goes from both the link and its text', () => {
+        const html = '<a href="tel:+16699006833,,81234567890#,,,,*654321#">+16699006833,,81234567890#,,,,*654321#</a>';
+        assert.equal(desc(html), '<a href="[removed]">[removed]</a>');
+    });
+});
+
+describe('buildInvite: D-029 HTML line breaks end the line for D-027', () => {
+    const desc = text => build({ description: text }).description;
+
+    test('<br>, <br/>, <br />, </p>, </li> and </div>, in any case, stop the removal', () => {
+        for (const tag of ['<br>', '<br/>', '<br />', '<BR>', '</p>', '</P>', '</li>', '</LI >', '</div>', '</Div>'])
+            assert.equal(desc(`Passcode: 654321${tag}Agenda: budget`), 'Passcode: [removed] Agenda: budget', tag);
+    });
+
+    test('a value alone on the next HTML line is removed, and the line after it stays', () => {
+        assert.equal(desc('<p>Passcode:</p><p>654321</p><p>Agenda: budget</p>'), '<p>Passcode: [removed] <p>Agenda: budget');
+        assert.equal(desc('Passcode:<br><br>654321<br>Agenda: budget'), 'Passcode: [removed] Agenda: budget');
+    });
+
+    test('other tags are not line ends', () => {
+        assert.equal(desc('Passcode: <b>654321</b> Agenda'), 'Passcode: [removed]');
+        assert.equal(desc('<brand>Passcode: 1</brand>x'), '<brand>Passcode: [removed]');
+    });
+
+    test('in the place too', () => {
+        assert.equal(build({ location: 'Room 4<br>PIN: 7788<br>Floor 2' }).place, 'Room 4 PIN: [removed] Floor 2');
+    });
+});
+
+describe('buildInvite: D-025, D-027 and D-029 on whole standard invites, plain and HTML', () => {
+    const AGENDA = ['Agenda: budget review and hiring plan', 'Wrap-up: action items and owners'];
+
+    // Synthetic invites in each service's standard layout; codes and IDs are made up.
+    const INVITES = {
+        'Zoom': {
+            lines: [
+                AGENDA[0],
+                'Tony Malandain is inviting you to a scheduled Zoom meeting.',
+                'Join Zoom Meeting',
+                'https://us02web.zoom.us/j/81234567890?pwd=Zq9xT7aBcDeFgHiJkLmN.1',
+                'Meeting ID: 812 3456 7890',
+                'Passcode: 654321',
+                'One tap mobile',
+                '+16699006833,,81234567890#,,,,*654321# US (San Jose)',
+                '+16465588656,,81234567890#,,,,*654321# US (New York)',
+                'Dial by your location',
+                '• +1 669 900 6833 US (San Jose)',
+                'Meeting ID: 812 3456 7890',
+                'Passcode: 654321',
+                'Find your local number: https://us02web.zoom.us/u/kdXyZ12abc',
+                AGENDA[1],
+            ],
+            secrets: ['654321', 'Zq9xT7aBcDeFgHiJkLmN', '81234567890#'],
+            kept: ['Meeting ID: 812 3456 7890', '+1 669 900 6833 US (San Jose)'],
+        },
+        'Google Meet': {
+            lines: [
+                AGENDA[0],
+                'Join with Google Meet',
+                'https://meet.google.com/abc-defg-hij',
+                'Join by phone',
+                '(US) +1 234-567-8901 PIN: 263 947 381#',
+                '+1 234-567-8901,,263947381#',
+                'More phone numbers',
+                'https://tel.meet/abc-defg-hij?pin=263947381',
+                AGENDA[1],
+            ],
+            secrets: ['263 947 381', '263947381'],
+            kept: ['https://meet.google.com/abc-defg-hij', '(US) +1 234-567-8901 PIN:'],
+        },
+        'Microsoft Teams': {
+            lines: [
+                AGENDA[0],
+                'Microsoft Teams meeting',
+                'Join on your computer, mobile app or room device',
+                'Click here to join the meeting<https://teams.microsoft.com/l/meetup-join/19%3ameeting_Nz%40thread.v2/0?context=%7b%22Tid%22%3a%22x9%22%7d>',
+                'Meeting ID: 234 567 890 123',
+                'Passcode: aB3cD4',
+                'Or call in (audio only)',
+                '+1 323-849-4874,,123456789#   United States, Los Angeles',
+                'Phone Conference ID: 123 456 789#',
+                'Find a local number | Reset PIN',
+                // After "Reset PIN" this line goes as a value on the next line (D-027).
+                'Learn More | Meeting options',
+                '________________________________________________________________________________',
+                AGENDA[1],
+            ],
+            secrets: ['aB3cD4', '123456789', '123 456 789', 'Tid'],
+            kept: ['Meeting ID: 234 567 890 123', 'United States, Los Angeles', 'Reset PIN'],
+        },
+        'Webex': {
+            lines: [
+                AGENDA[0],
+                'When it\'s time, join the Webex meeting here.',
+                'Meeting number (access code): 2553 123 4567',
+                'Meeting password: Xy7kPq2Rt',
+                'Join meeting https://acme.webex.com/acme/j.php?MTID=m0123456789abcdef',
+                'Tap to join from a mobile device (attendees only)',
+                '+1-415-655-0001,,25531234567## US Toll',
+                'Join by phone',
+                '+1-415-655-0001 US Toll',
+                'Numeric meeting password: 99754201',
+                AGENDA[1],
+            ],
+            secrets: ['Xy7kPq2Rt', '99754201', 'm0123456789abcdef', '25531234567'],
+            kept: ['Meeting number (access code): 2553 123 4567', '+1-415-655-0001 US Toll'],
+        },
+    };
+
+    // The same lines as an HTML description: each line ends with one of the D-029 tags,
+    // links and dial strings are wrapped in anchors as calendar clients write them.
+    const ENDS = [['<p>', '</p>'], ['', '<br>'], ['<li>', '</li>'], ['<div>', '</DIV>'], ['', '<BR />']];
+    const toHtml = lines => lines.map((line, i) => {
+        const body = line
+            .replace(/https:\/\/[^\s<>]+/g, url => `<a href="${url}">${url}</a>`)
+            .replace(/\+[\d -]+,,[\d#,*]+/g, dial => `<a href="tel:${dial}">${dial}</a>`);
+        const [open, close] = ENDS[i % ENDS.length];
+        return `${open}${body}${close}`;
+    }).join('');
+
+    // Something left of a dial string: a pause or code touching a digit.
+    const DIAL_LEFT = /\d[,;]+[\d#*]|\d#|[#*]\d/;
+
+    for (const [service, { lines, secrets, kept }] of Object.entries(INVITES)) {
+        for (const [form, description] of [['plain text', lines.join('\n')], ['HTML', toHtml(lines)]]) {
+            test(`${service}, ${form}: no code or dial string survives; agenda and meeting details stay`, () => {
+                const inv = build({ description, location: service === 'Zoom' ? lines[7] : '' });
+                const json = JSON.stringify(inv);
+                for (const secret of secrets)
+                    assert.ok(!json.includes(secret), `${secret} survived: ${inv.description}`);
+                assert.ok(!DIAL_LEFT.test(json), inv.description);
+                for (const line of [...AGENDA, ...kept])
+                    assert.ok(inv.description.includes(line), `${line} lost: ${inv.description}`);
+                assert.ok(!inv.description.endsWith('…'), 'the description must not be capped for this check');
+                assert.deepEqual(validateInvite(inv), { ok: true });
+            });
+        }
+    }
+});
+
+describe('buildInvite: no catastrophic backtracking on 1 000 000 characters', () => {
+    const N = 1_000_000;
+    const fill = unit => unit.repeat(Math.ceil(N / unit.length)).slice(0, N);
+    const INPUTS = {
+        'one digit run': fill('1'),
+        'digits split by spaces': fill('1 '),
+        'digits split by three separators': fill('1-()'),
+        'numbers each ending with a pause': fill('1234567,'),
+        'plus signs and digits': fill('+1'),
+        'a pause run after a number': '1234567' + fill(','),
+        '"<br" then spaces': '<br' + fill(' '),
+        '"</p" then spaces': '</p' + fill(' '),
+        'a keyword then separators to the end': 'Passcode' + fill(' :\n'),
+        'a keyword then punctuation to the end': 'Passcode' + fill('.'),
+        'keywords on every line': fill('pin\n'),
+        'invisible marks': fill('\u200B'),
+        'a mixed invite repeated': fill('Passcode: 654321<br>+16699006833,,81234567890#,,,,*654321# PIN\n'),
+    };
+
+    for (const [name, text] of Object.entries(INPUTS)) {
+        test(`${name}: under 200 ms`, () => {
+            const t = performance.now();
+            build({ description: text });
+            const ms = performance.now() - t;
+            assert.ok(ms < 200, `${name} took ${ms.toFixed(0)} ms`);
+        });
+    }
 });
 
 describe('buildInvite: argument checks', () => {
