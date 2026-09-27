@@ -157,7 +157,8 @@ Environment requirements come first.
 - **Serves:** a wrong verdict is what makes the owner give up (users.md), and the owner "has to carefully craft" reminders today. Before trusting the verdicts, or an AI engine, they need to see them. On Wayland, trying the extension itself means logging out.
 - **Who it serves:** Calendar owner, Installer.
 - **What they get:** one command in a terminal lists their upcoming meetings with the verdict and reason payAttention would give, from the rules or from their AI engine. It uses exactly the same judgment and the same calendar access as the extension, not a copy.
-- **State:** intended
+- **State:** real
+- **Evidence:** demoed
 
 ## What the solution is not
 
