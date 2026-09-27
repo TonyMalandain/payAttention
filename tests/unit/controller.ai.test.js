@@ -462,7 +462,7 @@ describe('controller AI: lifecycle', () => {
         const client = h.client;
         h.controller.destroy();
         assert.deepEqual(h.log, [
-            'ticker.destroy', 'aiTicker.destroy', 'aiClient.destroy', 'ui.destroy', 'feed.destroy',
+            'ticker.destroy', 'ui.destroy', 'aiTicker.destroy', 'aiClient.destroy', 'feed.destroy', 'reader.destroy',
             'environment.destroy', 'store.writeHealthClocks', 'store.destroy',
         ]);
         const views = h.ui.views.length;
@@ -489,7 +489,8 @@ describe('controller AI: lifecycle', () => {
         const log = [];
         const inner = { now: EN, log, settings: {}, seeds: null };
         const deps = {
-            createStore: onChange => (log.push('store.create'), makeStore(onChange, inner)),
+            createStoreWriter: () => (log.push('store.create'), makeStore(inner).writer),
+            createStoreReader: () => (log.push('reader.create'), makeStore(inner).reader),
             createEnvironment: () => (log.push('environment.create'), { isUserActive: () => true, destroy() {} }),
             createFeed: onUpdate => (log.push('feed.create'), makeFeed(onUpdate, inner)),
             createUi: () => (log.push('ui.create'), { render() {}, playAlertSound() {}, releaseTakeover() {}, destroy() {} }),

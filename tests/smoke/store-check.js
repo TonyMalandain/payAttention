@@ -7,7 +7,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-import { Store } from '../../extension/shell/store.js';
+import { StoreReader, StoreWriter } from '../../extension/shell/store.js';
 import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
 import { emptyAlertState, reduce, serializeAlertState } from '../../extension/core/alertState.js';
 import { emptyAiAnswers, recordAiAnswer, serializeAiAnswers } from '../../extension/core/aiAnswers.js';
@@ -58,32 +58,33 @@ function answersWith(key) {
 async function main() {
     const settings = withSignalTracker(new Gio.Settings({ schema_id: SCHEMA_ID }));
     const changes = [];
-    let store = new Store(settings, () => changes.push('change'));
+    let reader = new StoreReader(settings, () => changes.push('change'));
+    let writer = new StoreWriter(settings);
 
-    check(sameJson(store.readSettings(), { ...DEFAULT_SETTINGS }), 'readSettings equals DEFAULT_SETTINGS');
+    check(sameJson(reader.readSettings(), { ...DEFAULT_SETTINGS }), 'readSettings equals DEFAULT_SETTINGS');
 
     // Verdict overrides: add, overwrite, delete.
-    store.setVerdictOverride('occ:a|1', 'must');
-    check(store.readOverrides().verdict['occ:a|1'] === 'must', 'verdict override added');
-    store.setVerdictOverride('occ:a|1', 'ignore');
-    check(store.readOverrides().verdict['occ:a|1'] === 'ignore', 'verdict override overwritten');
-    store.setVerdictOverride('occ:a|1', null);
-    check(!('occ:a|1' in store.readOverrides().verdict), 'verdict override deleted');
-    store.setModeOverride('series:b', 'in-person');
-    check(store.readOverrides().mode['series:b'] === 'in-person', 'mode override added');
-    store.setModeOverride('series:b', null);
-    check(sameJson(store.readOverrides(), { verdict: {}, mode: {} }), 'overrides back to empty');
+    writer.setVerdictOverride('occ:a|1', 'must');
+    check(reader.readOverrides().verdict['occ:a|1'] === 'must', 'verdict override added');
+    writer.setVerdictOverride('occ:a|1', 'ignore');
+    check(reader.readOverrides().verdict['occ:a|1'] === 'ignore', 'verdict override overwritten');
+    writer.setVerdictOverride('occ:a|1', null);
+    check(!('occ:a|1' in reader.readOverrides().verdict), 'verdict override deleted');
+    writer.setModeOverride('series:b', 'in-person');
+    check(reader.readOverrides().mode['series:b'] === 'in-person', 'mode override added');
+    writer.setModeOverride('series:b', null);
+    check(sameJson(reader.readOverrides(), { verdict: {}, mode: {} }), 'overrides back to empty');
 
-    store.setTravel('hq', 45);
-    check(store.readTravel().hq === 45, 'travel round-trips');
+    writer.setTravel('hq', 45);
+    check(reader.readTravel().hq === 45, 'travel round-trips');
 
     // Coalesced alert-state writes.
-    store.readAlertState();
+    writer.readAlertState();
     let emissions = 0;
     const id = settings.connect('changed::alert-state', () => emissions++);
-    store.writeAlertState(stateWith('occ:x|1', 1));
-    store.writeAlertState(stateWith('occ:x|2', 2));
-    store.writeAlertState(stateWith('occ:x|3', 3));
+    writer.writeAlertState(stateWith('occ:x|1', 1));
+    writer.writeAlertState(stateWith('occ:x|2', 2));
+    writer.writeAlertState(stateWith('occ:x|3', 3));
     await sleep(250);
     check(emissions === 0, `no write before the delay (saw ${emissions})`);
     await sleep(600);
@@ -91,51 +92,55 @@ async function main() {
     check(settings.get_string('alert-state') === serializeAlertState(stateWith('occ:x|3', 3)), 'the last state was written');
 
     // destroy() flushes a pending write synchronously.
-    store.writeAlertState(stateWith('occ:y|4', 4));
-    store.destroy();
+    writer.writeAlertState(stateWith('occ:y|4', 4));
+    writer.destroy();
     check(settings.get_string('alert-state') === serializeAlertState(stateWith('occ:y|4', 4)), 'destroy flushes');
     settings.disconnect(id);
 
     // Coalesced ai-verdicts writes, exactly like alert state.
-    store = new Store(settings, () => changes.push('change'));
-    check(sameJson(store.readAiAnswers(), emptyAiAnswers()), 'readAiAnswers of the default is empty');
+    reader.destroy();
+    reader = new StoreReader(settings, () => changes.push('change'));
+    writer = new StoreWriter(settings);
+    check(sameJson(reader.readAiAnswers(), emptyAiAnswers()), 'readAiAnswers of the default is empty');
     let aiEmissions = 0;
     const aiId = settings.connect('changed::ai-verdicts', () => aiEmissions++);
-    store.writeAiAnswers(answersWith(`occ:x|${NOW + 1}`));
-    store.writeAiAnswers(answersWith(`occ:x|${NOW + 2}`));
-    store.writeAiAnswers(answersWith(`occ:x|${NOW + 3}`));
+    writer.writeAiAnswers(answersWith(`occ:x|${NOW + 1}`));
+    writer.writeAiAnswers(answersWith(`occ:x|${NOW + 2}`));
+    writer.writeAiAnswers(answersWith(`occ:x|${NOW + 3}`));
     await sleep(250);
     check(aiEmissions === 0, `no ai-verdicts write before the delay (saw ${aiEmissions})`);
     await sleep(600);
     check(aiEmissions === 1, `exactly one ai-verdicts write (saw ${aiEmissions})`);
     check(settings.get_string('ai-verdicts') === serializeAiAnswers(answersWith(`occ:x|${NOW + 3}`)), 'the last answers were written');
-    store.writeAiAnswers(answersWith(`occ:y|${NOW + 4}`));
-    store.destroy();
+    writer.writeAiAnswers(answersWith(`occ:y|${NOW + 4}`));
+    writer.destroy();
     check(settings.get_string('ai-verdicts') === serializeAiAnswers(answersWith(`occ:y|${NOW + 4}`)), 'destroy flushes ai-verdicts');
     settings.disconnect(aiId);
 
     // A corrupt stored value gives the empty state.
     settings.set_string('alert-state', '{"v":1,"items":');
     settings.set_string('ai-verdicts', '{"v":1,"items":');
-    store = new Store(settings, () => changes.push('change'));
-    check(sameJson(store.readAlertState(), emptyAlertState()), 'corrupt alert-state reads as empty');
-    check(sameJson(store.readAiAnswers(), emptyAiAnswers()), 'corrupt ai-verdicts reads as empty');
+    reader.destroy();
+    reader = new StoreReader(settings, () => changes.push('change'));
+    writer = new StoreWriter(settings);
+    check(sameJson(writer.readAlertState(), emptyAlertState()), 'corrupt alert-state reads as empty');
+    check(sameJson(reader.readAiAnswers(), emptyAiAnswers()), 'corrupt ai-verdicts reads as empty');
 
     // Health seeds: 0 is unknown; epoch ms fit the int64 key exactly.
-    check(sameJson(store.readHealthSeeds(), { dataAt: null, providerAt: null }), 'seeds default to null');
-    store.writeHealthClocks({ dataAt: 1790000000000, providerAt: 1789999000000 });
-    const seeds = store.readHealthSeeds();
+    check(sameJson(writer.readHealthSeeds(), { dataAt: null, providerAt: null }), 'seeds default to null');
+    writer.writeHealthClocks({ dataAt: 1790000000000, providerAt: 1789999000000 });
+    const seeds = writer.readHealthSeeds();
     check(seeds.dataAt === 1790000000000 && seeds.providerAt === 1789999000000, `seeds round-trip (got ${JSON.stringify(seeds)})`);
 
     // Pruning occurrence overrides.
     const old = `occ:old|${NOW - 8 * DAY}`;
     const recent = `occ:recent|${NOW - 6 * DAY}`;
     for (const key of [old, recent, 'series:s']) {
-        store.setVerdictOverride(key, 'ignore');
-        store.setModeOverride(key, 'online');
+        writer.setVerdictOverride(key, 'ignore');
+        writer.setModeOverride(key, 'online');
     }
-    store.pruneOccurrenceOverrides(NOW);
-    const o = store.readOverrides();
+    writer.pruneOccurrenceOverrides(NOW);
+    const o = reader.readOverrides();
     for (const kind of ['verdict', 'mode']) {
         check(!(old in o[kind]), `${kind}: the 8-day-old occurrence is pruned`);
         check(recent in o[kind] && 'series:s' in o[kind], `${kind}: the recent occurrence and the series are kept`);
@@ -154,7 +159,36 @@ async function main() {
     await sleep(100);
     check(changes.length === 1, `onChange for sound-enabled (saw ${changes.length})`);
 
-    store.destroy();
+    // The reader cannot write: no write method, no reachable field.
+    check(sameJson(Object.getOwnPropertyNames(StoreReader.prototype).sort(),
+        ['constructor', 'destroy', 'readAiAnswers', 'readOverrides', 'readSettings', 'readTravel']),
+    'the reader has only reads');
+    check(Object.keys(reader).length === 0, 'the reader exposes no field');
+    const delayed = withSignalTracker(new Gio.Settings({ schema_id: SCHEMA_ID }));
+    delayed.delay();
+    const delayedReader = new StoreReader(delayed, () => changes.push('delayed change'));
+    delayedReader.readSettings();
+    delayedReader.readOverrides();
+    delayedReader.readTravel();
+    delayedReader.readAiAnswers();
+    check(!delayed.get_has_unapplied(), 'reading never writes');
+    delayedReader.destroy();
+
+    // The writer does not rewrite the stored AI answers (the coalescing seed).
+    // The memory backend emits no 'changed' for a same-value write, so the
+    // write is caught as an unapplied change on a delay()ed settings object.
+    settings.set_string('ai-verdicts', serializeAiAnswers(answersWith('occ:z|1')));
+    const pinned = new Gio.Settings({ schema_id: SCHEMA_ID });
+    pinned.delay();
+    const pinnedWriter = new StoreWriter(pinned);
+    pinnedWriter.writeAiAnswers(answersWith('occ:z|1'));
+    await sleep(600);
+    check(!pinned.get_has_unapplied(), 'writing the stored AI answers again does nothing');
+    pinnedWriter.destroy();
+    check(!pinned.get_has_unapplied(), 'writing the stored AI answers again does nothing');
+
+    writer.destroy();
+    reader.destroy();
     settings.set_boolean('sound-enabled', true);
     await sleep(100);
     check(changes.length === 1, 'no onChange after destroy');

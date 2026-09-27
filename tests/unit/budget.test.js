@@ -70,7 +70,7 @@ test('judge over 2 000 events takes under 20 ms at its fastest', () => {
     assert.ok(fastest < 20, `judge fastest ${fastest.toFixed(3)} ms`);
 });
 
-// Judge runs per snapshot and per stored answer, never per tick (controller.js _judgeDirty).
+// Judge runs per snapshot and per stored answer, never per tick (verdicts.js judgedList).
 // 200 ms is an order-of-magnitude guard (assumed): every eligible event builds an invite and a fingerprint.
 test('judge in AI mode over 2 000 events takes under 200 ms at its fastest', () => {
     const snap = twoThousandEvents();

@@ -10,7 +10,7 @@ import { CalendarFeed } from './shell/calendarFeed.js';
 import { Controller } from './app/controller.js';
 import { Environment } from './shell/environment.js';
 import { launchUri } from './shell/launcher.js';
-import { Store } from './shell/store.js';
+import { StoreReader, StoreWriter } from './shell/store.js';
 import { Ticker } from './shell/ticker.js';
 import { Ui } from './ui/ui.js';
 
@@ -22,7 +22,8 @@ export default class PayAttentionExtension extends Extension {
         this._settings = this.getSettings();
         const helperPath = `${this.path}/helper/${HELPER_ENTRY}`;
         this._controller = new Controller({
-            createStore: onChange => new Store(this._settings, onChange),
+            createStoreReader: onChange => new StoreReader(this._settings, onChange),
+            createStoreWriter: () => new StoreWriter(this._settings),
             createFeed: onUpdate => new CalendarFeed({ argv: ['gjs', '-m', helperPath], onUpdate, now: () => Date.now() }),
             createEnvironment: onResume => new Environment({ onResume }),
             createUi: dispatch => new Ui({ dispatch, openPreferences: () => this.openPreferences() }),

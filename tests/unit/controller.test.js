@@ -375,7 +375,7 @@ describe('controller: destroy', () => {
         h.ticker.throwOnDestroy = true;
         h.controller.destroy();
         assert.deepEqual(h.log, [
-            'ticker.destroy', 'ui.destroy', 'feed.destroy', 'environment.destroy',
+            'ticker.destroy', 'ui.destroy', 'feed.destroy', 'reader.destroy', 'environment.destroy',
             'store.writeHealthClocks', 'store.destroy',
         ]);
         assert.ok(errors.some(e => e[0] === 'payattention: destroy-failed ticker'));
@@ -414,6 +414,6 @@ describe('controller: destroy', () => {
     test('20. a part failing to build destroys the parts already built and rethrows', () => {
         const h = { log: [] };
         assert.throws(() => setupInto(h), /no panel/);
-        assert.deepEqual(h.log, ['feed.destroy', 'environment.destroy', 'store.destroy']);
+        assert.deepEqual(h.log, ['feed.destroy', 'reader.destroy', 'environment.destroy', 'store.destroy']);
     });
 });

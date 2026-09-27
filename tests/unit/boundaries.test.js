@@ -57,7 +57,7 @@ const CASES = [
     ['extension/ui/probe.js', "import St from 'gi://St'; export {St};", 'ok'],
     ['extension/extension.js', "import {x} from './helper/main.js'; export {x};", 'error'],
     ['extension/extension.js', "import Adw from 'gi://Adw'; export {Adw};", 'error'],
-    ['extension/extension.js', "import {x} from './shell/controller.js'; export {x};", 'ok'],
+    ['extension/extension.js', "import {x} from './app/controller.js'; export {x};", 'ok'],
     ['extension/prefs.js', "import St from 'gi://St'; export {St};", 'error'],
     ['extension/prefs.js', "import {x} from './shell/store.js'; export {x};", 'error'],
     ['extension/prefs.js', "import {BUILTIN_IGNORE_WORDS} from './core/words.js'; export {BUILTIN_IGNORE_WORDS};", 'ok'],

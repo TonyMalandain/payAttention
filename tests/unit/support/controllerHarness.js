@@ -28,9 +28,13 @@ export const MEETING = meeting();
 export const KEY = occurrenceKey(MEETING);
 export const SNAP = snapshot([MEETING], [WORK]);
 
-export function makeStore(onChange, h) {
+/**
+ * The fake store: one record of what was stored and written, and the two facets
+ * the controller is given. `onChange` is set by whoever builds the reader.
+ */
+export function makeStore(h) {
     const store = {
-        onChange,
+        onChange: null,
         settings: { ...DEFAULT_SETTINGS, ...h.settings },
         overrides: { verdict: {}, mode: {} },
         travel: {},
@@ -43,12 +47,17 @@ export function makeStore(onChange, h) {
         modeCalls: [],
         travelCalls: [],
         prunes: [],
+    };
+    store.reader = {
         readSettings: () => ({ ...store.settings }),
         readOverrides: () => ({ verdict: { ...store.overrides.verdict }, mode: { ...store.overrides.mode } }),
         readTravel: () => ({ ...store.travel }),
+        readAiAnswers: () => store.aiAnswers,
+        destroy: () => h.log.push('reader.destroy'),
+    };
+    store.writer = {
         readAlertState: () => emptyAlertState(),
         writeAlertState: state => store.alertWrites.push(state),
-        readAiAnswers: () => store.aiAnswers,
         writeAiAnswers: a => {
             store.aiWrites.push(a);
             store.aiAnswers = a;
@@ -166,8 +175,13 @@ export function makeAiClient(engine, h) {
  */
 export function setup({ settings = {}, seeds = null, aiAnswers = null, aiClient = makeAiClient } = {}) {
     const h = { now: EN, log: [], launches: [], settings, seeds, aiAnswers, tickers: 0, aiClients: [], aiTickers: 0, aiTicker: null };
+    h.store = makeStore(h);
     const deps = {
-        createStore: onChange => (h.store = makeStore(onChange, h)),
+        createStoreWriter: () => h.store.writer,
+        createStoreReader: onChange => {
+            h.store.onChange = onChange;
+            return h.store.reader;
+        },
         createEnvironment: onResume => (h.env = {
             active: true,
             onResume,
@@ -239,8 +253,13 @@ export function setup({ settings = {}, seeds = null, aiAnswers = null, aiClient 
 /** setup() with createUi throwing, recording into h.log. */
 export function setupInto(h) {
     const inner = { now: EN, log: h.log, settings: {}, seeds: null };
+    inner.store = makeStore(inner);
     return new Controller({
-        createStore: onChange => makeStore(onChange, inner),
+        createStoreWriter: () => inner.store.writer,
+        createStoreReader: onChange => {
+            inner.store.onChange = onChange;
+            return inner.store.reader;
+        },
         createEnvironment: onResume => ({ onResume, isUserActive: () => true, destroy: () => h.log.push('environment.destroy') }),
         createFeed: onUpdate => makeFeed(onUpdate, inner),
         createUi: () => {
