@@ -284,3 +284,13 @@ Append only. Newest at the bottom.
 - **Fact:** PG-4a3 is built. All 14 review variants are removed. Accepted: zero-width joiners are dropped from text sent to the engine, which can split emoji or Persian text, and the verdict does not depend on it. The "best effort" Settings wording was added to PG-4d. No further passcode rounds are planned beyond this review (D-030).
 - **Source:** software engineer, PG-4a3.
 - **Touches:** decisions.md D-030, BACKLOG.md PG-4d
+
+## 2026-09-27 — PG-4a3 review taken
+- **Kind:** decision
+- **Fact:** One defect was sent to a fix: the dial rule allowed spaces before `#`/`*`, so it removed dates, order numbers and hashtags. Product additions to the same fix, under D-030 ("all other tags are dropped"):
+  - Outlook leftovers go: namespaced tags such as `<o:p>`, comments, conditional comments, and the contents of `<style>`/`<script>`;
+  - opening `<p>`, `<div>` and `<li>` also count as line ends.
+
+  Accepted as best effort: link addresses in HTML are not sent, and exotic dial or entity formats (notes 3–5) are not handled. No further passcode work.
+- **Source:** reviewer, PG-4a3 round 1.
+- **Touches:** decisions.md D-030
