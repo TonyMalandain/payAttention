@@ -417,3 +417,12 @@ Append only. Newest at the bottom.
 - **Fact:** The preview runs from the installed copy. Installing needs no logout, so `npm run install:local` then `npm run preview` meets R-20. A run straight from the checkout is not offered (ADR-0012). The plan first fixes a real GNOME leak: `StoreReader` used Shell-only `connectObject`, which would have thrown in a terminal. The README states the D-033 double-ask cost in plain words.
 - **Source:** senior engineer, PG-8c plan.
 - **Touches:** solution.md R-20
+
+## 2026-09-27 — PG-8c built; two wording fixes
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The preview is built. Parity with the extension and no writes are both proven. Two wording fixes go to the review fix round:
+  - an all-day row shows no online or in-person label;
+  - an unreadable calendar is described in plain words (for example `Could not read calendar "Broken": could not connect.`), with no raw error code.
+- **Source:** product manager, reading the sample output.
+- **Touches:** solution.md R-20
