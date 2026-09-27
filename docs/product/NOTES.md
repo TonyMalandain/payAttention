@@ -324,3 +324,9 @@ Append only. Newest at the bottom.
 - **Fact:** The PG-4c plan is accepted. Its two product-facing findings were closed as D-031: a truthful "AI unavailable" line, and recovery within 5 minutes without burning the budget. The architect was asked for the mechanism before the build. The build will also carry the spawn-environment rule (drop `G_MESSAGES_DEBUG`), which post-dates the plan.
 - **Source:** senior engineer, PG-4c plan.
 - **Touches:** decisions.md D-031, solution.md R-18
+
+## 2026-09-27 — PG-4b review: local engines cut off at 60 s
+- **Kind:** decision
+- **Fact:** The review found that the network library's default 60 s socket timeout cut local engines off before the 90 s deadline and reported it as a network failure. For the owner, whose GPU driver is not loaded, a local model running on the processor could hit this every time, so AI mode would never work. Sent to a fix round. The other checks held: the key never leaks, no redirects are followed, the size cap holds, the keyring never prompts, and no test reaches a real service. The proxy note (a system proxy without loopback in its ignore list) is left for the architect after its current run.
+- **Source:** reviewer, PG-4b round 1.
+- **Touches:** solution.md R-18
