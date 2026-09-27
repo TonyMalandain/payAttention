@@ -39,9 +39,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - **PG-4b — AI helper (M). ACCEPTED** (review round 1 fix: the 60 s socket timeout). A separate process that talks to the engine and reads the key from the password store. Done when tests against a fake engine pass, with no real cloud call.
     - **PG-4c — Shell side (M). ACCEPTED** (review round 1: test-only fixes). The queue, keeping old answers while asking again, the fallback, the budget, and "AI:" / "AI unavailable" in the menu. Done when no alert ever waits on the AI (tested). Also: both helper spawns (calendar and AI) drop `G_MESSAGES_DEBUG` from the child environment per `interfaces.md` §1 "Environment", tested.
     - **Carry-overs to fold into review fix rounds:**
-      - PG-4d: a loopback engine is reached directly, never through a proxy (`interfaces.md` §6.7; `extension/ai/transport.js:45`, `proxy_resolver: null`).
     - **PG-4c2 — One bad invite never blocks the others (S). DONE**, accepted on mutation evidence (10 of 10 caught). In `extension/shell/aiQueue.js` (the `lost` branch), from the second `lost` in a row on the same meeting, that meeting backs off (1 min, doubling up to 30) and joins `failedKeys`, so the queue moves on. Spec: `interfaces.md` §6.5 "Lost streak". Done when unit tests prove a meeting whose invite always crashes the helper does not stop other meetings getting AI answers. Runs after the PG-4c fix round (same file).
-    - **PG-4d — Settings page (S).** Mode switch, endpoint, model, key, "Test connection", and the warning. The warning must include the D-030 wording: "Passcodes and dial-in numbers are removed first, on a best-effort basis." "Test connection" also drops `G_MESSAGES_DEBUG` from the helper it spawns (§1 "Environment").
+    - **PG-4d — Settings page (S). ACCEPTED** (review round 1 fixes; full checks green 2026-09-27). Mode switch, endpoint, model, key, "Test connection", and the warning. The warning must include the D-030 wording: "Passcodes and dial-in numbers are removed first, on a best-effort basis." "Test connection" also drops `G_MESSAGES_DEBUG` from the helper it spawns (§1 "Environment").
     - **PG-4e — Uninstall `--purge` (S). ACCEPTED** (review round 1). One leftover: move the `OTHER_SCHEMA` block above `finish()`'s why-comment in `tests/ai/gjs/keyring.js`, and refresh that file's header. This goes with the next engineer run. Also erases the key and the stored AI answers.
 - **Owner's machine (not product work):** the NVIDIA driver is not built for the running kernel, so a local engine runs on the processor (about 5 to 20 s per verdict, estimated).
 
@@ -98,6 +97,14 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
   7. Sound (PG-7): run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
   - The full checklist is in `docs/architecture/testing-and-build.md`, under the real-session section.
+
+## Next — polish (PG-4f, size S)
+
+- The `tests/ai/gjs/keyring.js` comment move and header refresh (the PG-4e leftover).
+- Settings page:
+  - a refused key's red style clears when the address change empties the field;
+  - the address field follows a change made outside the window;
+  - Remove reflects the new address as soon as the lookup ends.
 
 ## Housekeeping (engineering)
 
