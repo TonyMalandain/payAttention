@@ -43,6 +43,12 @@ open window go with it. So:
 | Data considered stale | no accepted snapshot for 15 min (D-010), **or** a remote calendar not online-and-connected for 15 min (D-013); clocks survive lock/unlock. Exact rule: `interfaces.md`, addendum 2026-09-26 | 15 min is product (D-010) |
 | Helper restart backoff | 1 s, doubling, capped at 5 min; reset after 10 min of healthy running | assumed |
 | Per-source connect timeout in helper | 5 s; a slow source is reported `ok:false`, others still delivered | assumed |
+| AI request timeout (in the AI helper) | 60 s local, 30 s cloud | assumed; a cold local model on CPU is the slow case |
+| AI watchdog in the shell | request timeout + 10 s, then kill and respawn the AI helper | assumed |
+| AI requests in flight | at most 1 | local engines serialise anyway; keeps cloud rate limits simple |
+| AI retry per occurrence | 1 min, doubling, capped at 30 min; engine pause on `auth`/`config`/`no-key` until settings change; on `rate-limited`, `Retry-After` (≤ 30 min) or 5 min | assumed |
+| AI request budget | ≤ 120 per rolling hour per engine and model | assumed |
+| An alert waits for the AI | **never**. `plan()` and the tick do not read AI state | D-017 / PRD addendum |
 
 ## Scale
 
@@ -53,19 +59,38 @@ open window go with it. So:
 | Helper first snapshot, warm EDS | registry 26 ms; all sources, 7 days, ~60 ms | measured |
 | Designed for | ≤ 50 sources, ≤ 2 000 occurrences in range | assumed |
 | One snapshot line | ≤ 4 MiB; description capped at 32 768 characters | assumed |
+| AI facts per request | 10 fields (D-018); title ≤ 200 characters; about 300 prompt tokens | assumed |
+| AI reason | ≤ 80 characters after normalisation | interfaces.md §6.8 |
+| Owner's machine for local engines | Ryzen 5 7600 (6 cores), 61 GB RAM, RTX 4070 Ti SUPER 16 GB. **On 2026-09-26 the NVIDIA kernel module was not loaded** on kernel 7.2.7 (kmod built only for 7.0.12 and 7.1.10), so local inference would run on the CPU | measured |
 
 ## Privacy and security
 
-- **No network from our code.** Neither the extension nor the helper opens a
-  socket. EDS syncs with the owner's own providers as it already does (R-3).
-- **No calendar content in logs.** Titles, people, places, descriptions, and links
-  are never logged, by either process. Counts and short error codes only.
+- **No network from our code, with one exception.** Neither the shell process,
+  the calendar helper nor prefs opens a socket. EDS syncs with the owner's own
+  providers as it already does (R-3). **The exception is the AI helper**
+  (ADR-0008): only while `ai-enabled` is true, only to the configured base URL,
+  and only with the D-018 facts (`interfaces.md` §6.2). With AI off, the AI
+  helper is never spawned, so nothing is sent.
+- **Secrets.** AI keys only in the GNOME keyring (ADR-0009). They are never in
+  GSettings, on stdio, in the shell process or in logs. A key goes only over
+  `https:` or loopback `http:`. A `cloud` engine must be `https:`.
+- **Model output is untrusted data.** It is validated by core
+  (`interfaces.md` §6.8). It can set only the verdict and reason of an
+  eligible occurrence, and it is shown as plain text. No reply is ever run,
+  followed or opened.
+- **No calendar content in logs.** Titles, people, places, descriptions, links,
+  AI facts and AI replies are never logged, by any process. Counts and short error codes only.
 - **Untrusted text.** Everything in an event may come from a stranger's invite.
   Render as plain text; never as Pango markup.
 - **Links.** "Join" opens only `https:` URLs whose host is on core's conferencing
   allowlist, through the desktop's default handler. Nothing else is ever launched.
 - **Read-only calendars.** The helper calls no EDS method that writes.
-- **No telemetry.** (Also a review rule.)
+- **No telemetry.** (Also a review rule.) Sending D-018 facts to an engine the
+  owner configured is not telemetry: it goes only where the owner pointed it,
+  only after they turned it on.
+- **Review rule on dependencies:** Python modules and other dependencies "MUST
+  require explicit user action", and scripts should be GJS. This is why no LLM
+  library ships in the zip (ADR-0007).
 
 ## GNOME extension review rules that bind this code
 

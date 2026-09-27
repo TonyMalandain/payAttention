@@ -14,15 +14,25 @@ Run in this order. Each must pass before the next is worth running.
 | 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. |
 | 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/` and the gi-free shell modules, plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
-| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist` |
-| 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). |
-| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then a headless gnome-shell with the built zip installed and enabled (below). |
+| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist`. From PG-4, also `--extra-source=ai` (ADR-0008). |
+| 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). From PG-4 the same script also runs `tests/ai/**/*.test.js`: the AI helper against a fake engine (Layer 2b). |
+| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below). |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
 Setup once: `npm ci` (dev tools only; nothing from `node_modules` is ever packed).
 Install into the real session: `npm run install:local` (not `install`, which npm
 would run on every `npm install`/`npm ci`). `scripts/install.sh` also adds the UUID to
-`org.gnome.shell enabled-extensions`, so it loads at the next login.
+`org.gnome.shell enabled-extensions`, so it loads at the next login. It honours
+`XDG_DATA_HOME` in its post-install check.
+
+Remove: `npm run uninstall:local` (R-17, D-016). It stops the extension in the
+running shell, removes the install directory, and takes the UUID out of
+`enabled-extensions` and `disabled-extensions`. Settings are kept.
+`npm run uninstall:local -- --purge` also erases
+`/org/gnome/shell/extensions/payattention/`. From PG-4, `--purge` also clears
+the keyring items of the AI key schema (ADR-0009), and a plain uninstall
+reports them as kept. It never touches calendars, other extensions, other
+settings, or other keyring items. It is safe to run twice.
 
 ## Layer 1 — core unit tests (Node)
 
@@ -84,7 +94,56 @@ X-GOOGLE-CONFERENCE link, all-day, and a cancelled event. Verified: a
 Against the real calendars, by hand only: `gjs -m extension/helper/main.js --summary`
 (counts only, safe to paste into a bug report).
 
+## Layer 2b — AI helper integration (fake engine, no network)
+
+From PG-4 (ADR-0007, ADR-0008). The AI helper is run against a **fake engine**:
+a `node:http` server on `127.0.0.1`, on a port the OS picks. It speaks the
+OpenAI Chat Completions shape and records every request body. The helper runs
+inside `dbus-run-session`, so it can never reach the owner's keyring.
+
+Rules the tests hold:
+
+- **Never a real engine.** The harness refuses any base URL whose host is not
+  `127.0.0.1`. No test, fixture or script contains a real provider URL or key.
+- **D-018 proof.** The recorded body's user message parses to exactly the
+  facts object that was sent, with exactly the keys in core's fact list. The
+  body carries no `tools`, and no field holds a description, location, name or
+  email address. The fixture event must contain all of those, so that their
+  absence proves something.
+- **Failure mapping.** The fake engine can be made to answer late (past
+  `timeoutMs`, which must give `failed: timeout` within `timeoutMs` + 1 s), 401,
+  429 with `Retry-After`, 500, a closed port, non-JSON, fenced JSON, a leading
+  `<think>` block, and a 400 that rejects `response_format` (which must give one
+  retry without it).
+- **Injection.** Replies that try to do more than choose a verdict (markup,
+  newlines, bidi controls, 10 000 characters, extra keys such as `joinUrl` or
+  `mode`, a verdict of `MUST`) give either a clean verdict with a normalised
+  reason or `bad-reply`. The same corpus runs against core's reply validator in
+  Layer 1.
+- **Keys.** Whether a test keyring can be run headless
+  (`gnome-keyring-daemon --unlock --components=secrets` inside the private bus)
+  is not verified. If it can, one test proves that the `Authorization` header is
+  sent over loopback `http:` and that the key never appears on the helper's
+  stdout or stderr. If it cannot, the key path is checked in Layer 4.
+
+Layer 1 covers the rest in pure code: the fact builder, the fingerprint, and
+`judge` with `aiVerdicts` (overrides win, sure rules are never touched, a
+changed fact gives the rule verdict and a new request, AI off gives no request).
+The controller is tested with a fake AI client that never answers, and every
+alert step must still appear at its time.
+
 ## Layer 3 — shell smoke test (headless gnome-shell)
+
+**Install and uninstall check** (`tests/smoke/uninstall-check.sh`, run by
+`scripts/smoke.sh` before the shell). It runs `scripts/install.sh` and
+`scripts/uninstall.sh` in a throwaway home under `.smoke-home/`, with `env -i`,
+its own `dbus-run-session`, its own `XDG_*` directories and `XDG_RUNTIME_DIR`,
+and the real dconf mechanism (no `GSETTINGS_BACKEND` override). So it proves
+what an owner's dconf would see, and never reaches the owner's bus, dconf or
+`~/.local/share`. It checks that another extension's files, list entries and
+settings survive. It checks that settings are kept by a plain uninstall and gone
+after `--purge`, that a bad option changes nothing, and that a second uninstall
+succeeds. It prints `PAYATTENTION-UNINSTALL PASS` or `FAIL <check>: <reason>`.
 
 `gnome-shell --headless` runs a complete shell with virtual monitors, in its own
 D-Bus session, with an isolated home. `--devkit` is not usable here (the
@@ -140,6 +199,11 @@ What the smoke script checks:
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
 6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.
+7. Uninstall while a takeover holds the grab (check `9-uninstall`, last,
+   because the extension is gone afterwards). Nothing of ours is left on the
+   stage, no grab remains, and the helper has exited.
+8. From PG-4: AI is off by default, so no AI helper process runs at any point
+   of the smoke.
 
 **Isolation boundary.** The smoke isolates the session bus, the XDG directories
 (so settings and calendars) and nothing else. The system bus is the real one: the
@@ -174,6 +238,15 @@ alert and unlock (alert returns at the right step); suspend across a step time;
 **network off for 15 min** shows "Calendar not updating since …" while cached
 meetings still alert, and it clears within seconds of the network returning (D-013).
 
+From PG-4, AI checks on the real session (ADR-0007): with AI off, no
+`ai/main.js` process exists (`pgrep -af ai/main.js`). With a local engine
+(Ollama at `http://127.0.0.1:11434/v1`) and with a cloud engine, "Test
+connection" says yes, and an unsure meeting shows "AI: …". With the engine
+stopped, the menu says "AI unavailable — using rules", and a Test alert still
+runs all four steps on time. The key is visible in Passwords and Keys and absent
+from `dconf dump /org/gnome/shell/extensions/payattention/`. `--purge` removes
+it. The journal holds no title, fact, reason or key.
+
 ## Pitfalls found while verifying
 
 - **`gnome-extensions install` fails with "Can't recursively copy directory"** when
@@ -186,6 +259,10 @@ meetings still alert, and it clears within seconds of the network returning (D-0
   offer). Installing from the home filesystem into `~/.local/share` with the
   default `TMPDIR` works (verified).
 - **`node --test <directory>` fails on Node 24.11.** Always pass a quoted glob.
+- **`gnome-extensions uninstall` leaves the UUID in `enabled-extensions`.** It
+  runs `disable()` synchronously and deletes the directory (measured, PG-3),
+  but it does not edit the lists. `scripts/uninstall.sh` removes the UUID from
+  both lists itself, then re-reads them in a fresh process.
 - **`gnome-extensions pack` segfaults** if the `--out-dir` directory does not exist.
   Create it first.
 - **`gnome-extensions pack` includes only** `metadata.json`, `extension.js`,

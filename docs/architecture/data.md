@@ -2,7 +2,10 @@
 
 What is stored, where, in what format, and who writes it. Decided in ADR-0003:
 **everything durable lives in GSettings** under one schema. There are no files of
-our own on disk, and calendar content is never stored by us at all.
+our own on disk. Calendar content is never stored by us, with one bounded
+exception from PG-4: the AI's one-line reason (see `ai-verdicts` below).
+**One exception to "everything in GSettings":** AI engine keys live in the GNOME
+keyring (ADR-0009), never in GSettings.
 
 ## What is not stored
 
@@ -41,6 +44,16 @@ our own on disk, and calendar content is never stored by us at all.
 | `owner-domains` | `as` | `[]` | — | The owner's email domains. Empty means "detect from the calendars' own addresses" |
 | `extra-owner-addresses` | `as` | `[]` | — | Owner addresses beyond each calendar's own address, e.g. aliases (§6, D-009). Lowercased by core |
 | `sound-enabled` | `b` | `true` | — | Play a sound at insist and takeover |
+| `ai-enabled` | `b` | `false` | — | AI second opinion on unsure verdicts (R-18, D-017). Off by default |
+| `ai-location` | `s` | `'local'` | choices `local`, `cloud` | Where the engine runs (R-19). Picks which URL and model below are active, and the privacy wording in prefs |
+| `ai-local-url` | `s` | `'http://127.0.0.1:11434/v1'` | — | Base URL of an engine on this machine or network (the default is Ollama's) |
+| `ai-local-model` | `s` | `''` | — | Model name for the local engine. Empty means AI is not set up |
+| `ai-cloud-url` | `s` | `'https://api.openai.com/v1'` | — | Base URL of a cloud engine. Must be `https:` or AI stays off |
+| `ai-cloud-model` | `s` | `''` | — | Model name for the cloud engine. Empty means AI is not set up |
+
+The local and cloud URL and model are kept separately, so the owner can switch
+`ai-location` back and forth (R-19) without typing either again. The API key
+for an address is in the keyring, keyed by that address (ADR-0009).
 
 Defaults live once, in core (`DEFAULT_SETTINGS`); the schema repeats them and a
 unit test keeps the two equal. Core also clamps offsets, so steps can never come
@@ -66,6 +79,8 @@ Every integer key gets a `<range>` in the schema, so a bad value cannot reach co
 | `alert-state` | `s` | JSON, see below. Not shown in prefs. |
 | `health-data-at` | `x` | Epoch ms of the last fresh snapshot, written on `disable()`. `0` = unknown. Seeds the D-010 clock at the next `enable()`. |
 | `health-provider-at` | `x` | Epoch ms of the oldest per-calendar provider-sync time, written on `disable()`. `0` = unknown. Seeds the D-013 clock. |
+
+| `ai-verdicts` | `s` | JSON of AI answers, see below (ADR-0008). Not shown in prefs. |
 
 The two `health-*` keys exist so that locking the screen (which runs `disable()`,
 ADR-0005) does not reset the stale-calendar clocks: without them an owner working
@@ -107,10 +122,38 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
   (the meeting moved; alerting starts again).
 - Written through the store, coalesced so a burst of actions is one write.
 
+## AI answers (`ai-verdicts`)
+
+```jsonc
+{"v":1,
+ "items": {
+   "occ:<uid>|<t>": {
+     "fp": "…",                 // fingerprint of PROMPT_VERSION + engine + D-018 facts (interfaces.md §6.2); a hash, never the facts
+     "verdict": "must"|"ignore",
+     "reason": "…",             // normalised, at most 80 characters (interfaces.md §6.8)
+     "at": 1790000000000        // when it was answered, epoch ms
+   }}}
+```
+
+- Keyed by occurrence key (ADR-0003 format), so one answer per occurrence.
+  An answer applies only while its `fp` matches the current facts and engine.
+  A changed title, time, length, guest count, answer, place or link flag, or a
+  different engine or model, makes it not apply. The occurrence is then asked
+  again and the entry is overwritten.
+- **What it holds that is new:** `reason` is text written by the model from
+  the meeting facts, so it may paraphrase the title. Accepted, because it lets
+  a lock and unlock (ADR-0005) reuse answers instead of asking again. It is
+  bounded to 80 characters per entry, pruned with the `occ:` entries, erased by
+  `--purge`, and never logged.
+- Corrupt JSON or an unknown `v` → start from empty and log once. The cost is
+  that the unsure meetings are asked again.
+- Kept when AI is turned off, so turning it back on with the same engine asks
+  nothing again. Old entries age out through pruning.
+
 ## Pruning
 
-- `alert-state` items and `occ:` overrides are removed once `<t>` is more than
-  7 days in the past (assumed retention). The store prunes on `enable()` and daily.
+- `alert-state` items, `ai-verdicts` items and `occ:` overrides are removed once
+  `<t>` is more than 7 days in the past (assumed retention). The store prunes on `enable()` and daily.
 - `series:` overrides and `travel-times` are kept until the owner clears them. They
   are small (one entry per series or place the owner ever touched).
 

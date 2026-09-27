@@ -140,3 +140,29 @@ Append only. Newest at the bottom.
 - **Fact:** The owner said, verbatim: "you should use a llm abstraction library, so that the user can decide to use a cloud-hosted or internally hosted llm engine". Which library, where it runs (the extension's processes are gjs, and it must never block the shell), how keys are stored, and which engines are supported first are all for the architect.
 - **Source:** the owner.
 - **Touches:** docs/architecture/
+
+## 2026-09-27 — Owner's AI decisions
+- **Kind:** decision
+- **Fact:** The owner chose a rules-or-AI mode switch (D-019), sending the whole invite (D-020), and the standard connection instead of a bundled library (D-021). D-017 and D-018 are superseded. R-18 and R-19 were rewritten, and the PRD addendum was replaced.
+- **Why:** The "unsure" line had no score behind it. The owner asked how the product scores meetings, and it does not.
+- **Source:** the owner, 2026-09-27.
+- **Touches:** decisions.md, solution.md, docs/prd/meeting-guardian.md
+
+## 2026-09-27 — Architect PG-4 findings taken
+- **Kind:** decision
+- **Fact:** All 5 findings were taken:
+  - the library → D-021;
+  - the AI silencing alerts → accepted in D-019;
+  - uninstall keeps the key and AI answers, and `--purge` erases them → consistent with D-016, and added to the addendum;
+  - the GPU driver → noted in BACKLOG as the owner's machine issue;
+  - which cloud key → asked, not yet answered, and it does not block acceptance.
+
+  The inbox is emptied.
+- **Source:** docs/inbox.md, architect.
+- **Touches:** decisions.md, BACKLOG.md
+
+## 2026-09-27 — Which cloud key
+- **Kind:** question
+- **Fact:** It is not known which cloud service the owner has a key for. It is needed only for the one-time hand check of a cloud engine.
+- **Source:** product manager.
+- **Touches:** docs/prd/meeting-guardian.md

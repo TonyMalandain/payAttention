@@ -15,14 +15,16 @@ extension/              the pack source: exactly what ships in the zip
   schemas/              org.gnome.shell.extensions.payattention.gschema.xml
   core/                 pure logic: protocol validation, keys, judge, plan, reduce
   helper/               the calendar helper program (run as a subprocess)
+  ai/                   the AI helper program (run as a subprocess, only while AI is on; ADR-0008)
   shell/                in-shell services: calendar feed, store, controller, environment
   ui/                   actors: indicator + menu, card, takeover, sound
 tests/
   unit/                 node --test suites for extension/core and the gi-free shell modules
   helper/               node --test suites that run the helper against an isolated EDS
   fixtures/             synthetic snapshots (never real calendar data)
-  smoke/                headless gnome-shell automation script(s)
-scripts/                build, install, smoke wrappers
+  ai/                   node --test suites that run the AI helper against a fake engine on 127.0.0.1
+  smoke/                headless gnome-shell automation script(s), install/uninstall check
+scripts/                build, install, uninstall (--purge), smoke wrappers
 package.json            dev-only: test and lint tooling; never packed
 eslint.config.js        dev-only
 dist/                   build output (git-ignored)
@@ -37,11 +39,12 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | Directory | May import | Must not import |
 |---|---|---|
 | `core/` | other `core/` modules only | anything `gi://`, anything `resource://`, any Node built-in. No clock reads, timers, or I/O: time is a parameter. |
-| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, St/Clutter/Meta/Shell, the rest of `core/` |
-| `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, `ui/` internals, the `system` built-in |
-| `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, the store, GSettings, ECal/EDataServer/ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
-| `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Gtk/Gdk/Adw, the `system` built-in |
-| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib; `core/` (for defaults such as built-in word lists) | Clutter, Meta, St, Shell, `shell/`, `ui/`, `helper/` |
+| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `ai/`, St/Clutter/Meta/Shell, Soup, Secret, the rest of `core/` |
+| `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, core's AI protocol and reply-validation modules | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
+| `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
+| `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
+| `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
+| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, and the D-018 fact list it shows) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
 The "must not import" column is enforced with ESLint `no-restricted-imports` per
 directory, so a breach fails lint rather than review. Two parts are not enforced
@@ -56,6 +59,9 @@ creating a `Gio.Settings`.
 - **The `system` built-in is the helper's only.** `System.exit` inside the shell
   process would end the desktop session, so `shell/`, `ui/`, `extension.js` and
   `prefs.js` must not import it.
+- **Network and secrets are the AI helper's only** (ADR-0008, ADR-0009). No
+  other directory imports Soup, and only `ai/` (read) and `prefs.js` (write)
+  import Secret. The lint rules forbid both elsewhere, so a breach fails lint.
 - **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
   in `tests/unit/` only if it has no `gi://` and no `resource://` imports; its
   GNOME parts are injected (`interfaces.md` §3).
@@ -82,7 +88,17 @@ creating a `Gio.Settings`.
   whether to show something. It must not own scheduling timers: the only timers in
   `ui/` are animations and display-only effects (for example, a pulsing border).
   It never writes settings; it emits actions.
-- **Preferences** must not know alert state or the helper.
+- **AI helper** must not know calendars, overrides, settings, alert state, or
+  the UI. It receives its configuration and the D-018 facts on stdin and never
+  anything else. It builds one request per fact set, validates the reply with
+  core, and returns a verdict or a short failure code. It never logs facts,
+  titles, replies, reasons, or keys (codes and HTTP status only). It never
+  follows a URL or runs anything named in a reply.
+- **Core** also owns the D-018 fact list, the fact builder, the fingerprint,
+  the prompt text, and the reply validator. Because they are pure, the D-018
+  and injection promises are proven by unit tests.
+- **Preferences** must not know alert state or the helper. It may spawn the
+  AI helper for "Test connection" and read its one-line answer.
 
 ## Ownership of data
 
@@ -95,3 +111,6 @@ creating a `Gio.Settings`.
 | Verdict overrides, mode overrides, travel times | store (on controller request) | store, prefs.js may clear |
 | Alert state | store (on controller request, via core `reduce`) | controller |
 | Persisted health clocks (`health-*` keys) | store (on controller request, in `disable()`) | controller, at `enable()` |
+| AI settings (`ai-*` keys except `ai-verdicts`) | prefs.js | store, prefs.js |
+| AI answers (`ai-verdicts`) | store (on controller request, from AI helper replies) | controller, into `judge` |
+| AI engine keys (GNOME keyring, ADR-0009) | prefs.js | AI helper only; `scripts/uninstall.sh --purge` clears |

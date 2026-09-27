@@ -96,7 +96,8 @@ is what goes into bug reports.
 
 Three pure functions. The names are indicative; the shapes are the contract.
 
-- **`judge(snapshot, config, overrides, travel)` → judged occurrences.**
+- **`judge(snapshot, config, overrides, travel, aiVerdicts)` → judged occurrences.**
+  (`aiVerdicts` added by ADR-0008; see §6.)
   `config` holds the word lists, owner addresses (each source's `ownerEmail`
   plus `extra-owner-addresses`) and domains, large-meeting size, and default
   travel. The conferencing host allowlist is a constant in core, not config.
@@ -260,3 +261,192 @@ constraints they must now meet.
      weekday with the time, because persisted clocks make earlier days common.
   7. Lint: forbid the `system` built-in in `shell/`, `ui/`, `extension.js`,
      `prefs.js` (`boundaries.md`).
+
+
+## 6. AI second opinion (stable, protocol version 1) — added 2026-09-26 for PG-4
+
+Decided in ADR-0007 (wire protocol and client), ADR-0008 (process, `judge`
+input, persistence) and ADR-0009 (keys). Serves R-18 and R-19, under D-017 and
+D-018. R-3 now reads "unless the owner chooses a cloud AI engine".
+
+### 6.1 Which occurrences are eligible (core)
+
+An occurrence is **eligible** when AI is on and configured (`config.ai` is
+not null, see 6.4), it has **no** verdict override (occurrence or series), and
+its rule `reasonCode` is one of the unsure codes, exported by core as one
+frozen list:
+
+`no-guests`, `large`, `small`, `maybe`, `insufficient-data`
+
+The sure codes (`cancelled`, `declined`, `not-invited`, `all-day`, `free`,
+`ignore-word`, `important-word`, `organizer`, `external`), the overrides and
+`test` are never eligible. For them, `judge` builds no facts at all.
+
+### 6.2 The facts (core) — exactly D-018, nothing else
+
+Core exports the fact list once, with a plain-language label for each fact.
+`prefs.js` shows that list, so the settings text and the code cannot drift apart.
+
+```jsonc
+{
+  "title": "…",            // summary, whitespace collapsed, trimmed, cut to 200 characters
+  "start": "Mon 17:30",    // local wall-clock weekday and time, as the owner sees it
+  "minutes": 60,           // length, rounded, 0 or more
+  "guests": 3,             // guests as core already counts them (D-011): not the owner, no rooms or resources
+  "insideGuests": 2,       // guests in the owner's domains; null when the domains are unknown
+  "outsideGuests": 1,      // the rest; null when the domains are unknown
+  "response": "yes"|"maybe"|"no-answer"|"unknown",   // the owner's answer (declined is a sure rule, never sent)
+  "organisedByYou": false,
+  "hasPlace": true,        // a place text exists; the place itself is never sent
+  "hasVideoLink": false    // core found an allowlisted conferencing link; the link is never sent
+}
+```
+
+- Never sent: the description, location text, links, names, email addresses,
+  the calendar name, UIDs, occurrence keys, and the rule's own verdict.
+- Local time: core reads no environment. The controller passes the current
+  UTC offset in `config.ai.utcOffsetMinutes`, and core formats `start` from
+  it. A DST change inside the 36 h window shifts `start` by an hour for the
+  meetings after it. This is accepted: it does not change importance, and it
+  causes one extra request per meeting at the change.
+- **Fingerprint.** `fingerprint = hash(PROMPT_VERSION, engineTag, facts in
+  fixed key order)`. `engineTag` is `location|baseUrl|model` from
+  `config.ai`. The hash is a small pure non-cryptographic hash in core (at
+  least 53 bits), shown as a string. It only has to tell "same facts, same
+  engine, same prompt" from "something changed". It must not be reversible to
+  a title in practice, and it must not be a plain concatenation.
+
+### 6.3 `judge` with `aiVerdicts` (core, pure)
+
+`aiVerdicts` is a plain object: occurrence key → `{fp, verdict, reason}`, as
+read from the store. For each **eligible** occurrence, `judge`:
+
+- **Stored answer applies** (an entry exists and `entry.fp === fingerprint`):
+  `verdict` = the entry's verdict; `reasonCode` = `ai-must` or `ai-ignore`
+  (added to `REASON_CODES`); `reason` = `"AI: " + entry.reason`. It also sets
+  `ruleReason`, the rule's reason, kept for the menu's detail line.
+- **Otherwise:** the rule verdict stands, and the result carries
+  `aiAsk: {fp, facts}`.
+
+Every other field of the judged occurrence (mode, `joinUrl`, place, travel,
+deadline, key) is computed exactly as without AI. A test asserts that two
+runs, with and without an applying answer, differ only in `verdict`,
+`reasonCode`, `reason`, `ruleReason` and `aiAsk`. Duplicate merging across
+calendars still happens after this, on the final verdict.
+
+With `config.ai` null (AI off or not configured), `judge` produces no `aiAsk`,
+ignores `aiVerdicts`, and gives exactly today's output.
+
+### 6.4 Config and settings the shell passes in
+
+`config.ai` is null, or `{engineTag, utcOffsetMinutes}`. It is null when
+`ai-enabled` is false, when the active model name is empty, or when a `cloud`
+base URL is not `https:`. The controller builds it from the `ai-*` keys
+(`data.md`).
+
+### 6.5 Controller behaviour (shell, internal but binding)
+
+- After each `judge`, the controller collects the `aiAsk`s whose occurrence
+  starts no earlier than `now − cutoff`. It queues them, soonest start first.
+  **At most one request is in flight.**
+- **Never on the alert path.** The tick and `plan()` never read the queue and
+  never wait for it. An answer is written to `ai-verdicts` through the store
+  (coalesced, like alert state), and then `judge` re-runs, as it does after an
+  override.
+- **Retry.** After a failure for one occurrence, it is not asked again for
+  1 min, then 2, 4 and so on, up to 30 min (in memory). After `auth`, `config`
+  or `no-key`, the whole engine pauses until an `ai-*` setting changes, so a bad
+  key is never hammered. After `rate-limited`, the engine pauses for
+  `Retry-After` if given (capped at 30 min), else 5 min.
+- **Budget.** At most 120 requests per rolling hour per `engineTag`
+  (assumed). This guards a cloud bill against facts that keep changing.
+- **Status for the View**, one of: `off`; `ok`; `unavailable` (the most recent
+  completed attempt failed, or the helper could not start, and it has not
+  succeeded since). With `unavailable`, the menu shows "AI unavailable — using
+  rules". The status is not persisted.
+- **Helper lifecycle.** Spawn when there is something to ask and none is
+  running. Send `configure`, then requests. Kill it (SIGKILL) in `disable()`,
+  when `ai-enabled` goes false, and when any `ai-*` setting changes (the next
+  request respawns it with the new configuration). Watchdog: no answer within
+  `timeoutMs + 10 s` counts as `timeout`, and the helper is killed and
+  respawned. Respawn backoff as for the calendar helper (`constraints.md`).
+
+### 6.6 Shell ↔ AI helper protocol (NDJSON over stdio, version 1)
+
+Transport and lifecycle are as in §1: `gjs -m <extension dir>/ai/main.js`,
+stdin and stdout piped, stderr inherited, exit on stdin EOF, SIGKILL from the
+shell, and nothing but protocol lines on stdout. One core module defines the
+version and validates every line on both sides.
+
+**Shell → helper**
+
+```jsonc
+{"type":"configure","protocol":1,
+ "location":"local"|"cloud",
+ "baseUrl":"http://127.0.0.1:11434/v1",   // cloud: must be https:
+ "model":"…",
+ "timeoutMs":60000}                        // 60 000 local, 30 000 cloud (core constants, assumed)
+{"type":"judge","id":"<opaque, unique per helper run>","facts":{ …exactly §6.2… }}
+{"type":"probe","id":"…"}                  // "Test connection": core's fixed synthetic facts, no calendar data
+```
+
+The key is never on this channel. The helper looks it up itself (ADR-0009).
+The helper rejects a `judge` whose `facts` has any key outside §6.2, or a
+missing one, with `failed: bad-request`. This is a second guard on D-018,
+behind core.
+
+**Helper → shell**
+
+```jsonc
+{"type":"hello","protocol":1}
+{"type":"verdict","id":"…","verdict":"must"|"ignore","reason":"…"}   // reason already normalised (6.8)
+{"type":"failed","id":"…","code":"timeout"|"network"|"tls"|"auth"|"rate-limited"|"server"|"bad-reply"|"bad-request"|"no-key"|"config"}
+```
+
+`rate-limited` may carry `"retryAfterS": <integer>`. There are no other fields
+and no free text: an HTTP body is never forwarded.
+
+### 6.7 Helper → engine (OpenAI Chat Completions)
+
+`POST <baseUrl>/chat/completions`, `Content-Type: application/json`, and
+`Authorization: Bearer <key>` only when a key exists for the endpoint *and*
+the URL is `https:` or a loopback `http:`. The body:
+
+```jsonc
+{"model":"…",
+ "messages":[{"role":"system","content":"<core's fixed instructions, PROMPT_VERSION>"},
+             {"role":"user","content":"<JSON.stringify(facts)>"}],
+ "temperature":0,
+ "max_tokens":400,                              // room for a reasoning model's preamble
+ "response_format":{"type":"json_schema","json_schema":{"name":"verdict","strict":true,
+   "schema":{"type":"object","additionalProperties":false,"required":["verdict","reason"],
+             "properties":{"verdict":{"enum":["must","ignore"]},"reason":{"type":"string","maxLength":80}}}}}}
+```
+
+- No `tools`, no `functions`, no `stream`, and no other message. The facts
+  are data in the user message. The system text says so, and says the title is
+  untrusted text written by someone else.
+- If the engine answers 400 and the error names `response_format`, the helper
+  retries once without that field, and keeps it off for the rest of its run.
+- HTTP mapping: connection refused or DNS failure → `network`; TLS error →
+  `tls`; 401 or 403 → `auth`; 402 or 429 → `rate-limited`; other 4xx →
+  `config`; 5xx → `server`; timeout → `timeout`. Redirects are not followed.
+- Only `choices[0].message.content` is read. Everything else in the body is
+  ignored.
+
+### 6.8 Reply validation (core) — data, never instructions
+
+`parseReply(text)` → `{verdict, reason}` or `null` (which gives `bad-reply`):
+
+1. Remove one leading `<think>…</think>` block and one surrounding code fence.
+2. What remains must parse as exactly one JSON object. Otherwise → `null`.
+3. `verdict` must be exactly `"must"` or `"ignore"`. `reason` must be a
+   string. Any other key is ignored and never read.
+4. Normalise `reason`: remove control characters (including newlines) and
+   Unicode bidi controls (U+202A–U+202E, U+2066–U+2069); collapse whitespace;
+   trim; cut to 80 characters (79 plus "…"). If it is empty after that → `null`.
+
+The reason is shown as plain text, never markup (existing UI rule). Nothing
+in a reply can reach anything other than `verdict` and `reason` of an eligible
+occurrence (6.3). That is the structural answer to "a title cannot make the
+product do anything other than pick a verdict".

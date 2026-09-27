@@ -37,7 +37,7 @@ Environment requirements come first.
 ### R-3 — Calendar contents never leave the machine unless the owner chooses a cloud AI engine
 - **Serves:** calendars hold sensitive business information. The warning must also work when the network is unreliable.
 - **Who it serves:** Calendar owner.
-- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere, unless they turn on a cloud AI engine. Then only the facts listed in D-018 are sent.
+- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere, unless they turn on a cloud AI engine. Then the whole invite is sent to the engine they chose (D-020).
 - **State:** real
 - **Evidence:** verified in code
 
@@ -139,23 +139,23 @@ Environment requirements come first.
 - **State:** real
 - **Evidence:** verified in code
 
-### R-18 — An optional AI engine judges the meetings the rules are unsure of
+### R-18 — In AI mode, an AI engine judges every meeting
 - **Serves:** the author asked for a system "smart enough to understand meetings on my calendar I cannot afford to miss and meeting that are just placeholder". Fixed rules miss cases like a personal task that matters, and the owner "has to carefully craft" corrections by hand today.
 - **Who it serves:** Calendar owner.
-- **What they get:** smarter verdicts on unsure meetings, each with a one-line reason marked as the AI's opinion. Their own choices and the sure rules always win. If the engine cannot be reached, the rules alone decide and the menu says so.
+- **What they get:** a choice of two modes. Rules mode works as before. In AI mode every meeting is judged by the AI from the whole invite, with a one-line reason marked "AI:". Their own overrides always win. If the engine cannot be reached, the rules decide and the menu says so. An alert never waits for the AI.
 - **State:** intended
 
-### R-19 — The owner chooses where the AI engine runs
-- **Serves:** calendars hold sensitive business information (R-3). Only the owner can weigh smarter verdicts against sending meeting facts off the machine.
+### R-19 — The owner connects the AI engine of their choice
+- **Serves:** calendars hold sensitive business information (R-3). Only the owner can weigh smarter verdicts against sending meetings off the machine.
 - **Who it serves:** Installer.
-- **What they get:** AI stays off until they turn it on. They can then pick an engine on their own machine or network, or a cloud service, and switch at any time. Settings list exactly which meeting facts are sent (D-018).
+- **What they get:** rules mode until they switch. They then enter an endpoint, a model and an API key for any engine, on their own machine or in the cloud, test the connection, and can switch at any time. Settings say plainly that the whole invite is sent, and that with a cloud engine it leaves the computer. The key is kept in the desktop's password store.
 - **State:** intended
 
 ## What the solution is not
 
 - **Not a calendar.** It never creates, edits, or accepts meetings. The owner's calendar stays the one source of truth.
 - **Not a general notification filter.** It does nothing to other apps' notifications. Its job is to be the one alert that is worth reading, not to clean up the rest.
-- **No AI unless the owner turns it on.** Out of the box, verdicts come from the rules alone. The AI engine never overrides a sure rule or an owner's choice (D-017).
+- **No AI unless the owner turns it on.** Out of the box, verdicts come from the rules alone. The AI never overrides an owner's choice (D-019).
 - **No live traffic or map routing.** Travel time is what the owner sets per place, or the default. This would be reconsidered if fixed travel times led to late arrivals in practice.
 - **Does not detect presence in a meeting.** It does not watch the camera, microphone, or call apps to decide that you joined. Acknowledging is the only signal, because it is reliable and costs one click.
 - **Nothing over the lock screen, and no phone.** If the desktop is locked or the owner is away from the computer, the alert waits for their return.

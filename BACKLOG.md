@@ -16,13 +16,14 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 - **PG-3 — Remove payAttention with one command.** Built, reviewed (2 defects, fixed), and checked by the product manager. `npm run uninstall:local` removes it and keeps saved choices. `npm run uninstall:local -- --purge` also erases them.
 
-## Now — AI second opinion (PG-4, size L)
+## Now — AI mode (PG-4, size L)
 
-- **PG-4 — Optional AI engine for unsure verdicts, local or cloud** (spec: `docs/prd/meeting-guardian.md`, "Addendum — AI second opinion"; R-18, R-19, D-017, D-018). Size **L**: a new concept, new stored secrets, and a new outside dependency.
-  - **What changes for the owner:** unsure meetings get an AI verdict with an "AI:" reason. The owner chooses a local or cloud engine, and AI is off by default.
+- **PG-4 — Rules or AI mode; AI judges every meeting from the whole invite** (spec: `docs/prd/meeting-guardian.md`, "Addendum 2026-09-27 — AI mode"; R-18, R-19, D-019, D-020, D-021). Size **L**, to be split by the architect's order: core pieces first, then the AI helper, the shell side, settings plus the password store, and uninstall `--purge`.
+  - **What changes for the owner:** a mode switch in Settings. In AI mode, verdicts come from the engine they connect (endpoint, model, API key), with an "AI:" reason. The rules take over if it is down.
   - **Who it is for:** Calendar owner, Installer.
   - **Done when:** see the addendum's "Done when".
-  - **Next step:** the architect designs it (library choice per the owner's request), then plan, build, review.
+  - **Next step:** the architect revises ADR-0007 to ADR-0009 and `interfaces.md` §6 for D-019 and D-020, which replace "unsure only" and "facts only". Then plan, build, review.
+- **Owner's machine (not product work):** the NVIDIA driver is not built for the running kernel, so a local engine runs on the processor (about 5 to 20 s per verdict, estimated).
 
 ## Now — needs the owner (cannot be done unattended)
 

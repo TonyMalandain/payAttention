@@ -98,15 +98,33 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** A plain uninstall leaves the saved settings on the machine. The owner must use the erase option for a full clean-up.
 **Source:** the product manager, after the owner pointed out that no uninstall existed (2026-09-26).
 
-### D-017 — An optional AI engine gives a second opinion, and the owner chooses where it runs — 2026-09-26
+### D-017 — An optional AI engine gives a second opinion, and the owner chooses where it runs  [SUPERSEDED by D-019 on 2026-09-27]
 **Decision:** We chose to let an AI model judge the meetings the rules are unsure of. The owner turns it on and picks the engine: one hosted on their own machine or network, or a cloud service. It is off by default. The rules still decide the sure cases, the owner's overrides always win, and every AI verdict shows a one-line reason marked as the AI's opinion. If the engine is unreachable, the rules alone decide.
 **Why:** The owner asked for a system "smart enough to understand" meetings, and asked for the choice between a cloud and an internally hosted engine. D-003's reasons still hold for anyone who leaves it off: privacy, working offline, and verdicts that explain themselves.
 **Costs accepted:** Setup is no longer zero for owners who want AI. With a cloud engine, meeting facts leave the machine (limited by D-018). AI verdicts can change from one day to the next, and they are harder to predict than rules.
 **Source:** the owner, 2026-09-26 ("you should use a llm abstraction library, so that the user can decide to use a cloud-hosted or internally hosted llm engine").
 
-### D-018 — Only the facts the rules already use are sent to the AI engine — 2026-09-26
+### D-018 — Only the facts the rules already use are sent to the AI engine  [SUPERSEDED by D-020 on 2026-09-27]
 **Decision:** We chose to send only the meeting title, the start time and length, the number of guests from inside and outside the owner's organisation, the owner's response, whether the owner organised it, and whether it has a place or a video link. Guest names, email addresses, descriptions and places are never sent.
 **Why:** It is the smallest set that lets a model judge importance. It limits what a cloud engine can learn about the owner's contacts and business.
 **Costs accepted:** The model cannot use the description or the names of people, which sometimes show what a meeting is about.
 **Source:** assumed by the product manager. The owner can widen it by a new decision.
+
+### D-019 — Two verdict modes: rules, or AI deciding every meeting — 2026-09-27
+**Decision:** We chose two modes the owner picks between. In **rules** mode, the fixed rules decide, which is the default and the behaviour with AI off. In **AI** mode, the AI engine decides every meeting and gives a one-line reason marked "AI:". In both modes the owner's own overrides always win. If the engine cannot be reached, the rules decide that meeting, and the menu says so.
+**Why:** The earlier split between "sure" and "unsure" rules had no score behind it. It was a hand-drawn line the owner could neither see nor tune, and it hid real mistakes from the AI (a family event counted as "you organised it"). A whole-mode choice is simpler to understand.
+**Costs accepted:** In AI mode, the AI can silence a meeting the rules would have alerted, including one already alerting. That goes against "when unsure, warn" (D-004). The shown reason and the one-click override are the remedy. AI verdicts can vary from day to day.
+**Source:** the owner, 2026-09-27.
+
+### D-020 — In AI mode the whole invite is sent to the engine — 2026-09-27
+**Decision:** We chose to send the whole meeting invite to the AI engine, local or cloud. That is the title, time, description, place, video link, organiser and guests with their names, email addresses and responses. Settings state this plainly, and say that with a cloud engine it leaves the computer.
+**Why:** More context gives better verdicts. The owner chose this knowing the privacy cost.
+**Costs accepted:** With a cloud engine, contacts and business details of every meeting reach a third party. The owner accepts this by choosing AI mode with a cloud engine.
+**Source:** the owner, 2026-09-27.
+
+### D-021 — Engines are reached through one standard connection, not a bundled library — 2026-09-27
+**Decision:** We chose to reach any AI engine through the standard connection most engines share. The owner enters an address (endpoint), a model name and an API key in Settings. No AI library ships inside the extension.
+**Why:** The available libraries need Python or Node installed, which GNOME extensions should not require. One of them was compromised in March 2026 to steal API keys. The standard connection already covers local engines (for example Ollama) and cloud services (for example OpenAI and OpenRouter).
+**Costs accepted:** An engine that does not speak the standard connection needs a gateway the owner runs themselves, or an adapter built later. This reverses the owner's first request for "an llm abstraction library".
+**Source:** the owner, 2026-09-27, accepting the architect's recommendation (ADR-0007).
 

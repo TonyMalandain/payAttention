@@ -267,3 +267,80 @@ Append only. Newest at the bottom.
 - **Why:** The inbox is not a log.
 - **Source:** this session.
 - **Touches:** —
+
+## 2026-09-26 — Handoff taken: AI engine library, runtime, keys, engines (PG-4)
+- **Kind:** decision
+- **Fact:** Took the product handoff with the owner's words "you should use a llm abstraction library…". The answer is ADR-0007 (OpenAI-compatible protocol, own gjs client on libsoup 3, no bundled library), ADR-0008 (AI helper process, `aiVerdicts` as a `judge` input) and ADR-0009 (keys in the GNOME keyring).
+- **Why:** No LLM abstraction library runs in gjs. Node is not in the session, and Python needs an explicit install under the review rules. All the named engines already share the protocol those libraries translate to.
+- **Source:** product NOTES handoff 2026-09-26; probes below.
+- **Touches:** ADR-0007, ADR-0008, ADR-0009, interfaces.md §6
+
+## 2026-09-26 — gjs has no fetch; Soup 3 and Secret import
+- **Kind:** stack
+- **Fact:** `typeof fetch` and `typeof AbortController` are `undefined` in gjs 1.88. `gi://Soup?version=3.0` (3.6) and `gi://Secret` (libsecret 0.21.8) import. gnome-keyring owns `org.freedesktop.secrets`.
+- **Why:** Rules out running JS LLM SDKs under gjs without polyfills. Makes Soup the HTTP client and libsecret the key store.
+- **Source:** `gjs -c`/`gjs -m` probes; `busctl --user list`, 2026-09-26.
+- **Touches:** ADR-0007, ADR-0009, stack.md
+
+## 2026-09-26 — Option not taken: bundling LiteLLM or the Vercel AI SDK
+- **Kind:** decision
+- **Fact:** Rejected. The Vercel AI SDK and LangChain.js need Node or a polyfilled gjs port. LiteLLM needs a pip venv. LiteLLM Proxy stays available to the owner as a "custom" base URL.
+- **Why:** The review rules require explicit user action for Python or other dependencies, and forbid binaries and minified code. PyPI litellm 1.82.7 and 1.82.8 stole API keys (2026-03-24). An extra runtime next to the key buys nothing for one request per meeting.
+- **Source:** gjs.guide review guidelines (fetched 2026-09-26); docs.litellm.ai security update March 2026; BerriAI/litellm#24518.
+- **Touches:** ADR-0007
+
+## 2026-09-26 — Anthropic compat endpoint ignores response_format
+- **Kind:** constraint
+- **Fact:** Anthropic's OpenAI SDK compatibility endpoint silently ignores unsupported fields, including `response_format`, and is described as intended for testing.
+- **Why:** This is why every reply is validated by core whatever the engine promises, and why Anthropic direct is best effort, not in the first verified set.
+- **Source:** Claude docs "OpenAI SDK compatibility" (via search, 2026-09-26).
+- **Touches:** ADR-0007, stack.md
+
+## 2026-09-26 — NVIDIA driver not loaded on the owner's kernel
+- **Kind:** constraint
+- **Fact:** Kernel 7.2.7 has no NVIDIA kmod (built for 7.0.12 and 7.1.10 only). No nvidia module is loaded, and `nvidia-smi` fails. The CPU is a Ryzen 5 7600, with 61 GB of RAM.
+- **Why:** Local-engine latency will be CPU-bound until the owner's akmod rebuilds. Timeouts are 60 s local for that reason. Nothing on the alert path waits either way.
+- **Source:** `lsmod`, `rpm -qa | grep nvidia`, `nvidia-smi`, `lscpu`, 2026-09-26.
+- **Touches:** constraints.md
+
+## 2026-09-26 — AI invalidation by fingerprint, not by event
+- **Kind:** interface
+- **Fact:** Stored AI answers apply only while a hash of (prompt version, engine, D-018 facts) matches. Otherwise `judge` keeps the rule verdict and emits `aiAsk`.
+- **Why:** It keeps `judge` pure and level-triggered, like the rest of the core (ADR-0002). Nobody has to remember to invalidate. An engine or model change re-asks without separate clearing logic.
+- **Source:** design, this session.
+- **Touches:** interfaces.md §6.2–6.3, data.md
+
+## 2026-09-26 — AI answers persisted in GSettings, with the model's reason
+- **Kind:** data
+- **Fact:** `ai-verdicts` (JSON in `s`) stores the fingerprint, verdict, 80-character reason and time per occurrence key, pruned at 7 days.
+- **Why:** `disable()` runs on every lock (ADR-0005). Memory-only answers would re-ask every unsure meeting after each unlock, and the rule verdict would flicker back. The reason may paraphrase a title. This is accepted, bounded, and sent to product.
+- **Source:** design, this session.
+- **Touches:** data.md, ADR-0008
+
+## 2026-09-26 — Start time sent with the current UTC offset
+- **Kind:** debt
+- **Fact:** Core formats the D-018 start time from one UTC offset that the controller passes in. A DST change inside the 36 h window shifts the sent time by an hour for later meetings, and re-asks them once.
+- **Why:** It keeps core free of time-zone reads. The error does not change importance. Repaid by passing a per-occurrence local time from the shell, if it ever matters.
+- **Source:** assumed.
+- **Touches:** interfaces.md §6.2
+
+## 2026-09-26 — Headless test keyring unverified
+- **Kind:** question
+- **Fact:** Whether `gnome-keyring-daemon --unlock --components=secrets` works inside a private `dbus-run-session` for helper tests is not verified. If it does not, the key path is checked only in Layer 4.
+- **Why:** Tests must never touch the owner's real keyring (ADR-0009).
+- **Source:** assumed.
+- **Touches:** testing-and-build.md Layer 2b
+
+## 2026-09-26 — PG-3 uninstall facts folded in
+- **Kind:** stack
+- **Fact:** Folded into testing-and-build.md: `uninstall-check.sh` (isolated home, bus, dconf, `XDG_RUNTIME_DIR`), smoke check `9-uninstall` during a takeover, `npm run uninstall:local [-- --purge]`, install.sh honouring `XDG_DATA_HOME`, and the pitfall that `gnome-extensions uninstall` leaves the UUID in `enabled-extensions`. boundaries.md `scripts/` now names uninstall.
+- **Why:** Doc drift. The code and scripts were right, and the doc was behind.
+- **Source:** inbox (PG-3); `tests/smoke/uninstall-check.sh`, `tests/smoke/alert-ladder.js:512-513`, `scripts/uninstall.sh`.
+- **Touches:** testing-and-build.md, boundaries.md
+
+## 2026-09-26 — Inbox emptied (for-architecture, PG-3); for-product added (PG-4)
+- **Kind:** for-product
+- **Fact:** Took and removed the PG-3 entry. Added five for-product entries on PG-4: the library deviation, which cloud key, the GPU driver, key and answers on uninstall, and the AI silencing must-attend verdicts.
+- **Why:** The inbox is not a log. The product findings need decisions that only the owner or product can make.
+- **Source:** this session.
+- **Touches:** docs/inbox.md

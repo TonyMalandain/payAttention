@@ -148,38 +148,50 @@ The owner pointed out that nothing removes the extension.
   - If the extension was running, it is stopped and leaves nothing on screen.
   - The README documents the command.
 
-## Addendum 2026-09-26 — AI second opinion (R-18, R-19, D-017, D-018)
+## Addendum 2026-09-27 — AI mode (R-18, R-19, D-019, D-020, D-021)
 
-**Problem:** from `problem.md`: "A reminder for a client call looks the same as a reminder for a lunch placeholder." Fixed rules still misjudge some meetings. On the owner's real week, "Pick my child up for piano lessons" was silenced because it has no guests.
+This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a whole-mode switch instead of AI for "unsure" meetings only, because that line had no score behind it.
+
+**Problem:** from `problem.md`: "A reminder for a client call looks the same as a reminder for a lunch placeholder." Fixed rules still misjudge some meetings. On the owner's real week, a child pick-up was silenced, and a family event counted as "you organised it".
 
 **What changes:**
-- In Settings, an "AI second opinion" section, **off by default**. The owner picks:
-  - **where the engine runs:** on this machine or network (the owner gives its address), or a cloud service (the owner gives a key);
-  - **which model** to use;
-  - a **"Test connection"** button, which gives a clear yes or no.
-- The settings show, in plain words, exactly which facts are sent (D-018). For a cloud engine it also says "these facts leave your computer".
-- **Which meetings the AI judges:** only verdicts from the unsure rules. These are "no other guests: personal block", "large meeting", "small meeting", "you answered maybe" and "not enough information". The owner's overrides and the sure rules (cancelled, declined, not invited, all-day, free, ignore or important word, you organised it, external guests) are never sent and never changed.
-- **The AI's reason:** it returns must-attend or ignorable with a one-line reason. The menu and alerts show it as "AI: <reason>".
-- **When the AI is unreachable** (slow, erroring, offline, or out of quota), the rule verdict stands. The menu says "AI unavailable — using rules". An alert is never delayed while waiting for the AI.
-- **Asking again:** a meeting is judged once, and asked again only when its facts change. This keeps cost and traffic low.
-- **What the model returns is data, never instructions.** A meeting title cannot make the product do anything other than pick a verdict.
+- **Settings, "Verdicts" section:**
+  - **Mode:** Rules (the default) or AI.
+  - **AI engine:** endpoint (address), model name, API key, and a "Test connection" button that gives a clear yes or no.
+  - A plain warning: "In AI mode the whole invite is sent to this engine. With a cloud engine it leaves your computer."
+  - The key is kept in the desktop's password store, never in plain settings.
+- **In AI mode:**
+  - Every meeting's whole invite goes to the engine: title, time, description, place, video link, organiser, and guests with their names, email addresses and responses (D-020).
+  - The engine answers must-attend or ignorable with a one-line reason. The menu and alerts show it as "AI: <reason>".
+  - The owner's overrides always win, and they are not sent to be judged.
+  - A meeting is asked once, and again only when its invite changes.
+  - What the engine returns is data, never instructions. A meeting's text cannot make the product do anything except pick a verdict.
+- **When the engine cannot be reached** (slow, erroring, offline, out of quota, or a bad key):
+  - the rules decide that meeting;
+  - the menu says "AI unavailable — using rules";
+  - an alert is never delayed while waiting for the AI.
+- **Rules mode** behaves exactly as today, and nothing is sent anywhere.
+- **Uninstall:**
+  - A plain uninstall keeps the API key and the stored AI answers, and says so (D-016).
+  - `--purge` erases both.
 
 **Who it lands on:**
-- **Calendar owner:** helps (smarter verdicts). Cost: an AI verdict can be wrong in new ways. The reason shown and the one-click override are the remedy.
-- **Installer:** cost. Setup is no longer zero if they want AI; with AI off, nothing changes.
+- **Calendar owner:** helps, with smarter verdicts. Cost: the AI can silence a meeting the rules would have alerted (accepted in D-019). The shown reason and the one-click override are the remedy.
+- **Installer:** cost. Setup is needed for AI mode, but nothing is needed for rules mode.
 
 **Out of scope:**
-- Sending descriptions, names, email addresses, or places.
-- The AI changing sure verdicts or the alert timing.
-- Travel time from AI.
+- The AI changing alert timing or travel time.
 - Bundling or installing an engine for the owner.
+- A bundled AI library (D-021).
+- Engines that do not speak the standard connection, unless the owner runs a gateway.
 
 **Done when:**
-- With AI off, the product behaves exactly as before, and nothing is sent anywhere.
-- With a local engine and with a cloud engine, unsure meetings get an AI verdict and an "AI:" reason.
-- A test proves that only the D-018 facts are sent.
-- A test proves that an unreachable engine falls back to the rules without delaying any alert.
-- A test proves that a title containing instructions to the model cannot change anything except the verdict.
+- In rules mode the product behaves exactly as before, and nothing is sent anywhere.
+- In AI mode with a local engine, meetings get "AI:" verdicts. The same holds with a cloud engine, checked by hand with the owner's key.
+- Tests prove that:
+  - the whole invite is sent, and overrides are not;
+  - an unreachable engine falls back to the rules without delaying any alert;
+  - hostile text in an invite cannot change anything except the verdict;
+  - the key never appears in settings, logs, or the pipe to the shell.
 
-**Open questions:**
-- None for product. Which engines to support first, and the library, are for the architect.
+**Open questions:** none for product. Which cloud service to check by hand depends on which key the owner has; a local engine alone is enough to accept the build.
