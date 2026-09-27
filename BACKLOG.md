@@ -43,14 +43,23 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - the README links to it too.
   - **Blocked on:** the repository's address. No GitHub repository exists yet. Assumed `https://github.com/TonyMalandain/payAttention`, to be confirmed by the owner.
 - **PG-6 — Apply the Apache License 2.0 (S)** (D-026).
-  - **What changes for the owner:** the project states its licence clearly.
+  - **What changes for the owner:**
+    - GitHub shows "Apache-2.0" on the repository page;
+    - the project states its licence clearly;
+    - nothing it uses conflicts with that licence.
   - **Who it is for:** Installer, and anyone who reuses the code.
   - **Done when:**
-    - a `LICENSE` file holds the full Apache 2.0 text;
-    - the build file's licence field says `Apache-2.0` (replacing `GPL-2.0-or-later`);
-    - each source file carries a one-line licence tag;
-    - the README has a "License" section;
-    - the packed extension includes the licence.
+    - **GitHub recognises it:** `LICENSE` is at the repository root and holds the Apache 2.0 text exactly as published by the Apache Software Foundation, unmodified. GitHub only detects an unmodified text. The copyright line goes in a `NOTICE` file and in the file tags, never inside `LICENSE`.
+    - **`NOTICE`** at the root: "payAttention — Copyright 2026 Tony Malandain" (holder assumed; the owner confirms).
+    - **Build file licence field** says `Apache-2.0`, replacing `GPL-2.0-or-later`.
+    - **Each source file** starts with `SPDX-License-Identifier: Apache-2.0` and the copyright line.
+    - **README** has a "License" section.
+    - **The packed extension** contains `LICENSE` and `NOTICE`, and no third-party code.
+    - **Dependency check, recorded as `THIRD-PARTY.md`** (or a README section):
+      - No package ships inside the extension.
+      - The development-only tools are all under permissive licences (MIT, Apache-2.0, BSD, ISC, BlueOak) and are never shipped.
+      - The GNOME libraries it uses at run time are provided by the system, not copied (LGPL or MPL/LGPL; GNOME Shell GPL-2.0-or-later).
+      - The engineer re-runs this check against the current dependency list, and a new dependency under a copyleft or unknown licence fails the check.
 
 ## Now — needs the owner (cannot be done unattended)
 

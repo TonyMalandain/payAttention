@@ -209,3 +209,14 @@ Append only. Newest at the bottom.
 - **Fact:** No GitHub repository or git remote exists for the project. PG-5 needs the address. Assumed https://github.com/TonyMalandain/payAttention.
 - **Source:** checked with the owner's GitHub login (TonyMalandain).
 - **Touches:** BACKLOG.md PG-5
+
+## 2026-09-27 — Licence consistency checked
+- **Kind:** decision
+- **Fact:** The owner asked that the licence follow GitHub's terms and not conflict with the packages used. Checked:
+  - there are 0 runtime packages;
+  - the 3 development tools and their 79 sub-packages are all permissive and never shipped;
+  - the GNOME libraries used at run time are LGPL, MPL/LGPL or GPL-2.0-or-later, and come from the system.
+
+  No conflict. PG-6 now requires an unmodified Apache `LICENSE` (so GitHub detects it), a `NOTICE` file, SPDX tags, and a recorded dependency check. The copyright holder is assumed to be Tony Malandain.
+- **Source:** the owner; dependency scan by the product manager; GNOME extension review guidelines.
+- **Touches:** decisions.md D-026, BACKLOG.md PG-6
