@@ -426,3 +426,14 @@ Append only. Newest at the bottom.
   - an unreadable calendar is described in plain words (for example `Could not read calendar "Broken": could not connect.`), with no raw error code.
 - **Source:** product manager, reading the sample output.
 - **Touches:** solution.md R-20
+
+## 2026-09-27 — PG-8c accepted; fix round with polish
+- **Kind:** decision
+- **Fact:** PG-8c was accepted in review round 1 with no defects. Product accepted that the JSON `key`/`seriesKey` stay raw: they must match stored overrides, and the JSON bytes are escaped. The fix round carries:
+  - the two wording fixes (all-day rows show no mode; plain words for an unreadable calendar);
+  - closing the `./../` lint bypass that defeats every boundary rule (it protects the owner's decoupling principle);
+  - de-duplicating the plural helper and moving the progress wording next to the other texts;
+  - checking the helpers are gone after a normal exit;
+  - PG-4f (Settings polish and the keyring.js comment).
+- **Source:** reviewer, PG-8c round 1.
+- **Touches:** solution.md R-20
