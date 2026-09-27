@@ -8,6 +8,11 @@
 /** The request timeout by where the engine is. Frozen. (constraints.md, assumed) */
 export const AI_TIMEOUT_MS = Object.freeze({ local: 90000, public: 45000 });
 
+/** The libsecret schema name of the engine keys (ADR-0009). Written by prefs, read by the AI helper. */
+export const ENGINE_KEY_SCHEMA_NAME = 'org.gnome.shell.extensions.payattention.EngineKey';
+/** The schema's one attribute. Its value is always normaliseEndpoint(endpoint). */
+export const ENGINE_KEY_ATTRIBUTE = 'endpoint';
+
 const ENDPOINT = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)$/;
 const DEFAULT_PORTS = { http: 80, https: 443 };
 const HOST_NAME = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;

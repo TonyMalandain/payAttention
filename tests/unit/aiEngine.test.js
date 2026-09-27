@@ -7,7 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     AI_TIMEOUT_MS, normaliseEndpoint, endpointClass, isUsableEndpoint, mayCarryKey, requestTimeoutMs,
-    normaliseModel, aiEngine,
+    normaliseModel, aiEngine, ENGINE_KEY_SCHEMA_NAME, ENGINE_KEY_ATTRIBUTE,
 } from '../../extension/core/aiEngine.js';
 import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
 
@@ -171,5 +171,15 @@ describe('aiEngine', () => {
         assert.equal(aiEngine({}), null);
         assert.equal(aiEngine(null), null);
         assert.equal(aiEngine(undefined), null);
+    });
+});
+
+describe('engine key schema (ADR-0009)', () => {
+    // A stored format shared by prefs (writer) and the AI helper (reader): renaming it orphans every saved key.
+    test('the schema name and its one attribute are fixed strings', () => {
+        assert.equal(typeof ENGINE_KEY_SCHEMA_NAME, 'string');
+        assert.equal(typeof ENGINE_KEY_ATTRIBUTE, 'string');
+        assert.equal(ENGINE_KEY_SCHEMA_NAME, 'org.gnome.shell.extensions.payattention.EngineKey');
+        assert.equal(ENGINE_KEY_ATTRIBUTE, 'endpoint');
     });
 });

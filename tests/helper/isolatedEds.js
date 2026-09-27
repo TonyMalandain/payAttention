@@ -202,6 +202,18 @@ export async function createIsolatedEds(name, baseMs, { withRemote = false } = {
         TZ: 'Asia/Tokyo',
     };
 
+    const bus = await startPrivateBus(env);
+    return { home, env, stop: bus.stop };
+}
+
+/**
+ * Starts `dbus-daemon --session --nofork --print-address=1` with env (never the real bus),
+ * sets env.DBUS_SESSION_BUS_ADDRESS, and returns a stop() that SIGTERMs it and awaits its exit.
+ *
+ * @param {object} env built from scratch by the caller; mutated (bus address added)
+ * @returns {Promise<{stop: () => Promise<void>}>}
+ */
+export async function startPrivateBus(env) {
     const daemon = spawn('dbus-daemon', ['--session', '--nofork', '--print-address=1'],
         { env, stdio: ['ignore', 'pipe', 'inherit'] });
     const exited = new Promise(resolve => daemon.once('exit', resolve));
@@ -217,7 +229,7 @@ export async function createIsolatedEds(name, baseMs, { withRemote = false } = {
         daemon.kill('SIGTERM');
         await exited;
     }
-    return { home, env, stop };
+    return { stop };
 }
 
 /**
@@ -256,6 +268,16 @@ export function runHelper(env, args) {
  * @returns {number} how many processes were killed
  */
 export function killIsolatedCalendarFactory(env) {
+    return killOnPrivateBus(env, 'evolution-calendar-factory');
+}
+
+/**
+ * SIGKILLs every process whose argv[0] basename is programName AND whose
+ * environment carries env's private DBUS_SESSION_BUS_ADDRESS. Never matches by name alone.
+ *
+ * @returns {number} how many were killed
+ */
+export function killOnPrivateBus(env, programName) {
     const busEntry = `DBUS_SESSION_BUS_ADDRESS=${env.DBUS_SESSION_BUS_ADDRESS}`;
     let killed = 0;
     for (const pid of fs.readdirSync('/proc').filter(p => /^\d+$/.test(p))) {
@@ -266,7 +288,7 @@ export function killIsolatedCalendarFactory(env) {
         } catch {
             continue; // gone, or not ours to read
         }
-        if (path.basename(argv0) === 'evolution-calendar-factory' && environ.includes(busEntry)) {
+        if (path.basename(argv0) === programName && environ.includes(busEntry)) {
             process.kill(Number(pid), 'SIGKILL');
             killed++;
         }

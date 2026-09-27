@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "test": "node --test \"tests/unit/**/*.test.js\"",
     "build": "bash scripts/build.sh",
-    "test:helper": "node --test \"tests/helper/**/*.test.js\"",
+    "test:helper": "node --test \"tests/helper/**/*.test.js\" \"tests/ai/**/*.test.js\"",
     "smoke": "bash scripts/smoke.sh",
     "install:local": "bash scripts/install.sh",
     "uninstall:local": "bash scripts/uninstall.sh"

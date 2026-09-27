@@ -9,8 +9,8 @@ import globals from 'globals';
 
 const NO_NODE = { regex: '^node:', message: 'GNOME code cannot import Node modules' };
 const NO_SHELL_SIDE_GI = {
-    regex: '^gi://(ECal|EDataServer|ICalGLib|Gtk|Gdk|Adw)(\\?|$)',
-    message: 'shell-side code may not use EDS or GTK/Adw (boundaries.md)',
+    regex: '^gi://(ECal|EDataServer|ICalGLib|Gtk|Gdk|Adw|Soup|Secret)(\\?|$)',
+    message: 'shell-side code may not use EDS, GTK/Adw, Soup or Secret (boundaries.md)',
 };
 const NO_SYSTEM = { regex: '^system$', message: 'only the helper may import system: System.exit would end the session (boundaries.md)' };
 const TIME_MESSAGE = 'time and randomness are parameters in core/';
@@ -24,7 +24,8 @@ export default [
     },
     {
         // Code that runs in gjs.
-        files: ['extension/**/*.js', 'tests/smoke/**/*.js', 'tests/unit/support/gjs-*.js', 'tests/helper/gjs/**/*.js'],
+        files: ['extension/**/*.js', 'tests/smoke/**/*.js', 'tests/unit/support/gjs-*.js', 'tests/helper/gjs/**/*.js',
+            'tests/ai/gjs/**/*.js'],
         ignores: ['extension/core/**'],
         languageOptions: {
             globals: {
@@ -41,8 +42,8 @@ export default [
     },
     {
         // Node code.
-        files: ['eslint.config.js', 'tests/unit/**/*.js', 'tests/helper/**/*.js', 'scripts/**/*.js'],
-        ignores: ['tests/unit/support/gjs-*.js', 'tests/helper/gjs/**'],
+        files: ['eslint.config.js', 'tests/unit/**/*.js', 'tests/helper/**/*.js', 'tests/ai/**/*.js', 'scripts/**/*.js'],
+        ignores: ['tests/unit/support/gjs-*.js', 'tests/helper/gjs/**', 'tests/ai/gjs/**'],
         languageOptions: { globals: globals.node },
     },
     {
@@ -80,8 +81,29 @@ export default [
                         message: 'helper may use only ECal, EDataServer, ICalGLib, Gio, GioUnix, GLib',
                     },
                     { regex: '^\\.\\./core/(?!protocol\\.js$)', message: 'helper may import only core/protocol.js' },
-                    { regex: '^\\.\\./(shell|ui)/', message: 'helper may not import shell/ or ui/' },
+                    { regex: '^\\.\\./(shell|ui|ai)/', message: 'helper may not import shell/, ui/ or ai/' },
                     { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'helper may not import extension.js or prefs.js' },
+                    NO_NODE,
+                ],
+            }],
+        },
+    },
+    {
+        files: ['extension/ai/**/*.js'],
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [
+                    { regex: '^resource:', message: 'the AI helper runs outside the shell: no resource:// imports' },
+                    {
+                        regex: '^gi://(?!(Soup|Secret|Gio|GioUnix|GLib)(\\?|$))',
+                        message: 'the AI helper may use only Soup, Secret, Gio, GioUnix, GLib',
+                    },
+                    {
+                        regex: '^\\.\\./core/(?!(aiProtocol|aiPrompt|aiEngine)\\.js$)',
+                        message: 'the AI helper may import only core/aiProtocol.js, aiPrompt.js and aiEngine.js (ADR-0010)',
+                    },
+                    { regex: '^\\.\\./(shell|ui|helper)/', message: 'the AI helper may not import shell/, ui/ or helper/' },
+                    { regex: '^\\.\\./(extension|prefs)\\.js$', message: 'the AI helper may not import extension.js or prefs.js' },
                     NO_NODE,
                 ],
             }],
@@ -93,7 +115,7 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\.\\./(ui|helper)/', message: 'shell/ may not import ui/ or helper/' },
+                    { regex: '^\\.\\./(ui|helper|ai)/', message: 'shell/ may not import ui/, helper/ or ai/' },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -106,7 +128,7 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\.\\./(shell|helper)/', message: 'ui/ may not import shell/ or helper/' },
+                    { regex: '^\\.\\./(shell|helper|ai)/', message: 'ui/ may not import shell/, helper/ or ai/' },
                     { regex: '^\\.\\./core/(?!display\\.js$)', message: 'ui/ may import only display helpers (core/display.js)' },
                     NO_NODE,
                     NO_SYSTEM,
@@ -120,7 +142,7 @@ export default [
             'no-restricted-imports': ['error', {
                 patterns: [
                     NO_SHELL_SIDE_GI,
-                    { regex: '^\\./(helper|core)/', message: 'extension.js may not import helper/ or core/ directly' },
+                    { regex: '^\\./(helper|core|ai)/', message: 'extension.js may not import helper/, core/ or ai/ directly' },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
@@ -132,8 +154,8 @@ export default [
         rules: {
             'no-restricted-imports': ['error', {
                 patterns: [
-                    { regex: '^gi://(Clutter|Meta|St|Shell)(\\?|$)', message: 'prefs runs outside the shell: no Clutter/Meta/St/Shell' },
-                    { regex: '^\\./(shell|ui|helper)/', message: 'prefs may not import shell/, ui/ or helper/' },
+                    { regex: '^gi://(Clutter|Meta|St|Shell|Soup)(\\?|$)', message: 'prefs runs outside the shell and never uses the network: no Clutter/Meta/St/Shell/Soup' },
+                    { regex: '^\\./(shell|ui|helper|ai)/', message: 'prefs may not import shell/, ui/, helper/ or ai/' },
                     NO_NODE,
                     NO_SYSTEM,
                 ],
