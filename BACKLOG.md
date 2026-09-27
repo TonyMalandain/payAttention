@@ -96,6 +96,14 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
   7. Sound (PG-7): run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
+  8. AI mode (PG-4):
+     - Settings → Verdicts: pick "AI".
+     - Enter an endpoint and model. For example, install Ollama, then `ollama pull llama3.1:8b`, endpoint `http://127.0.0.1:11434/v1`, model `llama3.1:8b`, no key.
+     - Press "Test connection" and get "Yes".
+     - Open the menu: today's meetings show "AI: <reason>" within a few minutes.
+     - Stop the engine: the menu says "AI unavailable — using rules", and alerts still come.
+     - Start it again: AI answers return within 5 minutes.
+     - Note: the GPU driver is not built for the running kernel, so a local model runs on the processor and may be slow.
   - The full checklist is in `docs/architecture/testing-and-build.md`, under the real-session section.
 
 ## Next — polish (PG-4f, size S)

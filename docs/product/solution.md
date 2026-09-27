@@ -143,13 +143,15 @@ Environment requirements come first.
 - **Serves:** the author asked for a system "smart enough to understand meetings on my calendar I cannot afford to miss and meeting that are just placeholder". Fixed rules miss cases like a personal task that matters, and the owner "has to carefully craft" corrections by hand today.
 - **Who it serves:** Calendar owner.
 - **What they get:** a choice of two modes. Rules mode works as before. In AI mode every meeting is judged by the AI from the whole invite, with a one-line reason marked "AI:". Their own overrides always win. If the engine cannot be reached, the rules decide and the menu says so. An alert never waits for the AI.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ### R-19 — The owner connects the AI engine of their choice
 - **Serves:** calendars hold sensitive business information (R-3). Only the owner can weigh smarter verdicts against sending meetings off the machine.
 - **Who it serves:** Installer.
 - **What they get:** rules mode until they switch. They then enter an endpoint, a model and an API key for any engine, on their own machine or in the cloud, test the connection, and can switch at any time. Settings say plainly that the whole invite is sent, and that with a cloud engine it leaves the computer. The key is kept in the desktop's password store.
-- **State:** intended
+- **State:** real
+- **Evidence:** verified in code
 
 ## What the solution is not
 

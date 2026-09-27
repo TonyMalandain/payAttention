@@ -379,3 +379,9 @@ Append only. Newest at the bottom.
   Accepted: saving into a locked password store may show GNOME's own unlock prompt, because the owner pressed the button. The "never prompt" rule applies to the background helper.
 - **Source:** reviewer, PG-4d round 1.
 - **Touches:** solution.md R-19
+
+## 2026-09-27 — AI mode complete; reinstalled
+- **Kind:** solution
+- **Fact:** All AI-mode tickets (PG-4a to PG-4e, with PG-4a2, PG-4a3 and PG-4c2) are accepted. The full checks were run by the product manager on the combined tree: lint clean, 1370 unit, build, 188 helper, smoke PASS. R-18 and R-19 are now `real` (verified in code). The extension was reinstalled with `npm run install:local`; it loads at the owner's next login. The real-session check of AI mode is PG-2 step 8.
+- **Source:** product manager.
+- **Touches:** solution.md R-18, R-19; BACKLOG.md PG-2

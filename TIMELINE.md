@@ -24,3 +24,4 @@ This project was an experiment: build a working program from one high-level prom
 |---|---|
 | Owner reported the missing uninstall; work resumed | 2026-09-26, after the first stop |
 | Uninstall accepted | 2026-09-26T07:08:20-04:00 |
+| AI mode (PG-4) complete, all checks green, reinstalled | 2026-09-27T15:18:57-04:00 |
