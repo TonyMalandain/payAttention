@@ -674,7 +674,14 @@ amendments). The helper never prompts to unlock.
 `POST <endpoint>/chat/completions`, `Content-Type: application/json`, and
 `Authorization: Bearer <key>` only when a key is saved for the endpoint *and*
 the URL is `https:` or a loopback `http:`. A key is never sent over `http:`
-to a private host. The body:
+to a private host. **A loopback endpoint is always reached directly, never
+through a proxy**, whatever the desktop's proxy settings say: a proxy would
+receive the bearer key in clear and the invite would leave the computer,
+breaking "stays on this computer". GNOME's default ignore list already covers
+loopback; this rule makes it hold when the owner's list does not. Other
+endpoints honour the desktop proxy (an `https:` key travels inside the TLS
+tunnel). libsoup 3: a session built with `proxy_resolver: null` uses no proxy;
+the default is the GNOME resolver (both measured 2026-09-27). The body:
 
 ```jsonc
 {"model":"…",

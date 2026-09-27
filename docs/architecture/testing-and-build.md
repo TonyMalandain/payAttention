@@ -55,8 +55,13 @@ The PRD's "Done when" list maps onto core tests:
   meeting invalidating its alert state; the heads-up not consumed while idle.
 - **Stored format:** occurrence, series and place keys; pruning; a corrupt
   `alert-state` string yielding empty state.
-- **Budget:** `plan` over 500 occurrences under 1 ms (a benchmark-style test with
-  a generous margin, so it catches order-of-magnitude regressions only).
+- **Budget:** `plan` over 500 occurrences under 1 ms, `judge` over 2 000 under
+  20 ms, AI-mode `judge` under 200 ms (benchmark-style tests with a generous
+  margin, so they catch order-of-magnitude regressions only). Each bound is
+  checked against the **fastest** of at least 10 timed runs after warm-up, not
+  the mean: `npm test` runs files in parallel, and other load only ever adds
+  time, so the minimum is the stable figure. Never raise a bound to silence a
+  flake, and never serialise the suite for it.
 
 ## Layer 2 — helper integration (real EDS, fake data)
 
@@ -234,8 +239,9 @@ waits). The shell exits when `run()` resolves. The script prints one
 greps for it and also fails on any `JS ERROR` line, any `JS WARNING` naming
 payattention, any "has been already disposed" line (its stack trace may name
 only shell files), any of our own failure log codes (`tick-failed`,
-`destroy-failed`, `grab-failed`, `protocol-mismatch`, `helper-spawn-failed`, and
-the helper's `registry-failed`, `helper-failed`), and any `Gjs-CRITICAL` whose
+`destroy-failed`, `grab-failed`, `protocol-mismatch`, `helper-spawn-failed`,
+`ai-failed`, `ai-protocol-mismatch`, `ai-spawn-failed`, and the helper's
+`registry-failed`, `helper-failed`), and any `Gjs-CRITICAL` whose
 line or stack trace mentions payattention.
 
 What the smoke script checks:

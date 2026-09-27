@@ -24,7 +24,7 @@ open window go with it. So:
 - **Per-tick work** (`plan` + UI reconcile with an unchanged Plan): under 1 ms for
   500 judged occurrences (assumed; to be measured by a core benchmark test).
 - **`judge`** runs only when its inputs change (new snapshot, settings, overrides),
-  not per tick. Under 20 ms for 2 000 occurrences (assumed).
+  not per tick. Under 20 ms for 2 000 occurrences (assumed; measured about 7 ms mean on the owner's machine, 2026-09-27). Timed as the best of several runs, not the mean (`testing-and-build.md` Layer 1).
 - **A modal grab is never left behind.** Every exit from the takeover releases it.
 
 ## Timing
@@ -47,7 +47,7 @@ open window go with it. So:
 | AI watchdog in the shell | request timeout + 10 s, then kill and respawn the AI helper | assumed |
 | AI requests in flight | at most 1, soonest meeting first | local engines serialise anyway; keeps cloud rate limits simple. Nothing waits for the queue. Revisit trigger in ADR-0010 |
 | AI retry per occurrence | 1 min, doubling, capped at 30 min; not advanced by an unreachable failure of an ask sent while the engine was already down | assumed; `interfaces.md` §6.5 |
-| AI engine pause | `network`/`timeout`/`tls`/`server`: 30 s, doubling, capped at 90 s, reset by any engine reply; `auth`/`config`/`no-key`: 30 min or until an engine setting changes; `rate-limited`: `Retry-After` (≤ 30 min) or 5 min | 90 s cap: D-031 (answers resume within 5 min of the engine returning; worst case about 281 s for a local engine, §6.5); the rest assumed |
+| AI engine pause | `network`/`timeout`/`tls`/`server`: 30 s, doubling, capped at 90 s, reset by a `verdict` or `bad-reply` (the engine answered) or an engine change, never by `auth`/`rate-limited`, which set their own pause; `auth`/`config`/`no-key`: 30 min or until an engine setting changes; `rate-limited`: `Retry-After` (≤ 30 min) or 5 min | 90 s cap: D-031 (answers resume within 5 min of the engine returning; worst case about 281 s for a local engine, §6.5); the rest assumed |
 | AI recovery after an unreachable engine returns | first ask within 91 s (nothing in flight), within 191 s (a failing ask in flight); first answer within 5 min | D-031 |
 | AI request budget | ≤ 120 per rolling hour and ≤ 1 000 per rolling 24 h, per endpoint and model; in memory. Spends for unreachable and `lost` outcomes are returned, so an outage never lowers it (D-031) | assumed. AI mode asks about every meeting, and every RSVP re-asks one. The owner's calendar needs about 5–30 an hour at first sight and a handful after that (estimated from 26 occurrences in 7 days, measured) |
 | First-sight AI verdicts | rule verdicts stand until answered, then turn into AI verdicts one at a time. A changed invite keeps its previous AI answer while it is re-asked | ADR-0010 |

@@ -11,7 +11,7 @@ Every technology in use and why. Build-vs-adopt calls are at the bottom.
 | GSettings (dconf) | All durable state | Atomic writes, change signals, shared with prefs, visible to `dconf dump` (ADR-0003). |
 | GTK 4 + libadwaita | `prefs.js` | What the shell's preferences host provides. |
 | `Gio.AppInfo.launch_default_for_uri_async` | "Join" | Opens the owner's default browser or meeting app; no network code of ours. |
-| libsoup 3.6 (`gi://Soup?version=3.0`), in the AI helper only | HTTP to the AI engine (R-18) | Part of GNOME; async; honours the desktop's proxy settings; verifies TLS. Imports from gjs (measured 2026-09-26). gjs has no `fetch` (measured) (ADR-0007). |
+| libsoup 3.6 (`gi://Soup?version=3.0`), in the AI helper only | HTTP to the AI engine (R-18) | Part of GNOME; async; honours the desktop's proxy settings, except that loopback endpoints are always reached directly (`interfaces.md` §6.7); verifies TLS. Imports from gjs (measured 2026-09-26). gjs has no `fetch` (measured) (ADR-0007). |
 | OpenAI Chat Completions protocol | The one wire format to every AI engine | Served by Ollama, llama.cpp, vLLM, LM Studio, OpenAI, OpenRouter, Groq, Mistral, Gemini (compat path), Anthropic (compat endpoint), and LiteLLM Proxy (ADR-0007). |
 | libsecret 0.21.8 (`gi://Secret`) + gnome-keyring | AI engine keys (R-19) | Encrypted, unlocked at login, already running (`org.freedesktop.secrets`, measured). Written by prefs, read by the AI helper (ADR-0009). |
 | Node 24, `node:test`, `node:assert` | Unit tests of `core/` (dev only) | Present on the machine; zero dependencies; runs the ESM core unchanged (ADR-0002). |

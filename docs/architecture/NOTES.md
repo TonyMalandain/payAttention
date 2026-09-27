@@ -617,3 +617,31 @@ Append only. Newest at the bottom.
 - **Why:** GNOME loads prefs.js from the root; a directory for one file is structure without a second caller. Acting on unapplied fields could save a key under an address it is never sent to. A shell script cannot import core after removal. broadwayd without `-u` listens on TCP on every interface.
 - **Source:** docs/plans/PG-4d.md:41-42, 56, 83; docs/plans/PG-4e.md:45; inbox.
 - **Touches:** interfaces.md §6.7, §6.9; boundaries.md; data.md; testing-and-build.md — folded.
+
+## 2026-09-27 — Loopback endpoints bypass the proxy
+- **Kind:** interface
+- **Fact:** An ask to a loopback endpoint never goes through a proxy; other endpoints honour the desktop proxy.
+- **Why:** A proxy whose ignore list lacks loopback would receive the bearer key in clear over `http:` and carry the invite off the computer, breaking the "stays on this computer" claim. Option not taken: leave it to GNOME's default ignore list (true by default, but the owner can change it). Not yet in code: `extension/ai/transport.js:45` builds one session with the default resolver. No key can be saved before the settings page (PG-4d), so the exposure starts there.
+- **Source:** inbox (PG-4b review); `gsettings get org.gnome.system.proxy ignore-hosts` = localhost, 127.0.0.0/8, ::1; gjs: `Soup.Session` default `proxy_resolver` is GProxyResolverGnome, `proxy_resolver: null` gives null (measured 2026-09-27).
+- **Touches:** interfaces.md §6.7, stack.md — folded.
+
+## 2026-09-27 — Engine pause reset aligned with §6.5
+- **Kind:** constraint
+- **Fact:** The unreachable backoff resets on `verdict`, `bad-reply` or an engine change, not on "any engine reply".
+- **Why:** `auth` and `rate-limited` are replies too but set their own longer pause; the §6.5 table was the intent and the row was drift.
+- **Source:** interfaces.md §6.5 table; inbox (PG-4c plan).
+- **Touches:** constraints.md — folded.
+
+## 2026-09-27 — Smoke failure codes include the AI codes
+- **Kind:** constraint
+- **Fact:** The smoke fails on `ai-failed`, `ai-protocol-mismatch`, `ai-spawn-failed` as well.
+- **Why:** The document was one release behind `scripts/smoke.sh:106`.
+- **Source:** scripts/smoke.sh:105-106.
+- **Touches:** testing-and-build.md Layer 3 — folded.
+
+## 2026-09-27 — Timing guards: keep the bounds, time the fastest run
+- **Kind:** constraint
+- **Fact:** The 20 ms judge bound stays; the tests compare the fastest of at least 10 timed runs after warm-up instead of the mean of 10 after 2.
+- **Why:** Measured judge over 2 000 events at 5.4–7.7 ms mean, 9.5–10.8 ms worst single run, alone; the bound has about 3x margin, so the flake is measurement, not budget. Parallel test files and GC only add time, so the minimum is stable while still catching an order-of-magnitude regression. Options not taken: raising the bound (hides real regressions), running the budget file serially (slows the suite and CI still shares the machine). Same change applies to the plan and AI-mode guards in the same file.
+- **Source:** tests/unit/budget.test.js:15-22, 61-65; ad hoc run of the same fixture, 3x30 runs (measured 2026-09-27); inbox (PG-4c).
+- **Touches:** testing-and-build.md Layer 1, constraints.md — folded.
