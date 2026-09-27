@@ -410,3 +410,10 @@ Append only. Newest at the bottom.
 - **Fact:** ADR-0011 records the owner's principle: core rules in `core/`, GNOME-free orchestration in `app/`, and GNOME as adapters, with dependencies pointing inward. Two leaks block the preview: the verdict pipeline is private to the alert controller, and the store port has no read-only side. The calendar snapshot is source-neutral, so an O365 or Google reader could feed it. Product accepted the double engine asks (D-033). The code stays inside `extension/` in separated folders (the architect's recommendation). The owner may ask for a top-level split before ticket PG-8a lands. Other findings accepted: the preview needs the desktop session (no SSH), and the waits are assumed at 30 s for calendars and at most 5 min for AI answers. The inbox was emptied; the architect had already folded its entries.
 - **Source:** architect, ADR-0011, ADR-0012, interfaces.md §7.
 - **Touches:** decisions.md D-033, BACKLOG.md PG-8
+
+## 2026-09-27 — PG-8c plan taken
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The preview runs from the installed copy. Installing needs no logout, so `npm run install:local` then `npm run preview` meets R-20. A run straight from the checkout is not offered (ADR-0012). The plan first fixes a real GNOME leak: `StoreReader` used Shell-only `connectObject`, which would have thrown in a terminal. The README states the D-033 double-ask cost in plain words.
+- **Source:** senior engineer, PG-8c plan.
+- **Touches:** solution.md R-20
