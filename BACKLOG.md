@@ -36,7 +36,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
       - untested dial-rule edges.
 
       It also adds: HTML to plain text first, entities and `%xx` decoded, and one shared list of invisible marks. Done when every variant from the PG-4a2 review is removed by a test, and the agenda text survives.
-    - **PG-4b — AI helper (M).** A separate process that talks to the engine and reads the key from the password store. Done when tests against a fake engine pass, with no real cloud call.
+    - **PG-4b — AI helper (M). ACCEPTED** (review round 1 fix: the 60 s socket timeout). A separate process that talks to the engine and reads the key from the password store. Done when tests against a fake engine pass, with no real cloud call.
     - **PG-4c — Shell side (M).** The queue, keeping old answers while asking again, the fallback, the budget, and "AI:" / "AI unavailable" in the menu. Done when no alert ever waits on the AI (tested). Also: both helper spawns (calendar and AI) drop `G_MESSAGES_DEBUG` from the child environment per `interfaces.md` §1 "Environment", tested.
     - **PG-4d — Settings page (S).** Mode switch, endpoint, model, key, "Test connection", and the warning. The warning must include the D-030 wording: "Passcodes and dial-in numbers are removed first, on a best-effort basis." "Test connection" also drops `G_MESSAGES_DEBUG` from the helper it spawns (§1 "Environment").
     - **PG-4e — Uninstall `--purge` (S).** Also erases the key and the stored AI answers.
