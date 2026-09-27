@@ -96,6 +96,11 @@ const CASES = [
     ['extension/prefs.js', "import {x} from './ai/main.js'; export {x};", 'error'],
     ['extension/helper/probe.js', "import Soup from 'gi://Soup?version=3.0'; export {Soup};", 'error'],
     ['extension/helper/probe.js', "import {x} from '../ai/chat.js'; export {x};", 'error'],
+    // Every shell spawn goes through spawnHelper, which applies interfaces.md §1 "Environment".
+    ['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const p = Gio.Subprocess.new(['x'], 0);", 'error'],
+    ['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const l = new Gio.SubprocessLauncher({});", 'error'],
+    ['extension/shell/helperProcess.js', "import Gio from 'gi://Gio'; export const l = new Gio.SubprocessLauncher({});", 'ok'],
+    ['extension/shell/probe.js', "import Gio from 'gi://Gio'; export const f = Gio.SubprocessFlags.STDIN_PIPE;", 'ok'],
 ];
 
 describe('lint enforces the module boundaries', () => {

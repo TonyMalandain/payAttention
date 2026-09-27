@@ -8,6 +8,12 @@
 
 /** The protocol version both sides must speak. */
 export const PROTOCOL_VERSION = 1;
+/**
+ * Environment variables every helper spawner removes from the child's environment
+ * (interfaces.md §1 "Environment"): with G_MESSAGES_DEBUG set, GLib writes library
+ * DEBUG/INFO lines, the AI endpoint among them, to the helper's stdout. Frozen.
+ */
+export const HELPER_ENV_UNSET = Object.freeze(['G_MESSAGES_DEBUG']);
 /** The longest accepted line, in characters. */
 export const MAX_LINE_LENGTH = 4 * 1024 * 1024;
 /** The longest accepted event description, in characters. */

@@ -9,6 +9,9 @@ import {
     calendarLabel, stepHeadline, countdownCaption,
 } from '../core/display.js';
 
+/** The menu line while a waiting meeting is decided by the rules because of an AI failure (PRD addendum, D-031). */
+export const AI_UNAVAILABLE_TEXT = 'AI unavailable — using rules';
+
 /** Travel times the owner can pick, in minutes (PRD §4). */
 export const TRAVEL_CHOICES_MIN = Object.freeze([10, 15, 20, 30, 45, 60, 90]);
 
@@ -30,13 +33,15 @@ const MAX_NAMED_CALENDARS = 3;
  */
 /**
  * @typedef {{indicator: {text: string|null, highlighted: boolean, flashing: boolean, warning: boolean},
- *   menu: {status: string|null, meetings: MeetingRow[], signature: string},
+ *   menu: {status: string|null, aiStatus: string|null, meetings: MeetingRow[], signature: string},
  *   alert: AlertView|null}} View
  */
 
 // A meeting switched to in person with no place has nowhere to store a travel time.
 const travelChoices = j => (j.placeKey !== null ? TRAVEL_CHOICES_MIN : []);
 const defaultMark = j => (j.travelIsDefault ? ' (default)' : '');
+// Core already writes an AI reason as "AI: <reason>" (verdict.js), so it is shown as it is.
+const reasonLine = j => (j.reasonCode === 'ai-must' || j.reasonCode === 'ai-ignore' ? j.reason : `Why: ${j.reason}`);
 
 function buildAlert(chosenPlan, j, isTest, judgedByKey, now) {
     const c = chosenPlan.primary;
@@ -66,7 +71,7 @@ function buildAlert(chosenPlan, j, isTest, judgedByKey, now) {
         timeLine,
         countdown: formatCountdown(toDeadline),
         countdownCaption: countdownCaption(j.mode, toDeadline),
-        reason: `Why: ${j.reason}`,
+        reason: reasonLine(j),
         travel,
         also,
         canJoin: j.joinUrl !== null,
@@ -90,7 +95,7 @@ function buildRow(j) {
         key: j.key,
         label: `${j.allDay ? 'All day' : formatClock(j.start)}  ${oneLine(j.title, 40)}`,
         detail: `${verdictText} · ${modeText}${j.verdictOverridden ? ' · overridden' : ''}`,
-        reason: `Why: ${j.reason}`,
+        reason: reasonLine(j),
         isMust: j.verdict === 'must',
         overridden: j.verdictOverridden,
         recurring: j.recurring,
@@ -153,6 +158,7 @@ function signatureOf(rows) {
  * @param {ReadonlyMap<string, JudgedOccurrence>} p.judgedByKey real, by key
  * @param {Health} p.health
  * @param {number} p.now
+ * @param {'off'|'ok'|'unavailable'} p.aiStatus the AI queue's status (aiQueue.js aiStatusOf decides it)
  * @returns {View}
  */
 export function buildView(p) {
@@ -174,6 +180,7 @@ export function buildView(p) {
         },
         menu: {
             status: statusLine(health, meetings.length, now),
+            aiStatus: p.aiStatus === 'unavailable' ? AI_UNAVAILABLE_TEXT : null,
             meetings,
             signature: signatureOf(meetings),
         },

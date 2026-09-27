@@ -26,6 +26,8 @@
  *   largeMeetingSize:number,defaultTravelMinutes:number,ai?:AiJudgeConfig|null}} JudgeConfig */
 /** @typedef {{engineTag:string,utcOffsetMinutes:number}} AiJudgeConfig   engineTag from aiEngine(); offset an integer -840..840 */
 /** @typedef {Record<string,{fp:string,verdict:'must'|'ignore',reason:string}>} AiAnswers   occurrence key -> stored answer; other fields (such as `at`) ignored */
+/** @typedef {{fp:string,verdict:'must'|'ignore',reason:string,at:number}} StoredAiAnswer   one item of data.md "AI answers" */
+/** @typedef {{v:1,items:Readonly<Record<string,Readonly<StoredAiAnswer>>>}} StoredAiAnswers   exactly data.md "AI answers"; items is a valid AiAnswers for judge */
 
 /** The bounded invite sent to the AI engine (interfaces.md §6.2, D-024), keys in INVITE_FIELDS order.
  * @typedef {{title:string,calendar:string,start:string,minutes:number,allDay:boolean,recurring:boolean,

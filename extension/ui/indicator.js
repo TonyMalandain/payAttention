@@ -51,6 +51,10 @@ class Indicator extends PanelMenu.Button {
         this._status.label.name = 'payattention-menu-status';
         this._status.visible = false;
         this.menu.addMenuItem(this._status);
+        this._aiStatus = new PopupMenu.PopupMenuItem('', { reactive: false, can_focus: false });
+        this._aiStatus.label.name = 'payattention-menu-ai-status';
+        this._aiStatus.visible = false;
+        this.menu.addMenuItem(this._aiStatus);
         this._meetings = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._meetings);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -80,6 +84,9 @@ class Indicator extends PanelMenu.Button {
         this._status.visible = menu.status !== null;
         if (menu.status !== null)
             setText(this._status.label, menu.status);
+        this._aiStatus.visible = menu.aiStatus !== null;
+        if (menu.aiStatus !== null)
+            setText(this._aiStatus.label, menu.aiStatus);
 
         if (menu.signature === this._signature)
             return;

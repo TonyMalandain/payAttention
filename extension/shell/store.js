@@ -6,11 +6,12 @@
 import GLib from 'gi://GLib';
 
 import { parseAlertState, serializeAlertState } from '../core/alertState.js';
+import { parseAiAnswers, serializeAiAnswers } from '../core/aiAnswers.js';
 import { isExpiredOccurrenceKey } from '../core/keys.js';
 import { SETTINGS_KEYS, INTERNAL_KEYS } from './settingsKeys.js';
 
-// A burst of actions is one write (data.md "Alert state").
-const ALERT_STATE_FLUSH_MS = 500;
+// A burst of writes to one key is one write (data.md).
+const FLUSH_DELAY_MS = 500;
 
 const READERS = {
     int: (settings, key) => settings.get_int(key),
@@ -26,9 +27,8 @@ export class Store {
      */
     constructor(settings, onChange) {
         this._settings = settings;
-        this._pending = null;
-        this._flushId = 0;
-        this._lastWritten = null;
+        // GSettings key → {pending: string|null, lastWritten: string|null, flushId: number}
+        this._coalesced = new Map();
         settings.connectObject('changed', (_s, key) => {
             if (!INTERNAL_KEYS.includes(key))
                 onChange();
@@ -65,25 +65,44 @@ export class Store {
         const state = parseAlertState(text);
         if (text !== '' && serializeAlertState(state) !== text)
             console.warn('payattention: alert-state-corrupt');
-        this._lastWritten = text;
+        this._entry('alert-state').lastWritten = text;
         return state;
     }
 
     /**
-     * Store the alert state, coalesced: written ALERT_STATE_FLUSH_MS after the
+     * Store the alert state, coalesced: written FLUSH_DELAY_MS after the
      * first of a burst, or at destroy().
      *
      * @param {import('../core/types.js').AlertState} state
      */
     writeAlertState(state) {
-        this._pending = serializeAlertState(state);
-        if (this._flushId)
-            return;
-        this._flushId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ALERT_STATE_FLUSH_MS, () => {
-            this._flushId = 0;
-            this._flush();
-            return GLib.SOURCE_REMOVE;
-        });
+        this._writeCoalesced('alert-state', serializeAlertState(state));
+    }
+
+    /**
+     * The stored AI answers. A corrupt or partly invalid value is logged once
+     * ('payattention: ai-verdicts-corrupt') and read as what could be kept.
+     *
+     * @returns {import('../core/types.js').StoredAiAnswers}
+     */
+    readAiAnswers() {
+        const text = this._settings.get_string('ai-verdicts');
+        const answers = parseAiAnswers(text);
+        if (text !== '' && serializeAiAnswers(answers) !== text)
+            console.warn('payattention: ai-verdicts-corrupt');
+        this._entry('ai-verdicts').lastWritten = text;
+        return answers;
+    }
+
+    /**
+     * Store the AI answers, coalesced exactly like writeAlertState: written
+     * FLUSH_DELAY_MS after the first of a burst, or at destroy(). Writing the
+     * text already stored does nothing.
+     *
+     * @param {import('../core/types.js').StoredAiAnswers} answers
+     */
+    writeAiAnswers(answers) {
+        this._writeCoalesced('ai-verdicts', serializeAiAnswers(answers));
     }
 
     /** @returns {{dataAt: number|null, providerAt: number|null}} a stored 0 reads as null (unknown) */
@@ -143,25 +162,50 @@ export class Store {
         }
     }
 
-    /** Flushes a pending alert-state write and disconnects. */
+    /** Flushes every pending coalesced write and disconnects. */
     destroy() {
         if (!this._settings)
             return;
-        if (this._flushId) {
-            GLib.Source.remove(this._flushId);
-            this._flushId = 0;
+        for (const [key, entry] of this._coalesced) {
+            if (entry.flushId) {
+                GLib.Source.remove(entry.flushId);
+                entry.flushId = 0;
+            }
+            this._flushKey(key);
         }
-        this._flush();
         this._settings.disconnectObject(this);
         this._settings = null;
     }
 
-    _flush() {
-        if (this._pending !== null && this._pending !== this._lastWritten) {
-            this._settings.set_string('alert-state', this._pending);
-            this._lastWritten = this._pending;
+    _entry(key) {
+        let entry = this._coalesced.get(key);
+        if (!entry) {
+            entry = { pending: null, lastWritten: null, flushId: 0 };
+            this._coalesced.set(key, entry);
         }
-        this._pending = null;
+        return entry;
+    }
+
+    /** The first write of a burst arms one timeout; later writes replace what is pending. */
+    _writeCoalesced(key, text) {
+        const entry = this._entry(key);
+        entry.pending = text;
+        if (entry.flushId)
+            return;
+        entry.flushId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, FLUSH_DELAY_MS, () => {
+            entry.flushId = 0;
+            this._flushKey(key);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _flushKey(key) {
+        const entry = this._entry(key);
+        if (entry.pending !== null && entry.pending !== entry.lastWritten) {
+            this._settings.set_string(key, entry.pending);
+            entry.lastWritten = entry.pending;
+        }
+        entry.pending = null;
     }
 
     _readDict(key) {

@@ -69,9 +69,18 @@ function countByPrefix(actor, prefix) {
 
 const stageFind = name => findByName(global.stage, name);
 
-/** Helper processes started from the smoke home's installed extension only. */
+/** Calendar helper processes started from the smoke home's installed extension only. */
 function helperPids(home) {
-    const needle = `${home}/data/gnome-shell/extensions/${UUID}/helper/main.js`;
+    return pidsRunning(`${home}/data/gnome-shell/extensions/${UUID}/helper/main.js`);
+}
+
+/** AI helper processes started from the smoke home's installed extension only (none in rules mode). */
+function aiHelperPids(home) {
+    return pidsRunning(`${home}/data/gnome-shell/extensions/${UUID}/ai/main.js`);
+}
+
+/** Processes whose command line contains `needle`. */
+function pidsRunning(needle) {
     const pids = [];
     const children = Gio.File.new_for_path('/proc').enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
     let info;
@@ -187,6 +196,10 @@ async function checkIndicator(name, home) {
     check(!shown || status.text === 'No more meetings today', name,
         `unexpected menu status "${status.text}" (Reading…, or a stale warning for local calendars)`);
     check(helperPids(home).length === 1, name, `expected 1 helper process, found ${helperPids(home).length}`);
+    check(aiHelperPids(home).length === 0, name, `rules mode: expected no AI helper, found ${aiHelperPids(home).length}`);
+    const aiStatus = findByName(Main.panel.statusArea.payattention.menu.actor, 'payattention-menu-ai-status');
+    check(aiStatus, name, 'no AI status actor');
+    check(!aiStatus.get_parent().visible, name, `the AI status line is shown in rules mode: "${aiStatus.text}"`);
 }
 
 async function checkDisabled(name, home) {
@@ -199,6 +212,7 @@ async function checkDisabled(name, home) {
     check(ourModalEntries().length === 0, name, 'a modal entry of ours remains');
     check(!grabIsOurs(), name, 'a grab of ours remains');
     await mustWait(() => helperPids(home).length === 0, 3000, name, 'the helper is still running');
+    check(aiHelperPids(home).length === 0, name, `an AI helper is running (${aiHelperPids(home).length})`);
 }
 
 /**
@@ -505,6 +519,7 @@ async function runLadder() {
             ourModalEntries().length === 0 && !grabIsOurs(), 2000, '6-ack', `the takeover or our grab remains (${clicked})`);
         await Scripting.sleep(3000);
         check(!stageFind('payattention-takeover') && !stageFind('payattention-card'), '6-ack', 'an alert came back');
+        check(aiHelperPids(home).length === 0, '6-ack', `rules mode: an AI helper ran during the ladder (${aiHelperPids(home).length})`);
 
         // 6b. The worst-case alert keeps every button on screen and the title to two lines.
         await checkWorstCase('6b-worst-case', home);

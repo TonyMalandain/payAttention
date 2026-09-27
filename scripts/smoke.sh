@@ -103,7 +103,7 @@ grep -q '^PAYATTENTION-SMOKE PASS' "$T/shell.log" || fail=1
 # "already disposed" anywhere: its stack trace often names only shell files (a menu
 # item destroyed during its own activate() did).
 if grep -E -e 'JS ERROR' -e 'JS WARNING.*payattention' -e 'has been already disposed' \
-        -e 'payattention: (tick-failed|destroy-failed|grab-failed|protocol-mismatch|helper-spawn-failed)' \
+        -e 'payattention: (tick-failed|destroy-failed|grab-failed|protocol-mismatch|helper-spawn-failed|ai-failed|ai-protocol-mismatch|ai-spawn-failed)' \
         -e 'payattention-helper: (registry-failed|helper-failed)' "$T/shell.log"; then
     fail=1
 fi

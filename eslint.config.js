@@ -14,6 +14,7 @@ const NO_SHELL_SIDE_GI = {
 };
 const NO_SYSTEM = { regex: '^system$', message: 'only the helper may import system: System.exit would end the session (boundaries.md)' };
 const TIME_MESSAGE = 'time and randomness are parameters in core/';
+const SPAWN_MESSAGE = 'start helpers with spawnHelper() from shell/helperProcess.js (interfaces.md §1 "Environment")';
 
 export default [
     { ignores: ['node_modules/**', 'dist/**', '.test-home/**', '.smoke-home/**'] },
@@ -120,6 +121,15 @@ export default [
                     NO_SYSTEM,
                 ],
             }],
+        },
+    },
+    {
+        files: ['extension/shell/**/*.js'],
+        ignores: ['extension/shell/helperProcess.js'],
+        rules: {
+            'no-restricted-properties': ['error',
+                { object: 'Gio', property: 'Subprocess', message: SPAWN_MESSAGE },
+                { object: 'Gio', property: 'SubprocessLauncher', message: SPAWN_MESSAGE }],
         },
     },
     {

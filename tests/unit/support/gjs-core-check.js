@@ -21,6 +21,7 @@ import { validateInvite, cleanText, parseAiHelperLine, formatAiHelperMessage } f
 import { parseReply } from '../../../extension/core/aiPrompt.js';
 import { buildInvite } from '../../../extension/core/invite.js';
 import { hash53 } from '../../../extension/core/fingerprint.js';
+import { emptyAiAnswers, parseAiAnswers, serializeAiAnswers, recordAiAnswer, pruneAiAnswers } from '../../../extension/core/aiAnswers.js';
 import '../../../extension/core/types.js';
 
 function check(condition, what) {
@@ -82,6 +83,11 @@ try {
     const reply = parseReply('<think>x</think>\n```json\n{"verdict":"ignore","reason":"r"}\n```');
     check(reply !== null && reply.verdict === 'ignore', 'parseReply');
     check(parseAiHelperLine(formatAiHelperMessage({ type: 'hello', protocol: 1 })).ok, 'AI protocol round-trip');
+    const answers = recordAiAnswer(emptyAiAnswers(), aiJudged[0].key,
+        { fp: aiJudged[0].aiAsk.fp, verdict: 'must', reason: 'r' }, now);
+    const rereadAnswers = parseAiAnswers(serializeAiAnswers(answers));
+    check(rereadAnswers.items[aiJudged[0].key].at === now, 'AI answers round-trip');
+    check(pruneAiAnswers(rereadAnswers, now) === rereadAnswers, 'AI answers prune');
 
     print('CORE-GJS OK');
 } catch (e) {

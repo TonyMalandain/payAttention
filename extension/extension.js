@@ -5,6 +5,7 @@
 // disable(). No logic here.
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
+import { AiHelperClient } from './shell/aiHelperClient.js';
 import { CalendarFeed } from './shell/calendarFeed.js';
 import { Controller } from './shell/controller.js';
 import { Environment } from './shell/environment.js';
@@ -14,6 +15,7 @@ import { Ticker } from './shell/ticker.js';
 import { Ui } from './ui/ui.js';
 
 const HELPER_ENTRY = 'main.js';
+const AI_HELPER_ENTRY = 'main.js';
 
 export default class PayAttentionExtension extends Extension {
     enable() {
@@ -25,6 +27,10 @@ export default class PayAttentionExtension extends Extension {
             createEnvironment: onResume => new Environment({ onResume }),
             createUi: dispatch => new Ui({ dispatch, openPreferences: () => this.openPreferences() }),
             createTicker: onTick => new Ticker(1000, onTick),
+            createAiClient: engine => new AiHelperClient({
+                argv: ['gjs', '-m', `${this.path}/ai/${AI_HELPER_ENTRY}`], engine, now: () => Date.now(),
+            }),
+            createAiTicker: onTick => new Ticker(1000, onTick),
             launchUri,
             now: () => Date.now(),
         });

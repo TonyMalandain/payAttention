@@ -347,3 +347,9 @@ Append only. Newest at the bottom.
 - **Fact:** payAttention is ACTIVE in the owner's real GNOME session, and its calendar helper is running. This boot's journal shows no payAttention or shell script errors. PG-2 steps 1 and 2 passed. The installed copy is the build from before AI mode and PG-6/PG-7. A reinstall is held until the AI work lands, so the live session is not changed piecemeal.
 - **Source:** product manager, read-only checks (`gnome-extensions info`, `journalctl`).
 - **Touches:** solution.md R-1, BACKLOG.md PG-2
+
+## 2026-09-27 — PG-4c built; README privacy line corrected
+- **Kind:** decision
+- **Fact:** PG-4c (the shell side of AI mode) is built. It proves by mutation that no alert waits on the AI. The README's "no AI service and no network call" was no longer true with AI mode; it now says rules by default, AI mode sends each invite to the chosen engine, and passcode removal is best effort (D-030). The inbox entry is removed. The leftover keyring daemons the engineer saw had already exited; nothing of ours is running.
+- **Source:** software engineer, PG-4c; product manager.
+- **Touches:** README.md, solution.md R-3

@@ -10,6 +10,7 @@ import GLib from 'gi://GLib';
 import { PROTOCOL_VERSION, parseHelperLine, formatShellMessage } from '../core/protocol.js';
 import { isAcceptedSnapshot, recordSync } from './health.js';
 import { nextRestartDelayMs } from './backoff.js';
+import { spawnHelper } from './helperProcess.js';
 
 export class CalendarFeed {
     /**
@@ -96,9 +97,7 @@ export class CalendarFeed {
         this._warned.clear();
         this._spawnedAt = this._now();
         try {
-            // Stderr is inherited, so the helper's diagnostics reach the journal.
-            this._proc = Gio.Subprocess.new(this._argv,
-                Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE);
+            this._proc = spawnHelper(this._argv);
         } catch (e) {
             console.error('payattention: helper-spawn-failed', e.message);
             this._proc = null;

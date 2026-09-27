@@ -10,9 +10,11 @@ import { plan, actionFor } from '../core/plan.js';
 import { reduce, emptyAlertState } from '../core/alertState.js';
 import { timingFromSettings } from '../core/timing.js';
 import { testAlert } from '../core/testAlert.js';
+import { aiEngine } from '../core/aiEngine.js';
 import { dataHealth, clocksToPersist } from './health.js';
 import { buildView } from './view.js';
 import { shouldPlaySound } from './soundCue.js';
+import { AiQueue, aiJudgeConfig, withholdAnswers } from './aiQueue.js';
 
 const PRUNE_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,13 +25,15 @@ const PRUNE_EVERY_MS = 24 * 60 * 60 * 1000;
  * @property {() => import('../core/types.js').TravelTimes} readTravel
  * @property {() => import('../core/types.js').AlertState} readAlertState
  * @property {(state: import('../core/types.js').AlertState) => void} writeAlertState coalesced
+ * @property {() => import('../core/types.js').StoredAiAnswers} readAiAnswers
+ * @property {(answers: import('../core/types.js').StoredAiAnswers) => void} writeAiAnswers coalesced
  * @property {() => import('./health.js').HealthSeeds} readHealthSeeds
  * @property {(clocks: {dataAt: number, providerAt: number}) => void} writeHealthClocks
  * @property {(key: string, verdict: 'must'|'ignore'|null) => void} setVerdictOverride
  * @property {(key: string, mode: 'online'|'in-person'|null) => void} setModeOverride
  * @property {(placeKey: string, minutes: number) => void} setTravel
  * @property {(now: number) => void} pruneOccurrenceOverrides
- * @property {() => void} destroy flushes a pending alert-state write
+ * @property {() => void} destroy flushes pending alert-state and ai-verdicts writes
  */
 /**
  * @typedef {object} FeedPort
@@ -63,10 +67,16 @@ export class Controller {
      * @param {(onResume: () => void) => EnvironmentPort} deps.createEnvironment
      * @param {(dispatch: (action: UiAction) => void) => UiPort} deps.createUi
      * @param {(onTick: () => void) => {destroy(): void}} deps.createTicker
+     * @param {(engine: import('./aiQueue.js').AiEngine) => import('./aiQueue.js').AiClientPort} deps.createAiClient
+     *   the AI helper client for one engine (AI mode only)
+     * @param {(onTick: () => void) => {destroy(): void}} deps.createAiTicker the AI queue's 1 s ticker (AI mode only)
      * @param {(uri: string, onDone: (ok: boolean) => void) => void} deps.launchUri
      * @param {() => number} deps.now
+     * @throws {TypeError} before building anything, when createAiClient or createAiTicker is not a function
      */
     constructor(deps) {
+        if (typeof deps.createAiClient !== 'function' || typeof deps.createAiTicker !== 'function')
+            throw new TypeError('controller: deps.createAiClient and deps.createAiTicker must be functions');
         this._deps = deps;
         this._destroyed = false;
         this._store = null;
@@ -83,11 +93,24 @@ export class Controller {
         this._lastTestPlan = null;
         this._lastVisible = null;
         this._lastFailure = null;
+        this._aiQueue = null;
+        this._aiTicker = null;
+        this._aiEngine = null;
+        this._ai = null;
+        this._aiErrors = new Set();
         try {
             this._store = deps.createStore(() => this._onStoreChange());
             this._environment = deps.createEnvironment(() => this._onResume());
             this._feed = deps.createFeed(() => this._onFeedUpdate());
             this._ui = deps.createUi(action => this._dispatch(action));
+            this._aiQueue = new AiQueue({
+                answers: this._store.readAiAnswers(),
+                writeAnswers: answers => this._store.writeAiAnswers(answers),
+                createClient: deps.createAiClient,
+                onChange: state => this._onAiChange(state),
+                now: deps.now,
+            });
+            this._ai = this._aiQueue.state;
 
             const now = deps.now();
             this._enabledAt = now;
@@ -137,6 +160,9 @@ export class Controller {
 
         const steps = [
             ['ticker', () => this._ticker?.destroy()],
+            ['aiTicker', () => this._aiTicker?.destroy()],
+            // Before the store, so no answer is written after its final flush.
+            ['ai', () => this._aiQueue?.destroy()],
             ['ui', () => this._ui?.destroy()],
             ['feed', () => this._feed?.destroy()],
             ['environment', () => this._environment?.destroy()],
@@ -152,6 +178,8 @@ export class Controller {
         }
 
         this._ticker = null;
+        this._aiTicker = null;
+        this._aiQueue = null;
         this._ui = null;
         this._feed = null;
         this._environment = null;
@@ -169,12 +197,59 @@ export class Controller {
         this._overrides = this._store.readOverrides();
         this._travel = this._store.readTravel();
         this._judgeDirty = true;
+        this._aiEngine = aiEngine(this._settings);
+        this._syncAi();
+    }
+
+    /** Gives the queue the engine, and runs the AI ticker only while there is one. */
+    _syncAi() {
+        this._aiSafely('engine', () => this._aiQueue.setEngine(this._aiEngine));
+        if (this._aiEngine !== null && this._aiTicker === null) {
+            this._aiSafely('ticker', () => {
+                this._aiTicker = this._deps.createAiTicker(() => this._aiTick());
+            });
+        } else if (this._aiEngine === null && this._aiTicker !== null) {
+            this._aiSafely('ticker', () => this._aiTicker.destroy());
+            this._aiTicker = null;
+        }
+    }
+
+    /** The AI ticker: never renders or plans, and waits for a pending re-judge. */
+    _aiTick() {
+        if (this._destroyed || this._judgeDirty)
+            return;
+        this._aiSafely('pump', () => this._aiQueue.pump(this._judged, this._timing.cutoffMs));
+    }
+
+    /** The queue published a new state; the next alert tick re-judges if the inputs moved, and renders. */
+    _onAiChange(state) {
+        if (this._destroyed)
+            return;
+        const previous = this._ai;
+        this._ai = state;
+        if (state.answers !== previous.answers || state.failedKeys !== previous.failedKeys ||
+            state.engineDown !== previous.engineDown)
+            this._judgeDirty = true;
+    }
+
+    /** Runs an AI step so that it can never throw into the controller; logs each distinct failure once. */
+    _aiSafely(what, fn) {
+        try {
+            fn();
+        } catch (e) {
+            const id = what + String(e);
+            if (!this._aiErrors.has(id)) {
+                this._aiErrors.add(id);
+                console.error('payattention: ai-failed ' + what, e);
+            }
+        }
     }
 
     _prune(now) {
         this._alertState = reduce(this._alertState, { type: 'prune' }, now);
         this._store.writeAlertState(this._alertState);
         this._store.pruneOccurrenceOverrides(now);
+        this._aiSafely('prune', () => this._aiQueue.prune());
         this._lastPruneAt = now;
     }
 
@@ -203,7 +278,7 @@ export class Controller {
     _render(now) {
         const feed = this._feed;
         if (this._judgeDirty) {
-            this._judged = feed.snapshot ? judge(feed.snapshot, this._settings, this._overrides, this._travel) : [];
+            this._judged = this._judgeAll(now);
             this._judgedByKey = new Map(this._judged.map(j => [j.key, j]));
             this._judgeDirty = false;
         }
@@ -241,6 +316,7 @@ export class Controller {
             judgedByKey: this._judgedByKey,
             health,
             now,
+            aiStatus: this._ai.status,
         });
 
         const next = view.alert ? { key: view.alert.key, step: view.alert.step } : null;
@@ -254,6 +330,21 @@ export class Controller {
 
         if (now - this._lastPruneAt >= PRUNE_EVERY_MS)
             this._prune(now);
+    }
+
+    /**
+     * judge, with the stored AI answers minus those withheld (§6.5). A second pass
+     * runs only while something is withheld. In rules mode config.ai is null, and
+     * judge gives exactly the rules output.
+     */
+    _judgeAll(now) {
+        const snapshot = this._feed.snapshot;
+        if (!snapshot)
+            return [];
+        const config = { ...this._settings, ai: aiJudgeConfig(this._aiEngine, now) };
+        const first = judge(snapshot, config, this._overrides, this._travel, this._ai.answers);
+        const kept = withholdAnswers(first, this._ai);
+        return kept === null ? first : judge(snapshot, config, this._overrides, this._travel, kept);
     }
 
     _dispatch(action) {

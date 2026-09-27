@@ -10,6 +10,7 @@ import Gio from 'gi://Gio';
 import { Store } from '../../extension/shell/store.js';
 import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
 import { emptyAlertState, reduce, serializeAlertState } from '../../extension/core/alertState.js';
+import { emptyAiAnswers, recordAiAnswer, serializeAiAnswers } from '../../extension/core/aiAnswers.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.payattention';
 const DAY = 24 * 60 * 60 * 1000;
@@ -48,6 +49,10 @@ const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function stateWith(key, start) {
     return reduce(emptyAlertState(), { type: 'ack', key, start }, NOW);
+}
+
+function answersWith(key) {
+    return recordAiAnswer(emptyAiAnswers(), key, { fp: 'abc', verdict: 'must', reason: 'r' }, NOW);
 }
 
 async function main() {
@@ -91,10 +96,30 @@ async function main() {
     check(settings.get_string('alert-state') === serializeAlertState(stateWith('occ:y|4', 4)), 'destroy flushes');
     settings.disconnect(id);
 
+    // Coalesced ai-verdicts writes, exactly like alert state.
+    store = new Store(settings, () => changes.push('change'));
+    check(sameJson(store.readAiAnswers(), emptyAiAnswers()), 'readAiAnswers of the default is empty');
+    let aiEmissions = 0;
+    const aiId = settings.connect('changed::ai-verdicts', () => aiEmissions++);
+    store.writeAiAnswers(answersWith(`occ:x|${NOW + 1}`));
+    store.writeAiAnswers(answersWith(`occ:x|${NOW + 2}`));
+    store.writeAiAnswers(answersWith(`occ:x|${NOW + 3}`));
+    await sleep(250);
+    check(aiEmissions === 0, `no ai-verdicts write before the delay (saw ${aiEmissions})`);
+    await sleep(600);
+    check(aiEmissions === 1, `exactly one ai-verdicts write (saw ${aiEmissions})`);
+    check(settings.get_string('ai-verdicts') === serializeAiAnswers(answersWith(`occ:x|${NOW + 3}`)), 'the last answers were written');
+    store.writeAiAnswers(answersWith(`occ:y|${NOW + 4}`));
+    store.destroy();
+    check(settings.get_string('ai-verdicts') === serializeAiAnswers(answersWith(`occ:y|${NOW + 4}`)), 'destroy flushes ai-verdicts');
+    settings.disconnect(aiId);
+
     // A corrupt stored value gives the empty state.
     settings.set_string('alert-state', '{"v":1,"items":');
+    settings.set_string('ai-verdicts', '{"v":1,"items":');
     store = new Store(settings, () => changes.push('change'));
     check(sameJson(store.readAlertState(), emptyAlertState()), 'corrupt alert-state reads as empty');
+    check(sameJson(store.readAiAnswers(), emptyAiAnswers()), 'corrupt ai-verdicts reads as empty');
 
     // Health seeds: 0 is unknown; epoch ms fit the int64 key exactly.
     check(sameJson(store.readHealthSeeds(), { dataAt: null, providerAt: null }), 'seeds default to null');
@@ -120,6 +145,7 @@ async function main() {
     await sleep(100);
     changes.length = 0;
     settings.set_string('alert-state', '');
+    settings.set_string('ai-verdicts', '');
     settings.set_int64('health-data-at', 5);
     settings.set_int64('health-provider-at', 6);
     await sleep(100);

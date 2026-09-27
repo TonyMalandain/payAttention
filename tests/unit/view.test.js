@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 // Time formatting depends on the zone; fix it before the modules are loaded.
 process.env.TZ = 'UTC';
-const { buildView, TRAVEL_CHOICES_MIN } = await import('../../extension/shell/view.js');
+const { buildView, TRAVEL_CHOICES_MIN, AI_UNAVAILABLE_TEXT } = await import('../../extension/shell/view.js');
 const { formatClock, formatSince, formatShort } = await import('../../extension/core/display.js');
 const { plan, actionFor } = await import('../../extension/core/plan.js');
 const { emptyAlertState, reduce } = await import('../../extension/core/alertState.js');
@@ -23,7 +23,7 @@ const IN_PERSON = judged({
 });
 
 /** The view the controller would build for `list` at `now`. */
-function view(now, list, { state = E, health = OK, test = null, env = ENV } = {}) {
+function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off' } = {}) {
     const realPlan = plan(now, list, state, TIMING, env);
     const testPlan = test ? plan(now, test.judged, test.state ?? E, test.timing, env) : null;
     return buildView({
@@ -34,6 +34,7 @@ function view(now, list, { state = E, health = OK, test = null, env = ENV } = {}
         judgedByKey: new Map(list.map(j => [j.key, j])),
         health,
         now,
+        aiStatus,
     });
 }
 
@@ -345,6 +346,39 @@ describe('view: menu signature', () => {
         const now = LEAVE - 2 * HOUR;
         const a = view(now, [IN_PERSON]).menu.signature;
         const b = view(now, [{ ...IN_PERSON, travelMinutes: 45 }]).menu.signature;
+        assert.notEqual(a, b);
+    });
+});
+
+describe('view: AI mode', () => {
+    test('1. the unavailable line only for the unavailable status', () => {
+        assert.equal(AI_UNAVAILABLE_TEXT, 'AI unavailable — using rules');
+        assert.equal(view(T0 - HOUR, [ONLINE], { aiStatus: 'unavailable' }).menu.aiStatus, 'AI unavailable — using rules');
+        assert.equal(view(T0 - HOUR, [ONLINE], { aiStatus: 'ok' }).menu.aiStatus, null);
+        assert.equal(view(T0 - HOUR, [ONLINE], { aiStatus: 'off' }).menu.aiStatus, null);
+    });
+
+    test('2. an AI reason is shown as core wrote it, never "Why: AI: …"', () => {
+        const j = { ...ONLINE, verdict: 'ignore', reasonCode: 'ai-ignore', reason: 'AI: team social, optional' };
+        const rows = view(T0 - HOUR, [j], { aiStatus: 'ok' }).menu.meetings;
+        assert.equal(rows[0].reason, 'AI: team social, optional');
+    });
+
+    test('3. the alert reads "AI: …" for an AI must', () => {
+        const j = { ...ONLINE, reasonCode: 'ai-must', reason: 'AI: client call' };
+        const a = view(T0 - 25 * MIN, [j], { aiStatus: 'ok' }).alert;
+        assert.equal(a.step, 1);
+        assert.equal(a.reason, 'AI: client call');
+    });
+
+    test('4. a rule reason is unchanged', () => {
+        assert.equal(view(T0 - 25 * MIN, [ONLINE], { aiStatus: 'ok' }).alert.reason, 'Why: x');
+        assert.equal(view(T0 - HOUR, [ONLINE], { aiStatus: 'ok' }).menu.meetings[0].reason, 'Why: x');
+    });
+
+    test('5. the signature changes when a rule reason becomes an AI reason', () => {
+        const a = view(T0 - HOUR, [ONLINE]).menu.signature;
+        const b = view(T0 - HOUR, [{ ...ONLINE, reasonCode: 'ai-must', reason: 'AI: client call' }]).menu.signature;
         assert.notEqual(a, b);
     });
 });

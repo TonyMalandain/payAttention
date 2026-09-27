@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
     PROTOCOL_VERSION, MAX_LINE_LENGTH, CONNECTION_STATES, parseHelperLine, formatHelperMessage, parseShellLine, formatShellMessage,
+    HELPER_ENV_UNSET,
 } from '../../extension/core/protocol.js';
 import { event, snapshot, att } from './support/builders.js';
 
@@ -262,5 +263,12 @@ describe('shell protocol', () => {
 
     test('an invalid shell message cannot be formatted', () => {
         assert.throws(() => formatShellMessage({ type: 'refresh', reason: 'other' }), /invalid-refresh at reason/);
+    });
+});
+
+describe('helper environment (interfaces.md §1 "Environment")', () => {
+    test('every spawner removes exactly G_MESSAGES_DEBUG, from one frozen list', () => {
+        assert.deepEqual(HELPER_ENV_UNSET, ['G_MESSAGES_DEBUG']);
+        assert.ok(Object.isFrozen(HELPER_ENV_UNSET));
     });
 });

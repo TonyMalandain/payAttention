@@ -7,7 +7,7 @@ A GNOME Shell extension that stays quiet about the meetings that do not matter, 
 - Ignorable meetings make **no noise at all**.
 - Must-attend meetings get alerts that escalate until you act: a heads-up, then a nudge, then an insist card, then a **full-screen takeover** on every monitor.
 - In-person meetings count down to the time **you must leave**, not to the start time.
-- Nothing leaves your machine. There is no AI service and no network call.
+- Out of the box, nothing leaves your machine: the rules decide, with no AI and no network call. If you switch on **AI mode** (Settings → Verdicts), each invite is sent to the AI engine you choose, on your computer or in the cloud. Passcodes and dial-in numbers are removed first, on a best-effort basis.
 
 ![Takeover](docs/screenshots/step4.png)
 
