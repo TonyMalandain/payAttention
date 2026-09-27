@@ -58,6 +58,19 @@ uninstall() {
 }
 contains() { printf '%s\n' "$out" | grep -qF -- "$1"; }
 
+# 0. A throwaway keyring, unlocked, before anything can D-Bus-activate one (PG-4b fact 3).
+command -v gnome-keyring-daemon >/dev/null || fail 0-keyring "gnome-keyring-daemon is not installed"
+printf '%s' payattention-test-unlock | gnome-keyring-daemon --unlock --components=secrets --daemonize >/dev/null \
+    || fail 0-keyring "could not start a throwaway keyring"
+KEYRING="$ROOT/tests/ai/gjs/keyring.js"
+# Throwaway values, never real keys.
+KEY1="pa-test-key-$RANDOM$RANDOM$RANDOM"
+KEY2="pa-test-key-$RANDOM$RANDOM$RANDOM"
+KEY3="pa-test-key-$RANDOM$RANDOM$RANDOM"
+# keys <ours> <other>: the keyring holds exactly that many of our items and of the other schema.
+keys() { [ "$(gjs -m "$KEYRING" count)" = "KEYRING COUNT $1 $2" ]; }
+no_keys_in_output() { ! contains "$KEY1" && ! contains "$KEY2" && ! contains "$KEY3"; }
+
 # 2. Other extensions and settings that uninstall must leave alone.
 gsettings set org.gnome.shell enabled-extensions "['other@example.test']" || fail 2-seed "could not seed enabled-extensions"
 gsettings set org.gnome.shell disabled-extensions "['third@example.test']" || fail 2-seed "could not seed disabled-extensions"
@@ -73,14 +86,22 @@ gsettings set org.gnome.shell disabled-extensions "['third@example.test', '$UUID
     || fail 2-install "could not add $UUID to disabled-extensions"
 dconf write "$KEYS/snooze-minutes" 5 || fail 2-install "could not seed snooze-minutes"
 dconf write "$KEYS/travel-times" "{'hq': 30}" || fail 2-install "could not seed travel-times"
+dconf write "$KEYS/ai-verdicts" "'{\"v\":1,\"items\":{}}'" || fail 2-install "could not seed ai-verdicts"
+gjs -m "$KEYRING" store https://engine.example.test/v1 "$KEY1" >/dev/null || fail 2-install "could not seed the first key"
+gjs -m "$KEYRING" store http://127.0.0.1:11434/v1 "$KEY2" >/dev/null || fail 2-install "could not seed the second key"
+gjs -m "$KEYRING" store-other https://engine.example.test/v1 "$KEY3" >/dev/null || fail 2-install "could not seed the other schema's key"
+keys 2 1 || fail 2-install "keyring seed count is wrong"
+[ -d "$XDG_DATA_HOME/keyrings" ] || fail 0-keyring "the keyring is not in the throwaway home"
 
 # A wrong argument changes nothing.
 uninstall --bogus
+no_keys_in_output || fail 2-bad-option "a key appeared in the output"
 [ "$status" -eq 2 ] || fail 2-bad-option "--bogus exited $status, want 2"
 [ -d "$DIR" ] || fail 2-bad-option "--bogus removed $DIR"
 
 # Uninstall with no shell on the bus: files and list entries go, settings stay.
 uninstall
+no_keys_in_output || fail 2-uninstall "a key appeared in the output"
 [ "$status" -eq 0 ] || fail 2-uninstall "exited $status: $out"
 [ ! -e "$DIR" ] || fail 2-uninstall "$DIR still exists"
 enabled="$(gsettings get org.gnome.shell enabled-extensions)"
@@ -95,9 +116,14 @@ contains "Kept: saved settings" || fail 2-uninstall "no 'Kept: saved settings' l
 contains "Calendars and other extensions were not touched." || fail 2-uninstall "no closing line"
 ! contains "Stopped:" || fail 2-uninstall "claimed to stop a shell that is not running"
 ! contains "Nothing to remove" || fail 2-uninstall "said 'Nothing to remove' after removing the install"
+keys 2 1 || fail 2-uninstall "a plain uninstall changed the keyring"
+[ -n "$(dconf read "$KEYS/ai-verdicts")" ] || fail 2-uninstall "ai-verdicts was not kept"
+contains "Kept: saved settings and AI answers" || fail 2-uninstall "no 'Kept: saved settings and AI answers' line"
+contains "Kept: AI engine keys in your keyring" || fail 2-uninstall "no 'Kept: AI engine keys' line"
 
 # A second run succeeds and says there was nothing to remove.
 uninstall
+no_keys_in_output || fail 2-second-run "a key appeared in the output"
 [ "$status" -eq 0 ] || fail 2-second-run "exited $status: $out"
 contains "Nothing to remove: payAttention is not installed." || fail 2-second-run "no 'Nothing to remove' line"
 [ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 2-second-run "snooze-minutes was not kept"
@@ -106,11 +132,14 @@ contains "Nothing to remove: payAttention is not installed." || fail 2-second-ru
 status=0
 out="$(GSETTINGS_BACKEND=keyfile bash "$ROOT/scripts/uninstall.sh" --purge 2>&1)" || status=$?
 printf '%s\n' "$out"
+no_keys_in_output || fail 3-purge-refused "a key appeared in the output"
 [ "$status" -eq 2 ] || fail 3-purge-refused "exited $status, want 2: $out"
 [ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 3-purge-refused "snooze-minutes was erased"
+keys 2 1 || fail 3-purge-refused "the keyring changed"
 
 # --purge erases our settings path only.
 uninstall --purge
+no_keys_in_output || fail 3-purge "a key appeared in the output"
 [ "$status" -eq 0 ] || fail 3-purge "exited $status: $out"
 left="$(dconf dump "$KEYS/")"
 [ -z "$left" ] || fail 3-purge "settings remain: $left"
@@ -121,11 +150,20 @@ disabled="$(gsettings get org.gnome.shell disabled-extensions)"
 [ "$disabled" = "['third@example.test']" ] || fail 3-purge "disabled-extensions is $disabled"
 contains "Erased: saved settings" || fail 3-purge "no 'Erased: saved settings' line"
 ! contains "Kept:" || fail 3-purge "printed 'Kept:' with --purge"
+keys 0 1 || fail 3-purge "our keys were not all erased, or another schema's item was"
+contains "Erased: AI engine keys from your keyring." || fail 3-purge "no 'Erased: AI engine keys' line"
+contains "Erased: saved settings and AI answers" || fail 3-purge "no 'Erased: saved settings and AI answers' line"
+keys_line="$(printf '%s\n' "$out" | grep -nF "Erased: AI engine keys" | cut -d: -f1)"
+settings_line="$(printf '%s\n' "$out" | grep -nF "Erased: saved settings" | cut -d: -f1)"
+[ "$keys_line" -lt "$settings_line" ] || fail 3-purge "keys must be erased before settings"
 
 # Purging again is safe.
 uninstall --purge
+no_keys_in_output || fail 3-purge-again "a key appeared in the output"
 [ "$status" -eq 0 ] || fail 3-purge-again "exited $status: $out"
 contains "Erased: saved settings" || fail 3-purge-again "no 'Erased: saved settings' line"
+contains "Erased: AI engine keys from your keyring." || fail 3-purge-again "no 'Erased: AI engine keys' line"
+keys 0 1 || fail 3-purge-again "the keyring is not left with only the other schema's item"
 
 # 4. Failure paths. Each case puts stub commands first on PATH for one
 #    uninstall.sh run only, inside this isolated environment, after a clean
@@ -164,6 +202,7 @@ lists_unchanged() {
 reinstall 4-stop-failed
 stub stop-failed gnome-extensions 'case "$1" in info) exit 0 ;; uninstall) exit 1 ;; *) exit 2 ;; esac'
 uninstall_stubbed stop-failed
+no_keys_in_output || fail 4-stop-failed "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-stop-failed "exited $status, want 1: $out"
 contains "Nothing was removed." || fail 4-stop-failed "no 'Nothing was removed.' in: $out"
 [ -d "$DIR" ] || fail 4-stop-failed "$DIR was removed although the shell was not stopped"
@@ -174,6 +213,7 @@ lists_unchanged || fail 4-stop-failed "the extension lists changed"
 reinstall 4-still-loaded
 stub still-loaded gnome-extensions 'case "$1" in info|uninstall) exit 0 ;; *) exit 2 ;; esac'
 uninstall_stubbed still-loaded
+no_keys_in_output || fail 4-still-loaded "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-still-loaded "exited $status, want 1: $out"
 contains "still has payAttention loaded" || fail 4-still-loaded "no 'still has payAttention loaded' in: $out"
 [ -d "$DIR" ] || fail 4-still-loaded "$DIR was removed while the shell still has it loaded"
@@ -183,6 +223,7 @@ lists_unchanged || fail 4-still-loaded "the extension lists changed"
 reinstall 4-lists-failed
 stub lists-failed gjs 'exit 1'
 uninstall_stubbed lists-failed
+no_keys_in_output || fail 4-lists-failed "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-lists-failed "exited $status, want 1: $out"
 contains "could not remove $UUID from the GNOME extension lists" || fail 4-lists-failed "no 'could not remove' in: $out"
 ! contains "Removed: $UUID from the" || fail 4-lists-failed "claimed a list entry was removed: $out"
@@ -191,6 +232,7 @@ contains "could not remove $UUID from the GNOME extension lists" || fail 4-lists
 reinstall 4-lists-not-stored
 stub lists-not-stored gjs 'printf "enabled-extensions\ndisabled-extensions\n"'
 uninstall_stubbed lists-not-stored
+no_keys_in_output || fail 4-lists-not-stored "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-lists-not-stored "exited $status, want 1: $out"
 contains "could not remove $UUID from the GNOME extension lists" || fail 4-lists-not-stored "no 'could not remove' in: $out"
 ! contains "Removed: $UUID from the" || fail 4-lists-not-stored "claimed a list entry was removed before checking it was stored: $out"
@@ -199,9 +241,39 @@ contains "could not remove $UUID from the GNOME extension lists" || fail 4-lists
 reinstall 4-purge-failed
 stub purge-failed dconf "[ \"\$1\" = reset ] && exit 1; exec '$REAL_DCONF' \"\$@\""
 uninstall_stubbed purge-failed --purge
+no_keys_in_output || fail 4-purge-failed "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-purge-failed "exited $status, want 1: $out"
 contains "could not erase $KEYS/" || fail 4-purge-failed "no 'could not erase' in: $out"
 [ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 4-purge-failed "snooze-minutes was erased"
-! contains "Erased:" || fail 4-purge-failed "claimed the settings were erased: $out"
+! contains "Erased: saved settings" || fail 4-purge-failed "claimed the settings were erased: $out"
+contains "Erased: AI engine keys from your keyring." || fail 4-purge-failed "no 'Erased: AI engine keys' line: $out"
+
+# e) --purge cannot reach the keyring: it stops before erasing the settings.
+reinstall 4-keyring-unreachable
+gjs -m "$KEYRING" store https://engine.example.test/v1 "$KEY1" >/dev/null || fail 4-keyring-unreachable "could not seed"
+REAL_GJS="$(command -v gjs)"
+# Fails only the gjs run whose program mentions Secret, so the list step still works.
+stub keyring-unreachable gjs "case \"\$*\" in *Secret*) exit 1 ;; esac; exec '$REAL_GJS' \"\$@\""
+uninstall_stubbed keyring-unreachable --purge
+no_keys_in_output || fail 4-keyring-unreachable "a key appeared in the output"
+[ "$status" -eq 1 ] || fail 4-keyring-unreachable "exited $status, want 1: $out"
+contains "could not reach your keyring to erase the AI engine keys" || fail 4-keyring-unreachable "no 'could not reach your keyring' in: $out"
+contains "Saved settings were not erased." || fail 4-keyring-unreachable "no 'Saved settings were not erased.' in: $out"
+[ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 4-keyring-unreachable "snooze-minutes was erased"
+! contains "Erased:" || fail 4-keyring-unreachable "claimed something was erased: $out"
+keys 1 1 || fail 4-keyring-unreachable "the keyring changed"
+
+# f) --purge with a locked keyring: nothing is erased. Last case: the keyring stays locked.
+reinstall 4-keyring-locked
+gjs -m "$KEYRING" store https://engine.example.test/v1 "$KEY1" >/dev/null || fail 4-keyring-locked "could not seed"
+gjs -m "$KEYRING" lock >/dev/null || fail 4-keyring-locked "could not lock the keyring"
+uninstall --purge
+no_keys_in_output || fail 4-keyring-locked "a key appeared in the output"
+[ "$status" -eq 1 ] || fail 4-keyring-locked "exited $status, want 1: $out"
+contains "your keyring is locked" || fail 4-keyring-locked "no 'your keyring is locked' in: $out"
+contains "Saved settings were not erased." || fail 4-keyring-locked "no 'Saved settings were not erased.' in: $out"
+[ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 4-keyring-locked "snooze-minutes was erased"
+! contains "Erased:" || fail 4-keyring-locked "claimed something was erased: $out"
+keys 1 1 || fail 4-keyring-locked "the keyring changed"
 
 echo PAYATTENTION-UNINSTALL PASS

@@ -13,3 +13,9 @@ Agents append findings here, tagged `for-product` or `for-architecture`. The own
 ## 2026-09-27 — for-product — PG-4d settings wording
 - The warning is the spec's text, verbatim and always shown. Next to it, a line for the entered address says "On this computer: the invite does not leave it." or "… the invite leaves your computer." (worked out from the address, interfaces.md §6.4).
 - Every other text on the Verdicts page (mode lines, key status, the Yes/No reasons) was written by the senior engineer. They are listed in docs/plans/PG-4d.md and live in core/aiSetup.js. A reword is a one-line change there.
+
+## 2026-09-27 — for-architecture — PG-4e uninstall --purge and the keyring
+- Measured: Secret.password_clear on a locked collection returns false with no error and removes nothing. uninstall.sh therefore searches again after clearing and fails (exit 1, "your keyring is locked … Saved settings were not erased.") when any item of the schema remains.
+- --purge clears keys first, then settings, so a locked keyring leaves both in place. An unreachable Secret Service also fails --purge (the script cannot tell "none" from "unreachable").
+- The plain uninstall never calls the keyring; it prints a fixed "Kept: AI engine keys in your keyring, if you saved any" line.
+- The key schema name is repeated in scripts/uninstall.sh (a shell script cannot import core). tests/smoke/uninstall-check.sh seeds items with core's constant (tests/ai/gjs/keyring.js), so a drift fails the smoke. testing-and-build.md's uninstall check paragraph could mention the throwaway keyring it now starts.

@@ -33,10 +33,14 @@ The alarm icon in the top bar shows your next must-attend meeting and a countdow
 
 ```sh
 npm run uninstall:local              # stop it, remove it, keep your saved choices
-npm run uninstall:local -- --purge   # also erase overrides, travel times and settings
+npm run uninstall:local -- --purge   # also erase overrides, travel times, settings, AI answers and AI keys
 ```
 
 If payAttention is running, it stops at once, and no alert stays on screen. It no longer loads at login. The output lists what was removed and what was kept. Running it again is safe. It never touches your calendars or other extensions.
+
+A plain uninstall keeps your stored AI answers, and any AI engine keys in your keyring, and says so. `--purge` erases both, and only payAttention's own keys: nothing else in your keyring is touched.
+
+If your keyring is locked, `--purge` stops before erasing anything else, and asks you to unlock it and run it again.
 
 To reinstall after uninstalling, run `npm run install:local`, then log out and back in, because GNOME loads extension code only at login.
 

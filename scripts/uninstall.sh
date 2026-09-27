@@ -5,13 +5,18 @@
 # Removes payAttention from the owner's session: stops it in the running shell
 # (the shell runs its disable() before it answers), removes its install
 # directory, and takes its UUID out of org.gnome.shell enabled-extensions and
-# disabled-extensions. Saved settings are kept unless --purge is given, which
-# erases /org/gnome/shell/extensions/payattention/ and nothing else.
+# disabled-extensions. Saved settings (including the stored AI answers) and any
+# AI engine keys in the keyring are kept unless --purge is given, which erases
+# /org/gnome/shell/extensions/payattention/ and the keyring items of
+# payAttention's own key schema, and nothing else.
 # It never touches calendars, other extensions, or any other setting.
 set -euo pipefail
 UUID=payattention@tonymalandain.github.io
 DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
 SETTINGS_PATH=/org/gnome/shell/extensions/payattention/
+# The libsecret schema of the AI engine keys: ENGINE_KEY_SCHEMA_NAME in extension/core/aiEngine.js (ADR-0009).
+# A shell script cannot import it; tests/smoke/uninstall-check.sh proves the two agree.
+KEY_SCHEMA=org.gnome.shell.extensions.payattention.EngineKey
 USAGE='Usage: npm run uninstall:local [-- --purge]'
 
 die() {
@@ -97,12 +102,28 @@ fi
 # e. Saved settings. The trailing slash makes the reset an exact directory:
 #    /org/gnome/shell/extensions/payattention-other/ is not touched.
 if [ "$purge" -eq 1 ]; then
+    # Keys first: a locked keyring then leaves keys and settings both in place.
+    # Empty attributes match every item of our schema and only those. A clear
+    # on a locked keyring removes nothing and reports no error, so the second
+    # search decides. Secrets are never loaded or printed.
+    keyring="$(gjs -c "imports.gi.versions.Secret = '1'; const {Secret} = imports.gi;
+      const schema = new Secret.Schema('$KEY_SCHEMA', Secret.SchemaFlags.NONE, {endpoint: Secret.SchemaAttributeType.STRING});
+      const service = Secret.Service.get_sync(Secret.ServiceFlags.NONE, null);
+      Secret.password_clear_sync(schema, {}, null);
+      print(service.search_sync(schema, {}, Secret.SearchFlags.ALL, null).length === 0 ? 'cleared' : 'locked');" 2>/dev/null)" \
+        || keyring=''
+    case "$keyring" in
+        cleared) echo "Erased: AI engine keys from your keyring." ;;
+        locked) die "could not erase the AI engine keys: your keyring is locked. Unlock it (for example in Passwords and Keys), then run this again. Saved settings were not erased." ;;
+        *) die "could not reach your keyring to erase the AI engine keys. Run this from a terminal inside your GNOME session. Saved settings were not erased." ;;
+    esac
     if ! dconf reset -f "$SETTINGS_PATH" || ! left="$(dconf dump "$SETTINGS_PATH")" || [ -n "$left" ]; then
         die "could not erase $SETTINGS_PATH. Run this from a terminal inside your GNOME session."
     fi
-    echo "Erased: saved settings ($SETTINGS_PATH)."
+    echo "Erased: saved settings and AI answers ($SETTINGS_PATH)."
 else
-    echo "Kept: saved settings ($SETTINGS_PATH). To erase them: npm run uninstall:local -- --purge"
+    echo "Kept: saved settings and AI answers ($SETTINGS_PATH). To erase them: npm run uninstall:local -- --purge"
+    echo "Kept: AI engine keys in your keyring, if you saved any (Passwords and Keys). To erase them: npm run uninstall:local -- --purge"
 fi
 
 echo "Calendars and other extensions were not touched."
