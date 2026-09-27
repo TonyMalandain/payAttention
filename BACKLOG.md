@@ -44,7 +44,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - "See Details" opens it (checked by hand in Extension Manager after reinstalling);
     - the README links to it too.
   - **Blocked on:** the repository's address. No GitHub repository exists yet. Assumed `https://github.com/TonyMalandain/payAttention`, to be confirmed by the owner.
-- **PG-6 — Apply the Apache License 2.0 (S)** (D-026).
+- **PG-6 — Apply the Apache License 2.0 (S)** (D-026). **DONE**, accepted in review (2173b15).
   - **What changes for the owner:**
     - GitHub shows "Apache-2.0" on the repository page;
     - the project states its licence clearly;
@@ -63,7 +63,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
       - The GNOME libraries it uses at run time are provided by the system, not copied (LGPL or MPL/LGPL; GNOME Shell GPL-2.0-or-later).
       - The engineer re-runs this check against the current dependency list, and a new dependency under a copyleft or unknown licence fails the check.
 
-- **PG-7 — Use the owner's GNOME alert sound, not a fixed alarm (S).**
+- **PG-7 — Use the owner's GNOME alert sound, not a fixed alarm (S).** **BUILT**, accepted in review (2173b15). Closes after the owner's check in PG-2, step 7.
   - **What changes for the owner:** the sound at the insist and takeover steps is the alert sound they chose in GNOME Settings (Sound → Alert Sound), not a fixed alarm-clock noise.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner calls the current sound "noise". A familiar sound they chose is more likely to be accepted than tuned out.
@@ -84,6 +84,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   4. **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
+  7. Sound (PG-7): run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
   - The full checklist is in `docs/architecture/testing-and-build.md`, under the real-session section.
 
 ## Housekeeping (engineering)
