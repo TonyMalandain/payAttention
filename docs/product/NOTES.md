@@ -353,3 +353,9 @@ Append only. Newest at the bottom.
 - **Fact:** PG-4c (the shell side of AI mode) is built. It proves by mutation that no alert waits on the AI. The README's "no AI service and no network call" was no longer true with AI mode; it now says rules by default, AI mode sends each invite to the chosen engine, and passcode removal is best effort (D-030). The inbox entry is removed. The leftover keyring daemons the engineer saw had already exited; nothing of ours is running.
 - **Source:** software engineer, PG-4c; product manager.
 - **Touches:** README.md, solution.md R-3
+
+## 2026-09-27 — PG-4c review taken
+- **Kind:** decision
+- **Fact:** No code defects were found. Three §6.5 rows had no test that bites, so a test-only fix round was ordered. It also carries the benchmark measurement change, the tautological assertions, and the pruning of the retry and failed-key maps. Product rule sent to the architect: one invite that crashes the helper must never block AI answers for other meetings.
+- **Source:** reviewer, PG-4c round 1.
+- **Touches:** decisions.md D-031
