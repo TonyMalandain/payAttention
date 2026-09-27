@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Tony Malandain
+
 # Install and uninstall check for scripts/smoke.sh: runs scripts/install.sh and
 # scripts/uninstall.sh in a throwaway home under .smoke-home/, with its own
 # D-Bus session, XDG directories and dconf database (the real dconf mechanism,

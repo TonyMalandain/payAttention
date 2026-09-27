@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-FileCopyrightText: 2026 Tony Malandain -->
 <schemalist>
   <schema id="org.gnome.shell.extensions.payattention" path="/org/gnome/shell/extensions/payattention/">
     <key name="online-headsup-minutes" type="i">

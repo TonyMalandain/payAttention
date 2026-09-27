@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The calendar helper's entry point (ADR-0001). Parses argv, runs the main
 // loop, wires the parts together, and is the only place that ends the process.
 //

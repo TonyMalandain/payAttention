@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The owner's own answer and the guest records (interfaces.md §6.2, D-011).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

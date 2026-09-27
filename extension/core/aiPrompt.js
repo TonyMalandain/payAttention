@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // What the engine is asked, and which of its answers is accepted
 // (interfaces.md §6.7, §6.8). The reply can only pick a verdict and a reason.
 import { normaliseReason } from './aiProtocol.js';

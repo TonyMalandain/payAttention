@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Test factories. Not a test file. Tests never read the clock: T0 is the fixed base.
 import { DEFAULT_SETTINGS } from '../../../extension/core/defaults.js';
 import { timingFromSettings } from '../../../extension/core/timing.js';

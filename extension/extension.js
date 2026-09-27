@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The composition root: builds the controller in enable() and destroys it in
 // disable(). No logic here.
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';

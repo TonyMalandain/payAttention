@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // judge(): every meeting in a snapshot -> verdict, mode, travel and deadline.
 // One pass over the events; word lists and owner identity are built once per call.
 import { occurrenceKey, seriesKey, placeKey } from './keys.js';

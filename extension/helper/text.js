@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Pure text rules of the transcription.
 import { MAX_DESCRIPTION_LENGTH } from '../core/protocol.js';
 

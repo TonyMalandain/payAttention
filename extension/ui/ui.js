@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Draws a display model and reports clicks. Decides nothing: every string
 // arrives resolved in the View. Imports nothing from core/.
 import GLib from 'gi://GLib';
@@ -11,6 +14,10 @@ import { Takeover } from './takeover.js';
 
 const PULSE_MS = 600;
 const PULSE_CLASS = 'payattention-pulse-on';
+// GNOME Settings > Sound > Alert Sound sets this event in the user's sound theme
+// (mutter's own bell plays it). The shell's sound player follows theme changes, and
+// canberra falls back to the freedesktop "bell" when the chosen file is missing.
+const ALERT_SOUND_EVENT = 'bell-window-system';
 
 export class Ui {
     /**
@@ -70,7 +77,7 @@ export class Ui {
     }
 
     playAlertSound() {
-        global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', 'payAttention alert', null);
+        global.display.get_sound_player().play_from_theme(ALERT_SOUND_EVENT, 'payAttention alert', null);
     }
 
     /** Pops the grab and destroys the takeover actors. Safe to call any time. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The full-screen takeover: one panel per monitor and a modal grab, so only
 // an action clears it (ADR-0004). The grab is always popped before the actors
 // are destroyed.

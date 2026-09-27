@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';

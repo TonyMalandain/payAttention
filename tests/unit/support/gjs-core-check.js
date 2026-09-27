@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // gjs script, not a Node test: imports every core module and runs the pipeline
 // once, proving core uses no Node-only API (ADR-0002). Run by gjs.test.js.
 import System from 'system';

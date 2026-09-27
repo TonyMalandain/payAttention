@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Which GSettings key holds each owner setting, and of what kind. Pure.
 import { DEFAULT_SETTINGS } from '../core/defaults.js';
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Each PRD "Done when" timing case through the real pipeline: judge -> plan -> reduce(actionFor).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

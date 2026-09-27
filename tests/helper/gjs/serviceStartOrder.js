@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // gjs script, not a Node test: proves SnapshotService.start() asks for the
 // remote sync only after the first read has connected the clients. Uses a
 // fake reader and stdout; touches no EDS. Run by snapshotService.test.js.

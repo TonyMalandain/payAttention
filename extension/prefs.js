@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The settings window (PRD §6): edits the owner's settings keys only, never
 // alert-state or the health-* keys.
 import Adw from 'gi://Adw';

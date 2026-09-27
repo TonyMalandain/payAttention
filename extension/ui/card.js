@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // A corner (steps 1-2) or centred (step 3) alert card. Own chrome, never a
 // notification (ADR-0004); it never takes key focus.
 import Clutter from 'gi://Clutter';

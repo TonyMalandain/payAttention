@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Whether the configured AI engine is usable, and how it is addressed: the
 // endpoint rules and the AI-mode switch (interfaces.md §6.4, §6.7).
 // Parsed by hand because gjs has no global URL. Imports nothing.

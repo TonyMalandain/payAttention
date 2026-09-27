@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Builds helper -> shell protocol messages (interfaces.md §1) in canonical
 // order. Pure. Serialising and validating is core's formatHelperMessage.
 import { PROTOCOL_VERSION } from '../core/protocol.js';

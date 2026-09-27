@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The display model: plans, judged meetings and calendar health turned into
 // exactly what the UI draws. Pure. Every choice of what to show is made here,
 // so the UI decides nothing.

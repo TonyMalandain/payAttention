@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Which takeover size fits a monitor, so the action buttons are always fully on
 // screen. Pure, with no imports, so it is unit-tested under Node.
 

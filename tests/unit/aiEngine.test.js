@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The endpoint rules and the AI-mode switch (interfaces.md §6.4, §6.7). Getting
 // mayCarryKey wrong sends an API key over plain http, so every rule has a row here.
 import { test, describe } from 'node:test';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The rules-mode golden cases (PG-4a Step 1). Not a test file. The golden JSON in
 // tests/fixtures/judged-rules-golden.json was generated once from these cases on
 // the code before AI mode existed; judge.rulesMode.test.js proves it still holds.

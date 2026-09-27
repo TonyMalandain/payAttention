@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Tony Malandain
+
 # Installs the built extension into the owner's session and marks it enabled
 # for the next login. On Wayland the running shell does not load it until the
 # owner logs out and back in; this script never touches the running shell.

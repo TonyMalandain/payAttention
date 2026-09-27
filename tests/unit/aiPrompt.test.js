@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // What the engine is asked, and which of its answers core accepts (interfaces.md §6.7, §6.8).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

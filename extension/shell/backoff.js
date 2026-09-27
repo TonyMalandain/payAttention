@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // How long to wait before restarting the calendar helper. Pure.
 
 export const FIRST_DELAY_MS = 1000;

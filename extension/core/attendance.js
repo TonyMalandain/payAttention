@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Online or in person (PRD §2): a join link, a real place, or neither. Internal to core.
 import { extractUrls, isConferenceUrl } from './links.js';
 import { NOT_A_PLACE_WORDS } from './words.js';

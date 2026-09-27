@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Automation script for the headless smoke test (scripts/smoke.sh), run by the
 // shell's ui/scripting.js harness. Prints PAYATTENTION-SMOKE PASS, or
 // PAYATTENTION-SMOKE FAIL <check>: <reason> at the first failed check.
@@ -5,6 +8,7 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -429,88 +433,101 @@ async function runLadder() {
     await checkMenuVerdict('2-menu-verdict', ext);
 
     // 3. The test ladder, step by step.
-    ext.stateObj.runTestAlert();
-    const seen = new Set();
-    const takeover = await mustWait(() => {
-        const card = stageFind('payattention-card');
-        for (const step of [1, 2, 3]) {
-            if (card?.has_style_class_name(`payattention-card-step${step}`))
-                seen.add(step);
-        }
-        return stageFind('payattention-takeover');
-    }, 45000, '3-ladder', `no takeover; steps seen: ${[...seen].join(',')}`);
-    const takeoverAt = now();
-    check(seen.has(1) && seen.has(2) && seen.has(3), '3-ladder', `steps seen: ${[...seen].join(',')}`);
+    // Records which sound the ladder asks for. It does not call through: the headless
+    // shell has no audio.
+    const soundCalls = [];
+    const realPlay = Meta.SoundPlayer.prototype.play_from_theme;
+    Meta.SoundPlayer.prototype.play_from_theme = function (name, description) {
+        soundCalls.push({ name, description });
+    };
+    try {
+        ext.stateObj.runTestAlert();
+        const seen = new Set();
+        const takeover = await mustWait(() => {
+            const card = stageFind('payattention-card');
+            for (const step of [1, 2, 3]) {
+                if (card?.has_style_class_name(`payattention-card-step${step}`))
+                    seen.add(step);
+            }
+            return stageFind('payattention-takeover');
+        }, 45000, '3-ladder', `no takeover; steps seen: ${[...seen].join(',')}`);
+        const takeoverAt = now();
+        check(seen.has(1) && seen.has(2) && seen.has(3), '3-ladder', `steps seen: ${[...seen].join(',')}`);
+        check(soundCalls.length === 2 && soundCalls.every(c => c.name === 'bell-window-system' && c.description === 'payAttention alert'),
+            '3-sound', `sound calls: ${JSON.stringify(soundCalls)}`);
 
-    // 4. The takeover: every monitor, our grab, the right buttons.
-    check(takeover.get_parent() === Main.layoutManager.modalDialogGroup, '4-takeover', 'not in modalDialogGroup');
-    const monitors = Main.layoutManager.monitors;
-    check(monitors.length === 2, '4-takeover', `${monitors.length} monitors`);
-    const panels = monitors.map((_m, i) => findByName(takeover, `payattention-takeover-monitor-${i}`));
-    check(panels.every(p => p), '4-takeover', 'a monitor has no takeover panel');
-    const geometry = () => panels.map((p, i) => {
-        const [x, y] = p.get_transformed_position();
-        const [w, h] = p.get_transformed_size();
-        const m = monitors[i];
-        return { ok: p.mapped && x === m.x && y === m.y && w === m.width && h === m.height, text: `${i}: mapped=${p.mapped} ${x},${y} ${w}x${h} want ${m.x},${m.y} ${m.width}x${m.height}` };
-    });
-    await mustWait(() => geometry().every(g => g.ok), 2000, '4-takeover',
-        `a panel does not cover its monitor (${geometry().map(g => g.text).join('; ')})`);
-    await mustWait(() => buttonsOnScreen(panels, monitors).length === 0, 2000, '4-takeover',
-        `a button is off its monitor (${buttonsOnScreen(panels, monitors).join('; ')})`);
-    check(global.stage.get_grab_actor() === takeover, '4-takeover', 'the grab actor is not the takeover');
-    check(ourModalEntries().length === 1, '4-takeover', `${ourModalEntries().length} modal entries of ours`);
-    check(!stageFind('payattention-card'), '4-takeover', 'a card is still up');
-    check(!findByName(takeover, 'payattention-action-join'), '4-takeover', 'Join shown without a link');
-    check(findByName(takeover, 'payattention-action-skip') && findByName(takeover, 'payattention-action-ignore'),
-        '4-takeover', 'Skip or Not important is missing');
-    check(!findByName(takeover, 'payattention-action-ignore-series'), '4-takeover', 'whole-series shown for a single meeting');
+        // 4. The takeover: every monitor, our grab, the right buttons.
+        check(takeover.get_parent() === Main.layoutManager.modalDialogGroup, '4-takeover', 'not in modalDialogGroup');
+        const monitors = Main.layoutManager.monitors;
+        check(monitors.length === 2, '4-takeover', `${monitors.length} monitors`);
+        const panels = monitors.map((_m, i) => findByName(takeover, `payattention-takeover-monitor-${i}`));
+        check(panels.every(p => p), '4-takeover', 'a monitor has no takeover panel');
+        const geometry = () => panels.map((p, i) => {
+            const [x, y] = p.get_transformed_position();
+            const [w, h] = p.get_transformed_size();
+            const m = monitors[i];
+            return { ok: p.mapped && x === m.x && y === m.y && w === m.width && h === m.height, text: `${i}: mapped=${p.mapped} ${x},${y} ${w}x${h} want ${m.x},${m.y} ${m.width}x${m.height}` };
+        });
+        await mustWait(() => geometry().every(g => g.ok), 2000, '4-takeover',
+            `a panel does not cover its monitor (${geometry().map(g => g.text).join('; ')})`);
+        await mustWait(() => buttonsOnScreen(panels, monitors).length === 0, 2000, '4-takeover',
+            `a button is off its monitor (${buttonsOnScreen(panels, monitors).join('; ')})`);
+        check(global.stage.get_grab_actor() === takeover, '4-takeover', 'the grab actor is not the takeover');
+        check(ourModalEntries().length === 1, '4-takeover', `${ourModalEntries().length} modal entries of ours`);
+        check(!stageFind('payattention-card'), '4-takeover', 'a card is still up');
+        check(!findByName(takeover, 'payattention-action-join'), '4-takeover', 'Join shown without a link');
+        check(findByName(takeover, 'payattention-action-skip') && findByName(takeover, 'payattention-action-ignore'),
+            '4-takeover', 'Skip or Not important is missing');
+        check(!findByName(takeover, 'payattention-action-ignore-series'), '4-takeover', 'whole-series shown for a single meeting');
 
-    // 5. Escape reaches the takeover and does nothing.
-    let sawEscape = false;
-    const probeId = takeover.connect('captured-event', (_actor, event) => {
-        if (event.type() === Clutter.EventType.KEY_PRESS && event.get_key_symbol() === Clutter.KEY_Escape)
-            sawEscape = true;
-        return Clutter.EVENT_PROPAGATE;
-    });
-    await pressKey(Clutter.KEY_Escape);
-    await Scripting.sleep(500);
-    takeover.disconnect(probeId);
-    check(sawEscape, '5-escape', 'the Escape key never reached the takeover');
-    check(stageFind('payattention-takeover') === takeover, '5-escape', 'Escape changed the takeover');
-    check(global.stage.get_grab_actor() === takeover, '5-escape', 'Escape changed the grab');
+        // 5. Escape reaches the takeover and does nothing.
+        let sawEscape = false;
+        const probeId = takeover.connect('captured-event', (_actor, event) => {
+            if (event.type() === Clutter.EventType.KEY_PRESS && event.get_key_symbol() === Clutter.KEY_Escape)
+                sawEscape = true;
+            return Clutter.EVENT_PROPAGATE;
+        });
+        await pressKey(Clutter.KEY_Escape);
+        await Scripting.sleep(500);
+        takeover.disconnect(probeId);
+        check(sawEscape, '5-escape', 'the Escape key never reached the takeover');
+        check(stageFind('payattention-takeover') === takeover, '5-escape', 'Escape changed the takeover');
+        check(global.stage.get_grab_actor() === takeover, '5-escape', 'Escape changed the grab');
 
-    // 6. Acknowledge on the second monitor, once the buttons are armed.
-    const armedIn = 1500 - (now() - takeoverAt) / 1000;
-    if (armedIn > 0)
-        await Scripting.sleep(armedIn);
-    const ack = findByName(panels[1], 'payattention-action-ack');
-    check(ack, '6-ack', 'no ack button on monitor 1');
-    const clicked = await clickActor(ack, '6-ack');
-    await mustWait(() => !stageFind('payattention-takeover') && !stageFind('payattention-card') &&
-        ourModalEntries().length === 0 && !grabIsOurs(), 2000, '6-ack', `the takeover or our grab remains (${clicked})`);
-    await Scripting.sleep(3000);
-    check(!stageFind('payattention-takeover') && !stageFind('payattention-card'), '6-ack', 'an alert came back');
+        // 6. Acknowledge on the second monitor, once the buttons are armed.
+        const armedIn = 1500 - (now() - takeoverAt) / 1000;
+        if (armedIn > 0)
+            await Scripting.sleep(armedIn);
+        const ack = findByName(panels[1], 'payattention-action-ack');
+        check(ack, '6-ack', 'no ack button on monitor 1');
+        const clicked = await clickActor(ack, '6-ack');
+        await mustWait(() => !stageFind('payattention-takeover') && !stageFind('payattention-card') &&
+            ourModalEntries().length === 0 && !grabIsOurs(), 2000, '6-ack', `the takeover or our grab remains (${clicked})`);
+        await Scripting.sleep(3000);
+        check(!stageFind('payattention-takeover') && !stageFind('payattention-card'), '6-ack', 'an alert came back');
 
-    // 6b. The worst-case alert keeps every button on screen and the title to two lines.
-    await checkWorstCase('6b-worst-case', home);
+        // 6b. The worst-case alert keeps every button on screen and the title to two lines.
+        await checkWorstCase('6b-worst-case', home);
 
-    // 6c. A UI constructor that fails cleans up after itself.
-    await checkFailedConstruction('6c-failed-construction', home);
+        // 6c. A UI constructor that fails cleans up after itself.
+        await checkFailedConstruction('6c-failed-construction', home);
 
-    // 7. Disable: nothing of ours remains.
-    await checkDisabled('7-disable', home);
+        // 7. Disable: nothing of ours remains.
+        await checkDisabled('7-disable', home);
 
-    // 8. The lock path: disable while a takeover holds the grab.
-    Main.extensionManager.enableExtension(UUID);
-    await mustWait(() => Main.extensionManager.lookup(UUID)?.state === ACTIVE, 10000, '8-lock', 're-enable failed');
-    await checkIndicator('8-lock', home);
-    Main.extensionManager.lookup(UUID).stateObj.runTestAlert();
-    await mustWait(() => stageFind('payattention-takeover'), 45000, '8-lock', 'no takeover after re-enable');
-    await checkDisabled('8-lock', home);
+        // 8. The lock path: disable while a takeover holds the grab.
+        Main.extensionManager.enableExtension(UUID);
+        await mustWait(() => Main.extensionManager.lookup(UUID)?.state === ACTIVE, 10000, '8-lock', 're-enable failed');
+        await checkIndicator('8-lock', home);
+        Main.extensionManager.lookup(UUID).stateObj.runTestAlert();
+        await mustWait(() => stageFind('payattention-takeover'), 45000, '8-lock', 'no takeover after re-enable');
+        await checkDisabled('8-lock', home);
 
-    // 9. Uninstall while a takeover holds the grab. Last: the extension is gone afterwards.
-    await checkUninstall('9-uninstall', home);
+        // 9. Uninstall while a takeover holds the grab. Last: the extension is gone afterwards.
+        await checkUninstall('9-uninstall', home);
+    } finally {
+        Meta.SoundPlayer.prototype.play_from_theme = realPlay;
+    }
 }
 
 export async function run() {

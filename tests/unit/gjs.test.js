@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // ADR-0002: core runs unchanged under gjs as well as Node.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

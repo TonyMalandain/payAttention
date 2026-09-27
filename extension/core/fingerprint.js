@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The identity of one question: prompt version, engine and invite (interfaces.md §6.2).
 import { PROMPT_VERSION } from './aiPrompt.js';
 

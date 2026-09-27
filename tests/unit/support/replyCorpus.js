@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // parseReply corpus: engine replies and what core accepts from each. Not a test
 // file. Shared with the AI helper's fake-engine tests (Layer 2b, PG-4b).
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The shell ↔ AI helper wire contract (interfaces.md §6.2, §6.6): the messages,
 // the invite's shape and bounds, and the one text-cleaning rule both share.
 // Failures carry a field *path* only, never a value: meeting text must not reach

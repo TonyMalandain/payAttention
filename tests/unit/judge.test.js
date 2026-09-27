@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { judge } from '../../extension/core/judge.js';

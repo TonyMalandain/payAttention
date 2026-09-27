@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Order-of-magnitude guards for the tick budget in constraints.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

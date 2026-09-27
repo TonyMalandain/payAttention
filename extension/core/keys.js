@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Stored key formats (ADR-0003, data.md). Pure: no clock, no I/O.
 
 /** How long occurrence-keyed state is kept after its time: 7 days, in ms. */

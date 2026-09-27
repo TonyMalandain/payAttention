@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Default settings, the single source for them (boundaries.md: prefs may import this).
 // In-person offsets follow D-008 (10 / 5 / 2 / 0 min before leave-by); travel follows D-006.
 

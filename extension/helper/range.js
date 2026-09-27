@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The snapshot range and the protocol's overlap rule. Pure: the clock is a
 // parameter, so nothing here reads time.
 

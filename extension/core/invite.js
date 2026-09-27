@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Turning one occurrence into the bounded invite the AI engine sees
 // (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027). Pure.
 import { INVITE_CAPS, MAX_INVITE_BYTES, capText, cleanText, utf8Length } from './aiProtocol.js';

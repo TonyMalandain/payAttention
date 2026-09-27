@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // When to read: the timers, the debounce, one read at a time, and refresh
 // commands.
 import GLib from 'gi://GLib';

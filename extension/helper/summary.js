@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The counts-only text for `--summary`: safe to paste into a bug report. Pure.
 // It never includes a title, name, address, place, description, link, uid or
 // calendar name.

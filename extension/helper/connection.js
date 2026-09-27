@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Turns a source's remoteness, its client's online flag and its EDS
 // connection-status name into the protocol `connection` value (D-013,
 // interfaces.md addendum). Pure; the GI side passes the enum key name so the

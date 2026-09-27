@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Every EDS conversation: the registry, the per-source clients, the change
 // views, instance expansion and remote-sync requests. Read-only: the complete
 // list of EDS calls allowed here is in docs/plans/PG-1b.md ("EDS calls").

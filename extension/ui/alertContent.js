@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The content shared by a card and each takeover panel: text and buttons.
 // Draws what the view says and reports clicks; decides nothing.
 import Clutter from 'gi://Clutter';

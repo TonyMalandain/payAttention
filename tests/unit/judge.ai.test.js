@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // judge() with stored AI answers (interfaces.md §6.3; D-019, D-023, D-024).
 // A stored answer may change the verdict and its reason, nothing else; overrides
 // win and are never asked; cancelled, declined and all-day meetings are never asked.

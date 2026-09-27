@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Turns one expanded instance (ICal/ECal objects) into one OccurrenceDTO
 // (core/types.js). No I/O. The helper transcribes; it never judges.
 import ECal from 'gi://ECal?version=2.0';

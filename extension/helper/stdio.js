@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The process's three file descriptors. stdout carries protocol lines only
 // (and the counts-only summary); stderr carries short diagnostic codes only.
 // Calendar content never reaches stderr.

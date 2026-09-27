@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Calls a function at a fixed interval until destroyed.
 import GLib from 'gi://GLib';
 

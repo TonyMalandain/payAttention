@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Lint config. The per-directory no-restricted-imports rules are the
 // "must not import" column of docs/architecture/boundaries.md;
 // tests/unit/boundaries.test.js keeps them honest.

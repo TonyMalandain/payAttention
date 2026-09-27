@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // GJS check of shell/store.js against the real compiled schema, run by
 // scripts/smoke.sh with GSETTINGS_BACKEND=memory before the headless shell.
 // Prints PAYATTENTION-STORE PASS or PAYATTENTION-STORE FAIL <reason>.

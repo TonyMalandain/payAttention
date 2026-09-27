@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Test-only writer: adds one VEVENT (argv[0]) to the FIXTURE calendar of the
 // isolated EDS the test started. Never run it against a real session bus.
 import GLib from 'gi://GLib';

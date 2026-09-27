@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Video-call links (PRD §2): https only, allowlisted hosts only (constraints.md).
 // Parsed by hand because gjs has no global URL.
 

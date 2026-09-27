@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Typed read and write of the GSettings schema (data.md). The only GSettings
 // code in the shell process.
 import GLib from 'gi://GLib';

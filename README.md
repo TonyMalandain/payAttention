@@ -73,6 +73,8 @@ Meeting rooms are not counted as guests. The full rules are in [`docs/prd/meetin
 | Insist | 3 min | 2 min | A red card at the centre of the screen, pulsing, with a sound. |
 | Takeover | 1 min, then every minute | at leave-by, then every minute | Full screen on every monitor. It goes away only when you choose an action. |
 
+The sound at Insist and Takeover is the alert sound you chose in GNOME Settings → Sound → Alert Sound. If that sound file is missing, the standard bell plays. If you chose **None** there, GNOME silences it for payAttention too; the sound switch in payAttention's Settings turns it off on its own.
+
 Actions: **Join** (opens the video link, online meetings only), **I'm on it**, **Snooze**, **Skip this one**, and **Not important** (for this meeting or the whole series). **I'm on it** or **Join** stops all alerts for that meeting. Alerts stop 10 minutes after the start. Alerts appear even in Do Not Disturb.
 
 If the calendar has not updated for 15 minutes, the icon shows a warning. The menu names the calendar that is not updating, so you never mistake a broken calendar for a free afternoon.
@@ -101,3 +103,8 @@ All the timings, the default travel time (30 min), your extra important and igno
 ## Development
 
 Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test checks install and uninstall in a throwaway home, then runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md).
+
+## License
+
+payAttention is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Tony Malandain; see [`NOTICE`](NOTICE).
+The extension contains no third-party code. The development tools and the GNOME libraries it uses are listed, with their licences, in [`THIRD-PARTY.md`](THIRD-PARTY.md).

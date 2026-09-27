@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Whether the owner is at the machine, and when it resumed from sleep.
 import * as LoginManager from 'resource:///org/gnome/shell/misc/loginManager.js';
 

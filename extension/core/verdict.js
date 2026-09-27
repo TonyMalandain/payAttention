@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The verdict rules of PRD §1 steps 2 to 6, in order. Internal to core.
 import { findWord } from './words.js';
 

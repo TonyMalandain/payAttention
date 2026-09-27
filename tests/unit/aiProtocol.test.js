@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The AI helper wire contract (interfaces.md §6.2, §6.6): text cleaning, the
 // invite's shape and bounds, and (part 2) the messages both ends exchange.
 import { test, describe } from 'node:test';

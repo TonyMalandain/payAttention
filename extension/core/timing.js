@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Settings (minutes, seconds) -> Timing (ms). Unit conversion only; plan() clamps.
 
 const MINUTE = 60000;

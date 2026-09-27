@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The test alert (PRD §5): one fake must-attend meeting that runs the whole
 // ladder in 25 s. The controller keeps its state in memory, never stored.
 

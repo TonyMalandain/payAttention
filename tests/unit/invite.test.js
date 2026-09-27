@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The bounded invite (interfaces.md §6.2; D-020, D-022, D-024, D-025).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

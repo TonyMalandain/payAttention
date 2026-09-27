@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The top-bar countdown and the menu of today's meetings (PRD §5).
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';

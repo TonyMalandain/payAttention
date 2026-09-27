@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Keeps the calendar helper process alive (ADR-0001) and hands on its last
 // accepted snapshot, when it was accepted, and when each calendar was last
 // seen in sync. It records facts only; health.js decides what they mean.

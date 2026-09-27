@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Data shapes shared by core and its callers (interfaces.md §2, made exact). JSDoc only.
 
 /** @typedef {'needs-action'|'accepted'|'declined'|'tentative'|'delegated'|'other'} PartStat */

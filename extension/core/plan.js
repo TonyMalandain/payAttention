@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // plan(): what is on screen right now (ADR-0002: level-triggered, recomputed on
 // every tick from the time, the judged meetings and the owner's actions).
 // Nothing is scheduled, so a missed tick (sleep, lock, idle) cannot lose a step.

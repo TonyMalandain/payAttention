@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Who the owner is, and where they stand in one meeting. Internal to core.
 
 /** An address as core compares it: trimmed, lower case, without "mailto:". */

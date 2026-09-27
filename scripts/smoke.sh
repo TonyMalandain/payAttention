@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Tony Malandain
+
 # The smoke test (testing-and-build.md, layer 3): a GJS store check, an
 # install/uninstall check in a throwaway home with its own dconf, then a
 # headless gnome-shell with two virtual monitors, its own D-Bus session, its

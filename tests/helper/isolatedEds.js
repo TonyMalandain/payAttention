@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Test support, not a test: a private EDS on a private D-Bus with a synthetic
 // fixture calendar (*.test domains only). The environment is built from
 // scratch so that nothing can reach the owner's real session bus.

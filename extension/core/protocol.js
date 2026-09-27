@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Helper protocol v1 (interfaces.md §1): one JSON object per line.
 // Imports nothing, so the helper can import this module alone.
 // Failures carry a field *path* only, never a value: calendar content must not

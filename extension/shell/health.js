@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Calendar freshness (D-010, D-013, D-014): the one definition of "stale".
 // Pure. The feed records facts (when a snapshot was accepted, when each
 // calendar was seen in sync); this module turns them into a verdict.

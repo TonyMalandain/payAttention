@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // gjs script, not a Node test: after one read, emits notify::connection-status
 // on each source and notify::online on its client, and prints how many times
 // onChange ran for each. Run by helper.test.js against an isolated EDS only.

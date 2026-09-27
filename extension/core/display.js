@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Display strings: numbers and raw calendar text turned into what the owner
 // reads, and the comma lists typed in settings parsed back. Pure, shared by
 // shell/view.js and prefs.js (boundaries.md).

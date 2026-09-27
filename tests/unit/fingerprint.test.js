@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The identity of one question (interfaces.md §6.2): a changed invite, engine or
 // prompt must change it, so the meeting is asked again.
 import { test, describe } from 'node:test';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // "Rules mode behaves exactly as today" (PG-4a): judge() output pinned by a golden
 // record generated once, before AI mode was added. Never regenerate it to make a test pass.
 import { test, describe } from 'node:test';

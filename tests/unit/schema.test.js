@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // data.md: the schema repeats DEFAULT_SETTINGS, and "a unit test keeps the two equal".
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Opens a URL with the desktop's default handler (the "Join" button).
 import Gio from 'gi://Gio';
 

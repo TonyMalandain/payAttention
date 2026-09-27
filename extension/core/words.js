@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // Word lists (PRD §1 steps 2f and 3a, PRD §2) and whole-word matching.
 
 /** Title words that mark a placeholder (PRD §1 step 2), in PRD order. */

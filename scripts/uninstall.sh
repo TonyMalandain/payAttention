@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Tony Malandain
+
 # Removes payAttention from the owner's session: stops it in the running shell
 # (the shell runs its disable() before it answers), removes its install
 # directory, and takes its UUID out of org.gnome.shell enabled-extensions and

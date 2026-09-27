@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The one orchestrator (ADR-0002). Judges when its inputs change, plans on
 // every tick, renders, routes the owner's actions, and owns every part's
 // lifetime. Every part that touches GNOME is injected, so this file never

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // The owner's recorded actions per occurrence (data.md "Alert state") and the
 // reducer that updates them. Pure: `now` is always a parameter.
 import { occurrenceKeyTime, isExpiredOccurrenceKey } from './keys.js';

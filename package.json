@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "GNOME Shell extension: alerts for the meetings that matter (dev tooling only; never packed)",
-  "license": "GPL-2.0-or-later",
+  "license": "Apache-2.0",
   "type": "module",
   "engines": {
     "node": ">=24"

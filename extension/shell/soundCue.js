@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tony Malandain
+
 // When the alert sound plays: once each time a step-3 or step-4 alert newly
 // shows. Pure; the controller also requires the sound-enabled setting.
 
