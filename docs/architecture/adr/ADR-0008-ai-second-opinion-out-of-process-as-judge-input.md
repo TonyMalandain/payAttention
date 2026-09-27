@@ -1,4 +1,4 @@
-# ADR-0008 — The AI second opinion runs in its own on-demand helper process and reaches `judge` as stored data, never on the alert path
+# ADR-0008 — The AI second opinion runs in its own on-demand helper process and reaches `judge` as stored data, never on the alert path   [SUPERSEDED by ADR-0010 on 2026-09-27]
 - **Date:** 2026-09-26
 - **Kind:** reversible, except the stored `ai-verdicts` key format (schema key, `data.md`)
 
@@ -111,3 +111,15 @@ reader. The shape:
   stays.
 - `ai-verdicts` grows past about 64 KiB (the same trigger as ADR-0003).
 - The review process rejects a second spawned GJS helper.
+
+## Superseded 2026-09-27
+
+Superseded by ADR-0010. The owner replaced the second opinion on "unsure"
+verdicts (D-017) with a rules-or-AI mode, where the AI decides every meeting
+without an override (D-019). The D-018 fact list was replaced by the whole
+invite (D-020). What carries over into ADR-0010 unchanged: the separate
+on-demand AI helper process (option 3 above, and its reasoning), answers
+reaching `judge` as stored data, and nothing on the alert path. What does not:
+the eligibility list of unsure codes, the D-018 facts, the settings shape, and
+falling back to the rules the moment an invite changes. This record was never
+built.

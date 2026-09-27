@@ -166,3 +166,15 @@ Append only. Newest at the bottom.
 - **Fact:** It is not known which cloud service the owner has a key for. It is needed only for the one-time hand check of a cloud engine.
 - **Source:** product manager.
 - **Touches:** docs/prd/meeting-guardian.md
+
+## 2026-09-27 — Architect findings on the AI-mode design
+- **Kind:** decision
+- **Fact:** Three were accepted. An old AI answer stays in force while a changed invite is asked again, and the rules decide if that fails. The standard connection is refused over plain http on the public internet, and a key never goes over plain http to another machine. Passcodes are stripped from video links (D-022). Two went to the owner as questions: whether cancelled, declined and all-day meetings stay silent in AI mode, and whether the calendar name is sent.
+- **Source:** docs/inbox.md, architect, 2026-09-27.
+- **Touches:** decisions.md D-022, docs/prd/meeting-guardian.md
+
+## 2026-09-27 — Two open questions for the owner
+- **Kind:** question
+- **Fact:** (1) In AI mode, should cancelled, declined and all-day meetings stay silent without asking the AI? (2) Should the calendar name (for example "Family") be sent with the invite?
+- **Source:** architect finding; product manager.
+- **Touches:** decisions.md D-019, D-020

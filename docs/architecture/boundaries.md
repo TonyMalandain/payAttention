@@ -15,7 +15,7 @@ extension/              the pack source: exactly what ships in the zip
   schemas/              org.gnome.shell.extensions.payattention.gschema.xml
   core/                 pure logic: protocol validation, keys, judge, plan, reduce
   helper/               the calendar helper program (run as a subprocess)
-  ai/                   the AI helper program (run as a subprocess, only while AI is on; ADR-0008)
+  ai/                   the AI helper program (run as a subprocess, only in AI mode; ADR-0010)
   shell/                in-shell services: calendar feed, store, controller, environment
   ui/                   actors: indicator + menu, card, takeover, sound
 tests/
@@ -44,7 +44,7 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
 | `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
-| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, and the D-018 fact list it shows) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
+| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, and the endpoint rules) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
 The "must not import" column is enforced with ESLint `no-restricted-imports` per
 directory, so a breach fails lint rather than review. Two parts are not enforced
@@ -59,7 +59,7 @@ creating a `Gio.Settings`.
 - **The `system` built-in is the helper's only.** `System.exit` inside the shell
   process would end the desktop session, so `shell/`, `ui/`, `extension.js` and
   `prefs.js` must not import it.
-- **Network and secrets are the AI helper's only** (ADR-0008, ADR-0009). No
+- **Network and secrets are the AI helper's only** (ADR-0010, ADR-0009). No
   other directory imports Soup, and only `ai/` (read) and `prefs.js` (write)
   import Secret. The lint rules forbid both elsewhere, so a breach fails lint.
 - **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
@@ -89,14 +89,16 @@ creating a `Gio.Settings`.
   `ui/` are animations and display-only effects (for example, a pulsing border).
   It never writes settings; it emits actions.
 - **AI helper** must not know calendars, overrides, settings, alert state, or
-  the UI. It receives its configuration and the D-018 facts on stdin and never
-  anything else. It builds one request per fact set, validates the reply with
-  core, and returns a verdict or a short failure code. It never logs facts,
-  titles, replies, reasons, or keys (codes and HTTP status only). It never
-  follows a URL or runs anything named in a reply.
-- **Core** also owns the D-018 fact list, the fact builder, the fingerprint,
-  the prompt text, and the reply validator. Because they are pure, the D-018
-  and injection promises are proven by unit tests.
+  the UI. It receives its configuration and one bounded invite per request on
+  stdin, and nothing else. It builds one request per invite, validates the
+  reply with core, and returns a verdict or a short failure code. It never logs
+  invites, titles, replies, reasons, or keys (codes and HTTP status only). It
+  never follows a URL or runs anything named in a reply.
+- **Core** also owns the invite field list, the invite builder and its size
+  caps, the fingerprint, the endpoint rules (`normaliseEndpoint`,
+  `endpointClass`), the prompt text, and the reply validator (`interfaces.md`
+  §6). Because they are pure, the D-020 bounds, "overrides are not sent" and
+  the injection promises are proven by unit tests.
 - **Preferences** must not know alert state or the helper. It may spawn the
   AI helper for "Test connection" and read its one-line answer.
 
@@ -111,6 +113,6 @@ creating a `Gio.Settings`.
 | Verdict overrides, mode overrides, travel times | store (on controller request) | store, prefs.js may clear |
 | Alert state | store (on controller request, via core `reduce`) | controller |
 | Persisted health clocks (`health-*` keys) | store (on controller request, in `disable()`) | controller, at `enable()` |
-| AI settings (`ai-*` keys except `ai-verdicts`) | prefs.js | store, prefs.js |
+| AI settings (`verdict-source`, `ai-endpoint`, `ai-model`) | prefs.js | store, prefs.js |
 | AI answers (`ai-verdicts`) | store (on controller request, from AI helper replies) | controller, into `judge` |
 | AI engine keys (GNOME keyring, ADR-0009) | prefs.js | AI helper only; `scripts/uninstall.sh --purge` clears |

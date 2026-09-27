@@ -14,7 +14,7 @@ Run in this order. Each must pass before the next is worth running.
 | 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. |
 | 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/` and the gi-free shell modules, plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
-| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist`. From PG-4, also `--extra-source=ai` (ADR-0008). |
+| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist`. From PG-4, also `--extra-source=ai` (ADR-0010). |
 | 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). From PG-4 the same script also runs `tests/ai/**/*.test.js`: the AI helper against a fake engine (Layer 2b). |
 | 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below). |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
@@ -96,20 +96,23 @@ Against the real calendars, by hand only: `gjs -m extension/helper/main.js --sum
 
 ## Layer 2b — AI helper integration (fake engine, no network)
 
-From PG-4 (ADR-0007, ADR-0008). The AI helper is run against a **fake engine**:
+From PG-4 (ADR-0007, ADR-0010). The AI helper is run against a **fake engine**:
 a `node:http` server on `127.0.0.1`, on a port the OS picks. It speaks the
 OpenAI Chat Completions shape and records every request body. The helper runs
 inside `dbus-run-session`, so it can never reach the owner's keyring.
 
 Rules the tests hold:
 
-- **Never a real engine.** The harness refuses any base URL whose host is not
+- **Never a real engine.** The harness refuses any endpoint whose host is not
   `127.0.0.1`. No test, fixture or script contains a real provider URL or key.
-- **D-018 proof.** The recorded body's user message parses to exactly the
-  facts object that was sent, with exactly the keys in core's fact list. The
-  body carries no `tools`, and no field holds a description, location, name or
-  email address. The fixture event must contain all of those, so that their
-  absence proves something.
+- **Invite proof (D-020).** The recorded body's user message parses to exactly
+  the invite that was sent, with exactly the keys in core's invite field list,
+  and within 8 192 bytes. The body carries no `tools` and no second user
+  message. The fixture event has a description, a place, a video link, an
+  organiser, guests with names, emails and responses, a room, and a
+  too-long description and guest list. All of them must appear, capped as in
+  `interfaces.md` §6.2, and the room must not. The helper refuses an invite
+  with an extra key or over 8 192 bytes (`bad-request`).
 - **Failure mapping.** The fake engine can be made to answer late (past
   `timeoutMs`, which must give `failed: timeout` within `timeoutMs` + 1 s), 401,
   429 with `Retry-After`, 500, a closed port, non-JSON, fenced JSON, a leading
@@ -123,14 +126,29 @@ Rules the tests hold:
 - **Keys.** Whether a test keyring can be run headless
   (`gnome-keyring-daemon --unlock --components=secrets` inside the private bus)
   is not verified. If it can, one test proves that the `Authorization` header is
-  sent over loopback `http:` and that the key never appears on the helper's
-  stdout or stderr. If it cannot, the key path is checked in Layer 4.
+  sent over loopback `http:`, that no header is sent when no key is saved for
+  the endpoint (keyless engine), that a key saved for another endpoint is never
+  sent, and that the key never appears on the helper's stdout or stderr. If it
+  cannot, the key path is checked in Layer 4.
 
-Layer 1 covers the rest in pure code: the fact builder, the fingerprint, and
-`judge` with `aiVerdicts` (overrides win, sure rules are never touched, a
-changed fact gives the rule verdict and a new request, AI off gives no request).
-The controller is tested with a fake AI client that never answers, and every
-alert step must still appear at its time.
+Layer 1 covers the rest in pure code:
+- the invite builder, with its caps, the 8 192-byte cap, and cleaning;
+- the fingerprint (every invite field changes it, text past a cap does not);
+- `normaliseEndpoint` and `endpointClass`, including `http:` to a public host
+  being refused;
+- `judge` with `aiVerdicts`:
+  - overrides win and produce no `aiAsk`, so they are never sent;
+  - every rule code is eligible;
+  - a current answer applies;
+  - a stale answer applies with a new `aiAsk`;
+  - no answer gives the rule verdict and an `aiAsk`;
+  - rules mode gives exactly today's output and no `aiAsk`.
+
+The controller is tested with fake AI clients:
+- one that never answers: every alert step must still appear at its time;
+- one that fails: stale entries are withheld, so the rules decide;
+- a budget test: the 121st request in an hour is not sent, and the status is
+  `unavailable`.
 
 ## Layer 3 — shell smoke test (headless gnome-shell)
 
@@ -202,8 +220,8 @@ What the smoke script checks:
 7. Uninstall while a takeover holds the grab (check `9-uninstall`, last,
    because the extension is gone afterwards). Nothing of ours is left on the
    stage, no grab remains, and the helper has exited.
-8. From PG-4: AI is off by default, so no AI helper process runs at any point
-   of the smoke.
+8. From PG-4: rules mode is the default, so no AI helper process runs at any
+   point of the smoke.
 
 **Isolation boundary.** The smoke isolates the session bus, the XDG directories
 (so settings and calendars) and nothing else. The system bus is the real one: the
@@ -238,14 +256,15 @@ alert and unlock (alert returns at the right step); suspend across a step time;
 **network off for 15 min** shows "Calendar not updating since …" while cached
 meetings still alert, and it clears within seconds of the network returning (D-013).
 
-From PG-4, AI checks on the real session (ADR-0007): with AI off, no
-`ai/main.js` process exists (`pgrep -af ai/main.js`). With a local engine
-(Ollama at `http://127.0.0.1:11434/v1`) and with a cloud engine, "Test
-connection" says yes, and an unsure meeting shows "AI: …". With the engine
+From PG-4, AI checks on the real session (ADR-0007, ADR-0010): in rules mode,
+no `ai/main.js` process exists (`pgrep -af ai/main.js`). With a keyless local
+engine (Ollama at `http://127.0.0.1:11434/v1`), and by hand with the owner's
+cloud key, "Test connection" says yes, and every meeting without an override
+shows "AI: …" once answered. With the engine
 stopped, the menu says "AI unavailable — using rules", and a Test alert still
 runs all four steps on time. The key is visible in Passwords and Keys and absent
 from `dconf dump /org/gnome/shell/extensions/payattention/`. `--purge` removes
-it. The journal holds no title, fact, reason or key.
+it. The journal holds no title, invite field, reason or key.
 
 ## Pitfalls found while verifying
 

@@ -7,7 +7,7 @@ authority; none of them may add or change an ADR.
 |---|---|
 | `overview.md` | The system on one page: subsystems, the time/escalation model, idle/suspend/lock, the UI layer, product term → code name |
 | `boundaries.md` | Repository layout, what each directory owns, may import, and must not know |
-| `interfaces.md` | The helper snapshot protocol, core ↔ controller ↔ UI contracts, the public extension method, the settings contract, the AI second opinion (§6) |
+| `interfaces.md` | The helper snapshot protocol, core ↔ controller ↔ UI contracts, the public extension method, the settings contract, AI mode (§6) |
 | `data.md` | GSettings schema (keys, types, defaults), key formats, alert state, pruning |
 | `constraints.md` | Numbers (timing, scale, budgets), privacy and security rules, GNOME review rules |
 | `stack.md` | Every technology and why; build-vs-adopt calls |
@@ -25,8 +25,9 @@ authority; none of them may add or change an ADR.
 | ADR-0004 | Alerts are the extension's own shell actors and modal grab, never notifications |
 | ADR-0005 | Run in the `user` session mode only; locking disables the extension |
 | ADR-0006 | UUID `payattention@tonymalandain.github.io`, schema `org.gnome.shell.extensions.payattention`, GNOME 50 only |
-| ADR-0007 | LLM engines are reached through the OpenAI-compatible protocol with our own small gjs client, not a bundled abstraction library |
-| ADR-0008 | The AI second opinion runs in its own on-demand helper process and reaches `judge` as stored data, never on the alert path |
-| ADR-0009 | AI engine keys live in the GNOME keyring, written by prefs and read only by the AI helper |
+| ADR-0007 | LLM engines are reached through the OpenAI-compatible protocol with our own small gjs client, not a bundled abstraction library (accepted as D-021; amended 2026-09-27) |
+| ADR-0008 | [SUPERSEDED by ADR-0010] The AI second opinion on unsure verdicts runs in its own helper process and reaches `judge` as stored data |
+| ADR-0009 | AI engine keys live in the GNOME keyring, per normalised endpoint, written by prefs and read only by the AI helper (amended 2026-09-27: one endpoint, keyless allowed, transport rule by endpoint) |
+| ADR-0010 | AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite; stale answers serve while re-asked; settings are mode, endpoint, model |
 
 Last restructure: none.

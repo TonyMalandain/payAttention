@@ -1,6 +1,7 @@
 # ADR-0007 — LLM engines are reached through the OpenAI-compatible protocol, with our own small gjs client, not a bundled abstraction library
 - **Date:** 2026-09-26
 - **Kind:** reversible (behind the AI helper protocol in `interfaces.md` §6)
+- **Status:** accepted by the owner as D-021 on 2026-09-27; amended 2026-09-27 (see the end)
 
 ## Context
 
@@ -133,3 +134,23 @@ Rules that come with it:
   prerequisite for AI (then option 3, in its own process, under ADR-0008's
   protocol, replaces only the client), or
 - gjs gains `fetch` and web streams, so a JS library could run unmodified.
+
+## Amendment 2026-09-27
+
+The decision stands, and the owner accepted it as D-021: "The user can
+specify API KEY + endpoint via settings page". Three things in the text above
+have changed, and the original wording is kept as the record:
+
+- **Why AI is used.** D-017 (a second opinion on unsure meetings) is
+  superseded by D-019 (AI mode decides every meeting). The process and `judge`
+  side are now ADR-0010, which supersedes ADR-0008.
+- **Force 7, "about 10 short facts".** The request now carries one bounded
+  invite (D-020, `interfaces.md` §6.2): at most 8 192 bytes, about 2 000 tokens
+  at worst, and usually a few hundred. The conclusion still holds. It is one
+  request and one short reply, with no streaming, tools or conversation.
+- **Settings.** There is one endpoint, one model and one key (ADR-0010,
+  `data.md`), not a base URL and model per "local" or "cloud" location. Presets
+  are not part of this decision. Prefs may offer example endpoints as a
+  convenience, but nothing about them is stored. The native-adapter seam, if
+  ever needed, is chosen from the endpoint by the AI helper, not from a stored
+  preset.

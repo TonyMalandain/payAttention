@@ -3,7 +3,8 @@
 What is stored, where, in what format, and who writes it. Decided in ADR-0003:
 **everything durable lives in GSettings** under one schema. There are no files of
 our own on disk. Calendar content is never stored by us, with one bounded
-exception from PG-4: the AI's one-line reason (see `ai-verdicts` below).
+exception from PG-4: the AI's one-line reason (see `ai-verdicts` below;
+ADR-0010).
 **One exception to "everything in GSettings":** AI engine keys live in the GNOME
 keyring (ADR-0009), never in GSettings.
 
@@ -44,16 +45,21 @@ keyring (ADR-0009), never in GSettings.
 | `owner-domains` | `as` | `[]` | — | The owner's email domains. Empty means "detect from the calendars' own addresses" |
 | `extra-owner-addresses` | `as` | `[]` | — | Owner addresses beyond each calendar's own address, e.g. aliases (§6, D-009). Lowercased by core |
 | `sound-enabled` | `b` | `true` | — | Play a sound at insist and takeover |
-| `ai-enabled` | `b` | `false` | — | AI second opinion on unsure verdicts (R-18, D-017). Off by default |
-| `ai-location` | `s` | `'local'` | choices `local`, `cloud` | Where the engine runs (R-19). Picks which URL and model below are active, and the privacy wording in prefs |
-| `ai-local-url` | `s` | `'http://127.0.0.1:11434/v1'` | — | Base URL of an engine on this machine or network (the default is Ollama's) |
-| `ai-local-model` | `s` | `''` | — | Model name for the local engine. Empty means AI is not set up |
-| `ai-cloud-url` | `s` | `'https://api.openai.com/v1'` | — | Base URL of a cloud engine. Must be `https:` or AI stays off |
-| `ai-cloud-model` | `s` | `''` | — | Model name for the cloud engine. Empty means AI is not set up |
+| `verdict-source` | `s` | `'rules'` | choices `rules`, `ai` | The mode: who decides verdicts (R-18, D-019). Rules by default |
+| `ai-endpoint` | `s` | `'http://127.0.0.1:11434/v1'` | — | The AI engine's address (R-19, D-021). The default is Ollama on this computer. It must be usable (`interfaces.md` §6.4), or AI stays not set up |
+| `ai-model` | `s` | `''` | — | The model name. Empty means AI is not set up, even in AI mode |
 
-The local and cloud URL and model are kept separately, so the owner can switch
-`ai-location` back and forth (R-19) without typing either again. The API key
-for an address is in the keyring, keyed by that address (ADR-0009).
+One endpoint and one model, as the owner described them (D-021, ADR-0010).
+There is no stored "local" or "cloud" choice. Whether the invite leaves the
+computer is worked out from the endpoint by core, so it can never disagree
+with the address. The API key is not a setting. It is in the keyring, keyed by
+the normalised endpoint (ADR-0009). An endpoint with no key is a keyless
+engine. Switching endpoints and back finds the old key again, and a key is
+never sent to an address it was not saved for.
+
+These keys replace the `ai-enabled`, `ai-location`, `ai-local-*` and
+`ai-cloud-*` keys designed on 2026-09-26. Those keys never shipped, so there is
+nothing to migrate.
 
 Defaults live once, in core (`DEFAULT_SETTINGS`); the schema repeats them and a
 unit test keeps the two equal. Core also clamps offsets, so steps can never come
@@ -80,7 +86,7 @@ Every integer key gets a `<range>` in the schema, so a bad value cannot reach co
 | `health-data-at` | `x` | Epoch ms of the last fresh snapshot, written on `disable()`. `0` = unknown. Seeds the D-010 clock at the next `enable()`. |
 | `health-provider-at` | `x` | Epoch ms of the oldest per-calendar provider-sync time, written on `disable()`. `0` = unknown. Seeds the D-013 clock. |
 
-| `ai-verdicts` | `s` | JSON of AI answers, see below (ADR-0008). Not shown in prefs. |
+| `ai-verdicts` | `s` | JSON of AI answers, see below (ADR-0010). Not shown in prefs. |
 
 The two `health-*` keys exist so that locking the screen (which runs `disable()`,
 ADR-0005) does not reset the stale-calendar clocks: without them an owner working
@@ -128,7 +134,7 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
 {"v":1,
  "items": {
    "occ:<uid>|<t>": {
-     "fp": "…",                 // fingerprint of PROMPT_VERSION + engine + D-018 facts (interfaces.md §6.2); a hash, never the facts
+     "fp": "…",                 // fingerprint of PROMPT_VERSION + engine tag + the bounded invite (interfaces.md §6.2); a hash, never the invite
      "verdict": "must"|"ignore",
      "reason": "…",             // normalised, at most 80 characters (interfaces.md §6.8)
      "at": 1790000000000        // when it was answered, epoch ms
@@ -136,19 +142,29 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
 ```
 
 - Keyed by occurrence key (ADR-0003 format), so one answer per occurrence.
-  An answer applies only while its `fp` matches the current facts and engine.
-  A changed title, time, length, guest count, answer, place or link flag, or a
-  different engine or model, makes it not apply. The occurrence is then asked
-  again and the entry is overwritten.
+  An answer is **current** while its `fp` matches the current invite and
+  engine. Any change to the bounded invite makes it **stale**: title, time,
+  length, status, busy/free, description, place, video link, organiser, or any
+  guest, including one guest's response. So does a different endpoint or
+  model, or a new prompt version. A stale answer still applies while it is
+  asked again, unless the AI is unavailable or that ask failed
+  (`interfaces.md` §6.3 and §6.5). The new answer overwrites the entry.
 - **What it holds that is new:** `reason` is text written by the model from
-  the meeting facts, so it may paraphrase the title. Accepted, because it lets
-  a lock and unlock (ADR-0005) reuse answers instead of asking again. It is
+  the whole invite (D-020), so it may paraphrase the title or name a person
+  ("1:1 with Dana, client"). Accepted, because it lets a lock and unlock
+  (ADR-0005) reuse answers instead of asking about every meeting again. It is
   bounded to 80 characters per entry, pruned with the `occ:` entries, erased by
-  `--purge`, and never logged.
+  `--purge`, and never logged. Neither the invite nor the fingerprint input is
+  stored.
+- Size: one entry is at most about 200 bytes. The owner's calendar gives a few
+  dozen live entries within the 7-day pruning window. At the designed scale
+  (2 000 occurrences in range) it could reach the ADR-0003 64 KiB trigger
+  (assumed). That is a revisit trigger in ADR-0010, not a limit enforced here.
 - Corrupt JSON or an unknown `v` → start from empty and log once. The cost is
-  that the unsure meetings are asked again.
-- Kept when AI is turned off, so turning it back on with the same engine asks
-  nothing again. Old entries age out through pruning.
+  that every meeting in range is asked again.
+- Kept in rules mode, so going back to AI mode with the same engine asks
+  nothing again. Old entries age out through pruning. A plain uninstall keeps
+  them, and `--purge` erases them (D-016, PRD addendum).
 
 ## Pruning
 

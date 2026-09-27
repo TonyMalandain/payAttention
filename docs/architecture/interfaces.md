@@ -97,7 +97,7 @@ is what goes into bug reports.
 Three pure functions. The names are indicative; the shapes are the contract.
 
 - **`judge(snapshot, config, overrides, travel, aiVerdicts)` → judged occurrences.**
-  (`aiVerdicts` added by ADR-0008; see §6.)
+  (`aiVerdicts` added for AI mode, ADR-0010; see §6.)
   `config` holds the word lists, owner addresses (each source's `ownerEmail`
   plus `extra-owner-addresses`) and domains, large-meeting size, and default
   travel. The conferencing host allowlist is a constant in core, not config.
@@ -263,112 +263,173 @@ constraints they must now meet.
      `prefs.js` (`boundaries.md`).
 
 
-## 6. AI second opinion (stable, protocol version 1) — added 2026-09-26 for PG-4
+## 6. AI mode (stable, protocol version 1) — revised 2026-09-27 for PG-4
 
-Decided in ADR-0007 (wire protocol and client), ADR-0008 (process, `judge`
-input, persistence) and ADR-0009 (keys). Serves R-18 and R-19, under D-017 and
-D-018. R-3 now reads "unless the owner chooses a cloud AI engine".
+Decided in ADR-0007 (wire protocol and own client, accepted as D-021),
+ADR-0010 (AI mode: eligibility, the invite, stale answers, persistence and
+settings; it supersedes ADR-0008) and ADR-0009 (keys, amended). Serves R-18
+(AI mode judges every meeting) and R-19 (the owner connects the engine of
+their choice), under D-019, D-020 and D-021. The 2026-09-26 version of this
+section (second opinion on unsure codes, D-018 facts) was never built. It is
+in git history at commit `1871d4f`. Protocol version 1 is redefined here,
+since no version of it has shipped.
 
 ### 6.1 Which occurrences are eligible (core)
 
-An occurrence is **eligible** when AI is on and configured (`config.ai` is
-not null, see 6.4), it has **no** verdict override (occurrence or series), and
-its rule `reasonCode` is one of the unsure codes, exported by core as one
-frozen list:
+An occurrence is **eligible** when `config.ai` is not null (AI mode with a
+usable engine, §6.4) and it has **no** verdict override (occurrence or
+series). Every rule reason code is eligible, including `cancelled`,
+`declined`, `all-day` and `free`: D-019 says every meeting. Only the test
+alert is never eligible. An all-day occurrence has no deadline, so no verdict
+can make it alert (`core/plan.js:87`). The AI answer only changes its menu
+line.
 
-`no-guests`, `large`, `small`, `maybe`, `insufficient-data`
+### 6.2 The invite (core) — D-020, bounded
 
-The sure codes (`cancelled`, `declined`, `not-invited`, `all-day`, `free`,
-`ignore-word`, `important-word`, `organizer`, `external`), the overrides and
-`test` are never eligible. For them, `judge` builds no facts at all.
-
-### 6.2 The facts (core) — exactly D-018, nothing else
-
-Core exports the fact list once, with a plain-language label for each fact.
-`prefs.js` shows that list, so the settings text and the code cannot drift apart.
+Core builds one invite per eligible occurrence from the occurrence DTO (§1)
+and the owner identity it already computes. Core exports the field list with a
+plain-language label for each field. `prefs.js` shows that list next to the
+warning, so the settings text and the code cannot drift apart.
 
 ```jsonc
 {
-  "title": "…",            // summary, whitespace collapsed, trimmed, cut to 200 characters
-  "start": "Mon 17:30",    // local wall-clock weekday and time, as the owner sees it
-  "minutes": 60,           // length, rounded, 0 or more
-  "guests": 3,             // guests as core already counts them (D-011): not the owner, no rooms or resources
-  "insideGuests": 2,       // guests in the owner's domains; null when the domains are unknown
-  "outsideGuests": 1,      // the rest; null when the domains are unknown
-  "response": "yes"|"maybe"|"no-answer"|"unknown",   // the owner's answer (declined is a sure rule, never sent)
-  "organisedByYou": false,
-  "hasPlace": true,        // a place text exists; the place itself is never sent
-  "hasVideoLink": false    // core found an allowlisted conferencing link; the link is never sent
+  "title": "…",                     // summary; ≤ 200 characters
+  "start": "2026-09-28 Mon 17:30",  // local date, weekday and time; "2026-09-28 Mon" when allDay
+  "minutes": 60,                    // length, rounded, 0 or more
+  "allDay": false,
+  "recurring": true,
+  "status": "confirmed"|"tentative"|"cancelled"|"none",
+  "busy": "busy"|"free"|"unknown",  // from transparency
+  "description": "…",               // ≤ 1 500 characters; "" when absent
+  "place": "…",                     // location text ≤ 200 characters; "" when absent
+  "videoLink": "https://…"|null,    // the one link core's allowlist found (links.js); ≤ 300 characters, else null
+  "you": {"response":"accepted"|"declined"|"tentative"|"needs-action"|"delegated"|"other"|"unknown",
+          "organiser": false},      // the owner, as core identifies them (D-009); no address
+  "organiser": {"name":"…","email":"…"} | null,   // null when the owner organised it (see you.organiser)
+  "guests": [{"name":"…","email":"…",
+              "response":"accepted"|"declined"|"tentative"|"needs-action"|"delegated"|"other",
+              "role":"chair"|"required"|"optional"|"other"}],   // ≤ 25 entries
+  "guestsTotal": 3                  // how many guests there are before the cap
 }
 ```
 
-- Never sent: the description, location text, links, names, email addresses,
-  the calendar name, UIDs, occurrence keys, and the rule's own verdict.
-- Local time: core reads no environment. The controller passes the current
-  UTC offset in `config.ai.utcOffsetMinutes`, and core formats `start` from
-  it. A DST change inside the 36 h window shifts `start` by an hour for the
-  meetings after it. This is accepted: it does not change importance, and it
-  causes one extra request per meeting at the change.
-- **Fingerprint.** `fingerprint = hash(PROMPT_VERSION, engineTag, facts in
-  fixed key order)`. `engineTag` is `location|baseUrl|model` from
-  `config.ai`. The hash is a small pure non-cryptographic hash in core (at
-  least 53 bits), shown as a string. It only has to tell "same facts, same
-  engine, same prompt" from "something changed". It must not be reversible to
-  a title in practice, and it must not be a plain concatenation.
+- **Guests** are attendees with CUTYPE individual, group or unknown, other
+  than the owner, in DTO order (D-011). Rooms and resources are not guests,
+  and their names are not sent: the place text already says where.
+- **Every text field** is cleaned before capping: control characters and
+  Unicode bidi controls are removed, and runs of whitespace are collapsed to
+  one space. Then it is cut to its cap (one character less, plus "…"). Names
+  ≤ 80 characters, email addresses ≤ 254.
+- **Hard size cap: the serialised invite is at most 8 192 UTF-8 bytes.** If
+  the caps above still exceed it, drop guests from the end (`guestsTotal`
+  stays true), then shorten `description`. The field caps make the rest fit.
+  Typical invites are 0.5 to 2 KB.
+- **Never sent:** UIDs, occurrence or series keys, the calendar name, the
+  owner's own addresses, rooms and resources, links other than `videoLink`,
+  the rule's verdict and reason, and anything about overrides.
+- **Local time:** core reads no environment. The controller passes the current
+  UTC offset in `config.ai.utcOffsetMinutes`, and core formats `start` from it
+  (debt: a DST change inside the range shifts later meetings by an hour and
+  re-asks them once; NOTES 2026-09-26).
+- **Fingerprint** = `hash(PROMPT_VERSION, engineTag, invite in fixed key
+  order)`, computed on the *bounded* invite, so an edit past the description
+  cap does not re-ask. It is a small pure non-cryptographic hash in core (at
+  least 53 bits), shown as a string. It must not be a plain concatenation.
+  Any change to any field re-asks, including one guest's response.
 
 ### 6.3 `judge` with `aiVerdicts` (core, pure)
 
 `aiVerdicts` is a plain object: occurrence key → `{fp, verdict, reason}`, as
-read from the store. For each **eligible** occurrence, `judge`:
+the controller passes it (§6.5). Copies of one occurrence from several
+calendars are merged first, as today. The AI step then applies to the kept
+copy, and the invite is built from that copy. The merge must depend only on
+the snapshot, so the same snapshot always gives the same invite. For each
+**eligible** occurrence:
 
-- **Stored answer applies** (an entry exists and `entry.fp === fingerprint`):
-  `verdict` = the entry's verdict; `reasonCode` = `ai-must` or `ai-ignore`
-  (added to `REASON_CODES`); `reason` = `"AI: " + entry.reason`. It also sets
-  `ruleReason`, the rule's reason, kept for the menu's detail line.
-- **Otherwise:** the rule verdict stands, and the result carries
-  `aiAsk: {fp, facts}`.
+| Stored entry | Verdict and reason | `reasonCode` | Also carries |
+|---|---|---|---|
+| exists, `fp` matches | the entry's; `reason` = `"AI: " + entry.reason` | `ai-must` / `ai-ignore` | `ruleReason` |
+| exists, `fp` differs | the entry's, as above (a **stale** answer) | `ai-must` / `ai-ignore` | `ruleReason`, `aiStale: true`, `aiAsk: {fp, invite}` |
+| none | the rule's | the rule's | `aiAsk: {fp, invite}` |
 
-Every other field of the judged occurrence (mode, `joinUrl`, place, travel,
-deadline, key) is computed exactly as without AI. A test asserts that two
-runs, with and without an applying answer, differ only in `verdict`,
-`reasonCode`, `reason`, `ruleReason` and `aiAsk`. Duplicate merging across
-calendars still happens after this, on the final verdict.
+`ai-must` and `ai-ignore` are added to `REASON_CODES`. Every other field of
+the judged occurrence (mode, `joinUrl`, place, travel, deadline, key) is
+computed exactly as in rules mode. A test asserts that two runs, with and
+without an applying answer, differ only in `verdict`, `reasonCode`, `reason`,
+`ruleReason`, `aiStale` and `aiAsk`.
 
-With `config.ai` null (AI off or not configured), `judge` produces no `aiAsk`,
-ignores `aiVerdicts`, and gives exactly today's output.
+With `config.ai` null (rules mode, or AI mode without a usable engine),
+`judge` builds no invite, emits no `aiAsk`, ignores `aiVerdicts`, and gives
+exactly today's output.
 
-### 6.4 Config and settings the shell passes in
+### 6.4 Config, endpoint rules, and what the shell passes in
 
-`config.ai` is null, or `{engineTag, utcOffsetMinutes}`. It is null when
-`ai-enabled` is false, when the active model name is empty, or when a `cloud`
-base URL is not `https:`. The controller builds it from the `ai-*` keys
-(`data.md`).
+`config.ai` is null, or `{engineTag, utcOffsetMinutes}`. The controller
+builds it from the settings (`data.md`). It is null unless `verdict-source`
+is `ai`, `ai-model` is not empty, and `ai-endpoint` is **usable**.
+
+Core exports two pure functions, which the controller, `prefs.js` and the AI
+helper all use:
+
+- `normaliseEndpoint(url)` → string or null. The scheme must be `http` or
+  `https`. No user info, query or fragment is allowed. The scheme and host are
+  lowercased, the default port is dropped, and there is no trailing slash.
+  This is also the keyring attribute (ADR-0009).
+- `endpointClass(url)` → `loopback` | `private` | `public` | null.
+  - `loopback`: `localhost`, 127.0.0.0/8, `::1`.
+  - `private`: 10/8, 172.16/12, 192.168/16, 100.64/10, 169.254/16, fc00::/7,
+    fe80::/10, a single-label host name, or a name ending in `.local`, `.lan`,
+    `.internal` or `.home.arpa`. It is classified from the text alone, with no
+    DNS lookup.
+  - `public`: every other host.
+
+**Usable:** `https:` with any class, or `http:` with `loopback` or `private`.
+`http:` with `public` is not usable, so AI stays not set up, and prefs says
+why. `engineTag` = `normaliseEndpoint(endpoint) + "|" + model`.
+
+Where the invite goes, for the prefs warning: `loopback` stays on this
+computer. Every other class leaves it.
 
 ### 6.5 Controller behaviour (shell, internal but binding)
 
-- After each `judge`, the controller collects the `aiAsk`s whose occurrence
-  starts no earlier than `now − cutoff`. It queues them, soonest start first.
-  **At most one request is in flight.**
+- **Queue.** After each `judge`, the controller collects the `aiAsk`s whose
+  occurrence starts no earlier than `now − cutoff`, and queues them, soonest
+  start first. **At most one request is in flight.**
+- **What it passes to `judge`.** The stored `ai-verdicts` entries, except
+  that it withholds the entry of a key that has an outstanding `aiAsk` when:
+  - the AI status is `unavailable`, or
+  - that key's own most recent ask failed.
+
+  The rules then decide those meetings (D-019). Only keys with an `aiAsk`
+  can hold a stale entry, so the controller never computes a fingerprint. A
+  change of status re-runs `judge`.
 - **Never on the alert path.** The tick and `plan()` never read the queue and
   never wait for it. An answer is written to `ai-verdicts` through the store
   (coalesced, like alert state), and then `judge` re-runs, as it does after an
   override.
 - **Retry.** After a failure for one occurrence, it is not asked again for
   1 min, then 2, 4 and so on, up to 30 min (in memory). After `auth`, `config`
-  or `no-key`, the whole engine pauses until an `ai-*` setting changes, so a bad
-  key is never hammered. After `rate-limited`, the engine pauses for
-  `Retry-After` if given (capped at 30 min), else 5 min.
-- **Budget.** At most 120 requests per rolling hour per `engineTag`
-  (assumed). This guards a cloud bill against facts that keep changing.
-- **Status for the View**, one of: `off`; `ok`; `unavailable` (the most recent
-  completed attempt failed, or the helper could not start, and it has not
-  succeeded since). With `unavailable`, the menu shows "AI unavailable — using
-  rules". The status is not persisted.
+  or `no-key`, the whole engine pauses for 30 min, or until `verdict-source`,
+  `ai-endpoint` or `ai-model` changes, so a bad key is never hammered. A key
+  saved in prefs is in the keyring, which the shell cannot see. It applies to
+  the next request, because the helper looks the key up per request. After
+  fixing a key, the owner can switch the mode off and on to end the pause at
+  once. After `rate-limited`, the engine pauses for `Retry-After` if given
+  (capped at 30 min), else 5 min.
+- **Budget.** At most 120 requests per rolling hour and 1 000 per rolling
+  24 h, per `engineTag` (assumed; `constraints.md`). This is held in memory,
+  so a lock resets it. Stored answers make that harmless in practice. When the
+  budget blocks a waiting ask, the status is `unavailable`.
+- **Status for the View**, one of: `off` (rules mode or not set up); `ok`;
+  `unavailable` (the most recent completed attempt failed, the helper could
+  not start, or the budget blocks a waiting ask, and nothing has succeeded
+  since). With `unavailable`, the menu shows "AI unavailable — using rules".
+  The status is not persisted.
 - **Helper lifecycle.** Spawn when there is something to ask and none is
   running. Send `configure`, then requests. Kill it (SIGKILL) in `disable()`,
-  when `ai-enabled` goes false, and when any `ai-*` setting changes (the next
-  request respawns it with the new configuration). Watchdog: no answer within
-  `timeoutMs + 10 s` counts as `timeout`, and the helper is killed and
+  when `verdict-source` leaves `ai`, and when `ai-endpoint` or `ai-model`
+  changes (the next ask respawns it). Watchdog: no answer
+  within `timeoutMs + 10 s` counts as `timeout`, and the helper is killed and
   respawned. Respawn backoff as for the calendar helper (`constraints.md`).
 
 ### 6.6 Shell ↔ AI helper protocol (NDJSON over stdio, version 1)
@@ -382,18 +443,17 @@ version and validates every line on both sides.
 
 ```jsonc
 {"type":"configure","protocol":1,
- "location":"local"|"cloud",
- "baseUrl":"http://127.0.0.1:11434/v1",   // cloud: must be https:
+ "endpoint":"http://127.0.0.1:11434/v1",   // must be usable (§6.4)
  "model":"…",
- "timeoutMs":60000}                        // 60 000 local, 30 000 cloud (core constants, assumed)
-{"type":"judge","id":"<opaque, unique per helper run>","facts":{ …exactly §6.2… }}
-{"type":"probe","id":"…"}                  // "Test connection": core's fixed synthetic facts, no calendar data
+ "timeoutMs":90000}                        // 90 000 loopback/private, 45 000 public (core constants, assumed)
+{"type":"judge","id":"<opaque, unique per helper run>","invite":{ …exactly §6.2… }}
+{"type":"probe","id":"…"}                  // "Test connection": core's fixed synthetic invite, no calendar data
 ```
 
-The key is never on this channel. The helper looks it up itself (ADR-0009).
-The helper rejects a `judge` whose `facts` has any key outside §6.2, or a
-missing one, with `failed: bad-request`. This is a second guard on D-018,
-behind core.
+The key is never on this channel. The helper looks it up itself, by
+`normaliseEndpoint(endpoint)`, for each request (ADR-0009). The helper rejects
+a `judge` whose `invite` has a key outside §6.2, a missing key, or more than
+8 192 bytes, with `failed: bad-request`. This is a second guard behind core.
 
 **Helper → shell**
 
@@ -404,18 +464,21 @@ behind core.
 ```
 
 `rate-limited` may carry `"retryAfterS": <integer>`. There are no other fields
-and no free text: an HTTP body is never forwarded.
+and no free text: an HTTP body is never forwarded. `no-key` means the Secret
+Service could not be reached or is locked. An endpoint with no saved key is a
+keyless request, not `no-key` (ADR-0009 amendment).
 
 ### 6.7 Helper → engine (OpenAI Chat Completions)
 
-`POST <baseUrl>/chat/completions`, `Content-Type: application/json`, and
-`Authorization: Bearer <key>` only when a key exists for the endpoint *and*
-the URL is `https:` or a loopback `http:`. The body:
+`POST <endpoint>/chat/completions`, `Content-Type: application/json`, and
+`Authorization: Bearer <key>` only when a key is saved for the endpoint *and*
+the URL is `https:` or a loopback `http:`. A key is never sent over `http:`
+to a private host. The body:
 
 ```jsonc
 {"model":"…",
  "messages":[{"role":"system","content":"<core's fixed instructions, PROMPT_VERSION>"},
-             {"role":"user","content":"<JSON.stringify(facts)>"}],
+             {"role":"user","content":"<JSON.stringify(invite)>"}],
  "temperature":0,
  "max_tokens":400,                              // room for a reasoning model's preamble
  "response_format":{"type":"json_schema","json_schema":{"name":"verdict","strict":true,
@@ -423,9 +486,11 @@ the URL is `https:` or a loopback `http:`. The body:
              "properties":{"verdict":{"enum":["must","ignore"]},"reason":{"type":"string","maxLength":80}}}}}}
 ```
 
-- No `tools`, no `functions`, no `stream`, and no other message. The facts
-  are data in the user message. The system text says so, and says the title is
-  untrusted text written by someone else.
+- No `tools`, no `functions`, no `stream`, and no other message. The invite
+  is data in the user message. The system text says so. It says that every
+  field was written by other people and may contain instructions, which must
+  be ignored. It says the only task is to decide whether "you" (the owner)
+  must attend.
 - If the engine answers 400 and the error names `response_format`, the helper
   retries once without that field, and keeps it off for the rest of its run.
 - HTTP mapping: connection refused or DNS failure → `network`; TLS error →
@@ -448,5 +513,18 @@ the URL is `https:` or a loopback `http:`. The body:
 
 The reason is shown as plain text, never markup (existing UI rule). Nothing
 in a reply can reach anything other than `verdict` and `reason` of an eligible
-occurrence (6.3). That is the structural answer to "a title cannot make the
-product do anything other than pick a verdict".
+occurrence (6.3). That is the structural answer to "a meeting's text cannot
+make the product do anything except pick a verdict". A hostile invite can
+choose only its own verdict, because each request carries one invite.
+
+### 6.9 Prefs, "Verdicts" section (prefs.js, internal but binding)
+
+- Mode (`verdict-source`), endpoint (`ai-endpoint`), model (`ai-model`), and
+  a password entry for the key. The key is never echoed back, only "a key is
+  saved for this address" or "no key".
+- The warning comes from the PRD. The "leaves your computer" part shows for
+  any endpoint that is not `loopback` (§6.4). Core's labelled field list (§6.2)
+  is shown with it.
+- "Test connection" spawns `ai/main.js` with `configure` from the fields as
+  entered, then `probe`, and shows a clear yes, or no with the failure code in
+  plain words. It never sends calendar data.

@@ -1,6 +1,7 @@
 # ADR-0009 — AI engine keys live in the GNOME keyring, written by prefs and read only by the AI helper
 - **Date:** 2026-09-26
 - **Kind:** reversible (the libsecret schema name and attributes are the only stored format)
+- **Status:** amended 2026-09-27 (see the end)
 
 ## Context
 
@@ -70,3 +71,35 @@ secret.
 
 - The review process objects to libsecret use from an extension helper, or
 - an owner needs AI on a session without a Secret Service.
+
+## Amendment 2026-09-27
+
+The decision stands: the key lives in the GNOME keyring, is written by prefs
+and is read only by the AI helper. D-021 and ADR-0010 replace the separate
+"local" and "cloud" settings with one endpoint, one model and one key. Two
+rules above change:
+
+- **One key field, still stored per endpoint.** Prefs shows one key field.
+  It edits the item for the endpoint currently entered. Keying by normalised
+  endpoint stays for a security reason that one setting makes sharper: **if the
+  owner edits the endpoint, the key saved for the old address is never sent to
+  the new one.** A cloud key cannot leak to a mistyped or hostile address, and
+  switching back finds the old key again. An endpoint with no saved item is a
+  keyless engine. That is the normal case for a local Ollama, and nothing has
+  to be switched off for it.
+- **Transport rule, by endpoint instead of by "location".** Core classifies
+  the endpoint (`interfaces.md` §6.4):
+  - `https:` to any host is allowed;
+  - `http:` to a loopback host is allowed;
+  - `http:` to a private-network host is allowed, but the key is never sent
+    over it, and prefs says so;
+  - `http:` to any other host is refused, and AI stays not set up.
+
+  The old rule, "a `cloud` engine must be `https:`", is replaced by the last
+  line.
+- **Missing key.** An empty or absent key is a keyless request, not an error.
+  `no-key` is kept only for a Secret Service that cannot be reached or is
+  locked. It gives "AI unavailable — using rules", so a locked keyring never
+  sends an unauthenticated request that the owner did not intend. **Correction
+  to the text above:** "Missing Secret Service or no key: requests go without
+  an `Authorization` header" now holds for "no key" only.

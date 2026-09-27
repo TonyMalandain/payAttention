@@ -43,12 +43,13 @@ open window go with it. So:
 | Data considered stale | no accepted snapshot for 15 min (D-010), **or** a remote calendar not online-and-connected for 15 min (D-013); clocks survive lock/unlock. Exact rule: `interfaces.md`, addendum 2026-09-26 | 15 min is product (D-010) |
 | Helper restart backoff | 1 s, doubling, capped at 5 min; reset after 10 min of healthy running | assumed |
 | Per-source connect timeout in helper | 5 s; a slow source is reported `ok:false`, others still delivered | assumed |
-| AI request timeout (in the AI helper) | 60 s local, 30 s cloud | assumed; a cold local model on CPU is the slow case |
+| AI request timeout (in the AI helper) | 90 s for a loopback or private endpoint, 45 s for a public one | assumed; a cold local model on CPU with a whole invite is the slow case |
 | AI watchdog in the shell | request timeout + 10 s, then kill and respawn the AI helper | assumed |
-| AI requests in flight | at most 1 | local engines serialise anyway; keeps cloud rate limits simple |
-| AI retry per occurrence | 1 min, doubling, capped at 30 min; engine pause on `auth`/`config`/`no-key` until settings change; on `rate-limited`, `Retry-After` (≤ 30 min) or 5 min | assumed |
-| AI request budget | ≤ 120 per rolling hour per engine and model | assumed |
-| An alert waits for the AI | **never**. `plan()` and the tick do not read AI state | D-017 / PRD addendum |
+| AI requests in flight | at most 1, soonest meeting first | local engines serialise anyway; keeps cloud rate limits simple. Nothing waits for the queue. Revisit trigger in ADR-0010 |
+| AI retry per occurrence | 1 min, doubling, capped at 30 min; engine pause on `auth`/`config`/`no-key` for 30 min or until an engine setting changes; on `rate-limited`, `Retry-After` (≤ 30 min) or 5 min | assumed |
+| AI request budget | ≤ 120 per rolling hour and ≤ 1 000 per rolling 24 h, per endpoint and model; in memory | assumed. AI mode asks about every meeting, and every RSVP re-asks one. The owner's calendar needs about 5–30 an hour at first sight and a handful after that (estimated from 26 occurrences in 7 days, measured) |
+| First-sight AI verdicts | rule verdicts stand until answered, then turn into AI verdicts one at a time. A changed invite keeps its previous AI answer while it is re-asked | ADR-0010 |
+| An alert waits for the AI | **never**. `plan()` and the tick do not read AI state | D-019 / PRD addendum 2026-09-27 |
 
 ## Scale
 
@@ -59,7 +60,7 @@ open window go with it. So:
 | Helper first snapshot, warm EDS | registry 26 ms; all sources, 7 days, ~60 ms | measured |
 | Designed for | ≤ 50 sources, ≤ 2 000 occurrences in range | assumed |
 | One snapshot line | ≤ 4 MiB; description capped at 32 768 characters | assumed |
-| AI facts per request | 10 fields (D-018); title ≤ 200 characters; about 300 prompt tokens | assumed |
+| AI invite per request | one invite (D-020); title ≤ 200, description ≤ 1 500, place ≤ 200, link ≤ 300, names ≤ 80, emails ≤ 254 characters; ≤ 25 guests listed plus the true total; whole invite ≤ 8 192 bytes (`interfaces.md` §6.2) | caps assumed. Typically 0.5–2 KB (about 150–600 tokens); at most about 2 500 tokens with the system prompt |
 | AI reason | ≤ 80 characters after normalisation | interfaces.md §6.8 |
 | Owner's machine for local engines | Ryzen 5 7600 (6 cores), 61 GB RAM, RTX 4070 Ti SUPER 16 GB. **On 2026-09-26 the NVIDIA kernel module was not loaded** on kernel 7.2.7 (kmod built only for 7.0.12 and 7.1.10), so local inference would run on the CPU | measured |
 
@@ -68,24 +69,28 @@ open window go with it. So:
 - **No network from our code, with one exception.** Neither the shell process,
   the calendar helper nor prefs opens a socket. EDS syncs with the owner's own
   providers as it already does (R-3). **The exception is the AI helper**
-  (ADR-0008): only while `ai-enabled` is true, only to the configured base URL,
-  and only with the D-018 facts (`interfaces.md` §6.2). With AI off, the AI
-  helper is never spawned, so nothing is sent.
+  (ADR-0010): only in AI mode, only to the configured endpoint, and only one
+  bounded invite per request, never an override (`interfaces.md` §6.2). In
+  rules mode the AI helper is never spawned, so nothing is sent. Plain `http:`
+  is refused for a public host, so an invite never crosses the internet
+  unencrypted (`interfaces.md` §6.4).
 - **Secrets.** AI keys only in the GNOME keyring (ADR-0009). They are never in
   GSettings, on stdio, in the shell process or in logs. A key goes only over
-  `https:` or loopback `http:`. A `cloud` engine must be `https:`.
+  `https:` or loopback `http:`, never over `http:` to a private host, and
+  only to the endpoint it was saved for (ADR-0009, amended).
 - **Model output is untrusted data.** It is validated by core
   (`interfaces.md` §6.8). It can set only the verdict and reason of an
-  eligible occurrence, and it is shown as plain text. No reply is ever run,
+  eligible occurrence, and it is shown as plain text. Each request carries
+  one invite, so a hostile invite can influence only its own verdict. No reply is ever run,
   followed or opened.
 - **No calendar content in logs.** Titles, people, places, descriptions, links,
-  AI facts and AI replies are never logged, by any process. Counts and short error codes only.
+  AI invites and AI replies are never logged, by any process. Counts and short error codes only.
 - **Untrusted text.** Everything in an event may come from a stranger's invite.
   Render as plain text; never as Pango markup.
 - **Links.** "Join" opens only `https:` URLs whose host is on core's conferencing
   allowlist, through the desktop's default handler. Nothing else is ever launched.
 - **Read-only calendars.** The helper calls no EDS method that writes.
-- **No telemetry.** (Also a review rule.) Sending D-018 facts to an engine the
+- **No telemetry.** (Also a review rule.) Sending invites to an engine the
   owner configured is not telemetry: it goes only where the owner pointed it,
   only after they turned it on.
 - **Review rule on dependencies:** Python modules and other dependencies "MUST

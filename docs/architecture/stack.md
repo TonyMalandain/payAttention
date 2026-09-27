@@ -41,7 +41,8 @@ Every technology in use and why. Build-vs-adopt calls are at the bottom.
   with explicit user action required by review, and a March 2026 PyPI
   compromise that stole API keys. The engines already share one protocol, and
   we need one request per meeting. An owner who wants a library's provider
-  range runs LiteLLM Proxy themselves and enters its URL as a custom engine.
+  range runs LiteLLM Proxy themselves and enters its address as the endpoint.
+  The owner accepted this as D-021 (2026-09-27).
 - **AI engines verified first** (research only; nothing installed on
   2026-09-26):
   - Local: **Ollama** at `http://127.0.0.1:11434/v1`. It is installable
@@ -55,6 +56,6 @@ Every technology in use and why. Build-vs-adopt calls are at the bottom.
   - Cloud: **OpenAI**, whose protocol this is, with `json_schema` enforced; and
     **OpenRouter**, where one key reaches Anthropic, Google and others through
     the same protocol. Anthropic direct (the `https://api.anthropic.com/v1/`
-    compat endpoint) is a preset, but best effort: it ignores
+    compat endpoint) works as an endpoint, but best effort: it ignores
     `response_format` and Anthropic calls it a testing aid. Core's reply
     validator makes it safe, not guaranteed.

@@ -128,3 +128,9 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** An engine that does not speak the standard connection needs a gateway the owner runs themselves, or an adapter built later. This reverses the owner's first request for "an llm abstraction library".
 **Source:** the owner, 2026-09-27, accepting the architect's recommendation (ADR-0007).
 
+
+### D-022 — Passcodes are removed from video links before the invite is sent — 2026-09-27
+**Decision:** We chose to send video links to the AI engine without their passcode or query part. Everything else in D-020 is unchanged.
+**Why:** The engine only needs to know that a meeting is online. A passcode lets anyone who sees it join the meeting.
+**Costs accepted:** none of practical weight.
+**Source:** the product manager, closing an architect finding.

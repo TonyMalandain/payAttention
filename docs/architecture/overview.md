@@ -27,8 +27,8 @@ of one in-shell part and one small helper process.
                                                                └────────────────────────────────────────────────────┘
                                                                   prefs.js (separate GTK4/Adw process) ◄──► GSettings
 
- Only while AI is on (ADR-0008):
- controller ── stdin: configure, judge{D-018 facts} ──► AI helper (gjs subprocess) ── HTTPS/HTTP ──► engine (local or cloud)
+ Only in AI mode (ADR-0010):
+ controller ── stdin: configure, judge{bounded invite} ──► AI helper (gjs subprocess) ── HTTPS/HTTP ──► engine (local or cloud)
             ◄─ stdout: verdict | failed{code} ────────       │ reads key from the GNOME keyring (ADR-0009)
  answers → store (ai-verdicts) → judge(…, aiVerdicts) ; the tick and plan() never wait for it
 ```
@@ -43,7 +43,7 @@ of one in-shell part and one small helper process.
 | **Store** | `extension/shell/` | Typed read and write of everything in GSettings: settings, verdict overrides, attendance-mode overrides, travel times per place, alert state. Coalesces writes and prunes old entries (ADR-0003). |
 | **Controller** | `extension/shell/` | The one orchestrator. Owns the 1-second tick and the environment signals (idle, resume). Re-runs `judge` when inputs change and `plan` on every tick, hands the Plan to the UI, turns UI actions into store writes or `reduce` calls, triggers sounds on step transitions, and runs the test alert. Catches and logs any exception per tick so one bad meeting cannot stop the loop. |
 | **UI** | `extension/ui/` | Draws the Plan: top-bar indicator and menu, the corner/centre card, the all-monitor takeover with its modal grab, the sound. Emits actions. Decides nothing (ADR-0004). |
-| **AI helper** | `extension/ai/` | Only while AI is on. The only code with network access and the only reader of the API key. It turns one D-018 fact set into one OpenAI-compatible request, validates the reply with core, and returns a verdict with an 80-character reason, or a failure code. Separate process so that a slow, failing or hostile engine cannot touch the desktop (ADR-0007, ADR-0008). |
+| **AI helper** | `extension/ai/` | Only in AI mode. The only code with network access and the only reader of the API key. It turns one bounded invite into one OpenAI-compatible request, validates the reply with core, and returns a verdict with an 80-character reason, or a failure code. Separate process so that a slow, failing or hostile engine cannot touch the desktop (ADR-0007, ADR-0010). |
 | **Preferences** | `extension/prefs.js` | GTK4/libadwaita window, in its own process, that edits the settings keys. Writes the AI key to the keyring and runs "Test connection" through the AI helper. |
 | **Composition root** | `extension/extension.js` | Builds all of the above in `enable()` and destroys all of it in `disable()`. No logic. |
 
@@ -140,6 +140,9 @@ that sees consecutive Plans.
 | Escalation step | step 1–4: heads-up, nudge, insist, takeover |
 | Acknowledge / skip / snooze | alert-state actions `ack`, `skip`, `snooze` |
 | Travel time for a place | travel entry, keyed by place key |
-| AI second opinion | AI helper; `reasonCode` `ai-must` / `ai-ignore`; stored in `ai-verdicts` |
-| Unsure verdict (AI may judge) | eligible occurrence: unsure `reasonCode` and no override (`interfaces.md` §6.1) |
-| Where the engine runs: this machine or network / cloud | `ai-location`: `local` / `cloud` |
+| Mode: Rules / AI | `verdict-source`: `rules` / `ai` (not `mode`, which is online / in-person) |
+| AI verdict ("AI: <reason>") | AI helper; `reasonCode` `ai-must` / `ai-ignore`; stored in `ai-verdicts` |
+| A meeting the AI judges | eligible occurrence: AI mode with a usable engine, and no override (`interfaces.md` §6.1) |
+| The whole invite | the bounded invite object (`interfaces.md` §6.2) |
+| AI engine: endpoint, model, API key | `ai-endpoint`, `ai-model`; the key in the keyring per normalised endpoint (ADR-0009) |
+| On this computer / leaves your computer | `endpointClass` `loopback` / anything else |

@@ -344,3 +344,59 @@ Append only. Newest at the bottom.
 - **Why:** The inbox is not a log. The product findings need decisions that only the owner or product can make.
 - **Source:** this session.
 - **Touches:** docs/inbox.md
+
+## 2026-09-27 — PG-4 revised for D-019/D-020/D-021: ADR-0008 superseded by ADR-0010
+- **Kind:** decision
+- **Fact:** ADR-0010 replaces ADR-0008. In AI mode, every occurrence without an override is eligible, and one bounded invite is sent per request. ADR-0007 and ADR-0009 are amended, not superseded, because their decisions still hold.
+- **Why:** The eligibility rule, the prompt input and the settings shape all changed. The separate process and the "stored data, never on the alert path" design carried over unchanged.
+- **Source:** docs/product/decisions.md D-019–D-021; PRD addendum 2026-09-27.
+- **Touches:** adr/, 00-index.md
+
+## 2026-09-27 — One endpoint and model; mode key named verdict-source
+- **Kind:** data
+- **Fact:** `verdict-source` (`rules`/`ai`), `ai-endpoint` and `ai-model` replace `ai-enabled`, `ai-location` and the local/cloud URL and model pairs. None of those keys shipped (`extension/schemas` has no `ai-` key, checked 2026-09-27), so nothing has to be migrated.
+- **Why:** The owner described one endpoint and one key. "Local or cloud" is worked out from the endpoint (`endpointClass`), so it cannot disagree with the address. The name avoids `mode`, which already means online or in-person.
+- **Source:** D-021; `extension/schemas/*.gschema.xml` (no ai keys).
+- **Touches:** data.md, interfaces.md §6.4
+
+## 2026-09-27 — Keys stay per endpoint even with one key field
+- **Kind:** constraint
+- **Fact:** The keyring item is still keyed by the normalised endpoint.
+- **Why:** If the owner edits the endpoint, a saved cloud key is never sent to the new, possibly mistyped, address. Keyless local engines need no switch.
+- **Source:** design, this session.
+- **Touches:** ADR-0009 amendment
+
+## 2026-09-27 — Stale-while-revalidate for AI answers
+- **Kind:** interface
+- **Fact:** When the fingerprint differs, the old answer still applies (`aiStale`) while it is re-asked. The controller withholds those entries when the AI is unavailable or that key's ask failed.
+- **Why:** In AI mode, RSVPs change the fingerprint close to the start. Falling back to the rules would flash an alert the AI had silenced. The controller can tell stale keys apart from `aiAsk` without computing a hash.
+- **Source:** design, this session.
+- **Touches:** interfaces.md §6.3, §6.5; ADR-0010
+
+## 2026-09-27 — Invite bounds
+- **Kind:** constraint
+- **Fact:** Title ≤ 200, description ≤ 1 500, place ≤ 200, link ≤ 300, names ≤ 80, emails ≤ 254 characters; ≤ 25 guests plus the true total; the whole invite ≤ 8 192 bytes (guests dropped first, then the description cut).
+- **Why:** On the CPU, prompt processing is the slow part. Meeting descriptions from Teams or Zoom are mostly boilerplate. The caps keep the worst case at about 2 500 tokens.
+- **Source:** assumed (no local engine has been measured yet).
+- **Touches:** interfaces.md §6.2, constraints.md
+
+## 2026-09-27 — Budget and timeouts for asking every meeting
+- **Kind:** constraint
+- **Fact:** Still one request in flight. 120 per hour and 1 000 per 24 h, per engine tag, in memory. The timeout is 90 s for loopback or private endpoints, 45 s for public ones.
+- **Why:** The owner's volume is about 5–30 requests an hour at first sight (estimated from 26 occurrences in 7 days). The daily cap guards a cloud bill against RSVP churn. Nothing waits on the queue, so serial is enough. The revisit trigger is in ADR-0010.
+- **Source:** assumed.
+- **Touches:** constraints.md, interfaces.md §6.5
+
+## 2026-09-27 — Auth pause is time-boxed, not "until settings change"
+- **Kind:** interface
+- **Fact:** An `auth`/`config`/`no-key` failure pauses the engine for 30 min, or until an engine setting changes.
+- **Why:** A key saved in prefs goes to the keyring, where the shell cannot see the change. A time box avoids adding a GSettings signal key just for that.
+- **Source:** design, this session.
+- **Touches:** interfaces.md §6.5
+
+## 2026-09-27 — for-product findings on AI mode
+- **Kind:** for-product
+- **Fact:** Five entries were added to docs/inbox.md: cancelled/declined/all-day meetings are asked too, the calendar name is not sent, stale answers apply while a meeting is re-asked, the `http:` and key transport limits, and passcodes in video links.
+- **Why:** Each one either narrows or widens D-019/D-020, or is a behaviour the owner will see.
+- **Source:** this session.
+- **Touches:** docs/inbox.md
