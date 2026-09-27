@@ -220,3 +220,10 @@ Append only. Newest at the bottom.
   No conflict. PG-6 now requires an unmodified Apache `LICENSE` (so GitHub detects it), a `NOTICE` file, SPDX tags, and a recorded dependency check. The copyright holder is assumed to be Tony Malandain.
 - **Source:** the owner; dependency scan by the product manager; GNOME extension review guidelines.
 - **Touches:** decisions.md D-026, BACKLOG.md PG-6
+
+## 2026-09-27 — Alert sound should be the owner's GNOME alert sound
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** The alert plays a fixed alarm-clock sound, which the owner calls "noise". It should play the alert sound chosen in GNOME Settings. Backlog item PG-7. This refines R-8/R-15 (sound at insist and takeover, sound on/off); it needs no new requirement.
+- **Source:** the owner, 2026-09-27.
+- **Touches:** solution.md R-8, R-15

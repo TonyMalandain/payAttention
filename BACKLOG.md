@@ -61,6 +61,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
       - The GNOME libraries it uses at run time are provided by the system, not copied (LGPL or MPL/LGPL; GNOME Shell GPL-2.0-or-later).
       - The engineer re-runs this check against the current dependency list, and a new dependency under a copyleft or unknown licence fails the check.
 
+- **PG-7 — Use the owner's GNOME alert sound, not a fixed alarm (S).**
+  - **What changes for the owner:** the sound at the insist and takeover steps is the alert sound they chose in GNOME Settings (Sound → Alert Sound), not a fixed alarm-clock noise.
+  - **Who it is for:** Calendar owner.
+  - **Why:** the owner calls the current sound "noise". A familiar sound they chose is more likely to be accepted than tuned out.
+  - **Done when:**
+    - the insist and takeover steps play the alert sound selected in GNOME Settings;
+    - changing it in GNOME Settings changes what payAttention plays, without reinstalling;
+    - the existing sound on/off setting still silences it;
+    - it still plays once per step, as today;
+    - checked by hand in the real session.
+  - **Open for the engineer:** what plays if the selected alert sound cannot be found. A silent failure is not acceptable (fall back to a standard sound).
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
