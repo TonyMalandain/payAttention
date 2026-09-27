@@ -12,6 +12,21 @@ as long as every caller changes in the same change.
 stderr inherited, so helper diagnostics land in the gnome-shell journal. Messages
 are UTF-8 JSON, one object per line (NDJSON). No other channel is used.
 
+**Environment (2026-09-27, binding on every spawner).** Whoever spawns a helper
+(the calendar feed, the shell's AI side, and prefs' "Test connection") removes
+`G_MESSAGES_DEBUG` from the child's environment (`Gio.SubprocessLauncher`,
+`unsetenv`); the variable list is one constant in core, so the spawners cannot
+disagree. Why: with it set, GLib's default log writer puts library DEBUG and
+INFO lines on **stdout** whenever stderr is not the journal (a nested or
+terminal shell, prefs, tests), and they carry the AI endpoint URL. The helper
+cannot fix this itself (measured on gjs 1.88 / GLib 2.88):
+`GLib.log_writer_default_set_use_stderr(true)` fails its assertion because gjs
+has already started threads, and GIO logs before any helper code runs. Under a
+normal session stderr is the journal and GLib writes there, so nothing leaks;
+the rule covers every other case. The cost: library debug output from a helper
+is only seen by running it by hand. The shell and prefs still log only the code
+of a line that fails to parse, never its text.
+
 **Lifecycle promises.**
 - The helper exits on its own when stdin reaches EOF. If the shell dies, the helper
   dies too; there are no orphan helpers.
@@ -20,7 +35,8 @@ are UTF-8 JSON, one object per line (NDJSON). No other channel is used.
   shutdown; the stdin-EOF exit covers the case where the shell itself dies.
 - The helper exits non-zero on a fatal error. The feed restarts it with backoff
   (`constraints.md`).
-- The helper never writes anything but protocol lines to stdout.
+- The helper never writes anything but protocol lines to stdout. Library log
+  lines are kept off it by the spawner (Environment, above), not by the helper.
 
 **Helper → shell.**
 
@@ -356,12 +372,16 @@ warning, so the settings text and the code cannot drift apart.
   - `description` and `place` go through these steps, in this order in core
     (`core/invite.js`, `withoutPasscodes`). Plain text comes first so every
     later rule sees one format, not HTML and text mixed (D-030):
-    1. **HTML to plain text:** a line-ending tag becomes a line break, so
-       step 8 stops there: `<br …>` (attributes allowed), and the closers
-       `</p>`, `</li>`, `</div>`, `</tr>`, `</td>`, `</h1>`–`</h6>`, any case.
-       Every other tag is dropped. A tag is `<`, an optional `/`, a letter,
-       then name characters ending at a space, `/` or `>`, so `<https://…>`
-       and `a < b` stay as text. No tag is sent (D-029, D-030).
+    1. **HTML to plain text,** in this order (D-030): comments, `<style>` and
+       `<script>` blocks are dropped with their contents (an unclosed one keeps
+       its text, so later rules still read it); then the conditional markers
+       `<![if …]>` / `<![endif]>`; then tags. A line-ending tag becomes a line
+       break, so step 8 stops there: the openers `<br>`, `<p>`, `<div>`,
+       `<li>` (attributes allowed) and the closers `</p>`, `</li>`, `</div>`,
+       `</tr>`, `</td>`, `</h1>`–`</h6>`, any case. Every other tag, namespaced
+       ones such as `<o:p>` included, is dropped. A tag is `<`, an optional
+       `/`, a letter, then name characters ending at a space, `/` or `>`, so
+       `<https://…>` and `a < b` stay as text. No tag is sent (D-029, D-030).
     2. **Entities decoded,** once, after the tags are gone: decimal `&#…;`,
        hex `&#x…;`, and `&nbsp;` `&shy;` `&amp;` `&lt;` `&gt;` `&quot;`
        `&apos;`. One pass, so `&lt;br&gt;` becomes text and is not a line end,
@@ -383,10 +403,10 @@ warning, so the settings text and the code cannot drift apart.
        of them), so other text with `%` is untouched (D-030).
     7. **Dial-in strings:** a phone number (optional `tel:` and `+`, at least 7
        digits, groups split by up to 3 of space, tab, `.`, `-`, `(`, `)`)
-       directly followed (after up to 3 spaces or tabs) by `#` or `*`, or by
-       `,`/`;` then a digit, `#` or `*`, is replaced whole, codes included,
-       with `[removed]`. A plain number, or one followed by `, ` as in a list,
-       stays. Fewer than 7 digits is never a dial string: it cannot be told
+       followed by `#` or `*` directly after the last digit, or (after up to
+       3 spaces or tabs) by `,`/`;` then a digit, `#` or `*`, is replaced whole, codes included,
+       with `[removed]`. A plain number, one followed by `, ` as in a list, or
+       one followed by a space and then `#` (`Order 1234567 #urgent`) stays. Fewer than 7 digits is never a dial string: it cannot be told
        from a room number or an extension (D-029). **Must stay linear:** each
        number is found once and the scan resumes after it (D-030); a
        backtracking pattern over a long digit run is a hang in the shell.
@@ -527,8 +547,9 @@ computer. Every other class leaves it.
 ### 6.6 Shell ↔ AI helper protocol (NDJSON over stdio, version 1)
 
 Transport and lifecycle are as in §1: `gjs -m <extension dir>/ai/main.js`,
-stdin and stdout piped, stderr inherited, exit on stdin EOF, SIGKILL from the
-shell, and nothing but protocol lines on stdout. One core module defines the
+stdin and stdout piped, stderr inherited, `G_MESSAGES_DEBUG` removed from its
+environment (by the shell and by prefs' probe alike), exit on stdin EOF, SIGKILL
+from the shell, and nothing but protocol lines on stdout. One core module defines the
 version and validates every line on both sides.
 
 **Shell → helper**

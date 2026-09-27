@@ -547,3 +547,31 @@ Append only. Newest at the bottom.
 - **Why:** Invite text is untrusted and runs inside gnome-shell; a super-linear regex on a long digit run freezes the desktop.
 - **Source:** extension/core/invite.js:36-39, 82-97.
 - **Touches:** interfaces.md §6.2 step 7 — folded.
+
+## 2026-09-27 — Helpers spawned without G_MESSAGES_DEBUG
+- **Kind:** interface
+- **Fact:** Every helper spawner (calendar feed, shell AI side, prefs "Test connection") removes `G_MESSAGES_DEBUG` from the child environment; the list is one core constant.
+- **Why:** With it set, GLib's default writer sends DEBUG/INFO (endpoint URL included) to stdout, the protocol channel, whenever stderr is not the journal. The helper cannot redirect it itself.
+- **Source:** measured 2026-09-27, gjs 1.88.1 / GLib 2.88.3: without the variable stdout is clean; with journal stderr (systemd-cat) GLib writes to the journal; `GLib.log_writer_default_set_use_stderr(true)` in module code fails `g_thread_n_created () == 0`, and GIO DEBUG lines print before module code. Inbox, PG-4b.
+- **Touches:** interfaces.md §1 (Environment), §6.6 — folded.
+
+## 2026-09-27 — Env strip rejected in favour of an in-helper writer: not possible
+- **Kind:** decision
+- **Fact:** Option not taken: each helper installing its own log writer.
+- **Why:** Under gjs the default-writer switch asserts (threads exist before module code) and gjs/GIO log before the helper runs, so it would miss lines. Cost accepted: helper library debug output is only seen by running the helper by hand.
+- **Source:** measurement above.
+- **Touches:** interfaces.md §1 — folded.
+
+## 2026-09-27 — Env rule lands with PG-4c and PG-4d
+- **Kind:** for-product
+- **Fact:** The shell spawns (the new AI spawn and `shell/calendarFeed.js:100`) belong in PG-4c; prefs' probe spawn (`docs/plans/PG-4d.md:566`, `Gio.Subprocess.new`) belongs in PG-4d. PG-4b needs no change.
+- **Why:** The fix is in spawn code, not in the helpers; the calendar feed spawn is shell code PG-4c already touches in kind. Ticket scope is the product manager's to confirm.
+- **Source:** extension/shell/calendarFeed.js:100-101; docs/plans/PG-4d.md:566.
+- **Touches:** none (ticket scope).
+
+## 2026-09-27 — PG-4a3 fix round folded
+- **Kind:** interface
+- **Fact:** §6.2 step 1 now names comments, `<style>`/`<script>` blocks, conditional markers, namespaced tags and opening line-end tags; step 7 allows spaces only before a pause, never before `#`/`*`.
+- **Why:** "Order 1234567 #urgent" is not a dial string; Outlook HTML carries passcodes behind those constructs.
+- **Source:** extension/core/invite.js:36-55, 57-107; inbox.
+- **Touches:** interfaces.md §6.2 — folded. The `ai/stdio.js` duplicate was already recorded (boundaries.md, NOTES 2026-09-27).

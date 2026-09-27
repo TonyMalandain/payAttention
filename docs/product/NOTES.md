@@ -312,3 +312,9 @@ Append only. Newest at the bottom.
   The page texts are the planner's wording, kept in one core module; the product manager reviews them on the built page. Findings for the architect are held until the architect's current inbox run ends: prefs.js carries three jobs, "as applied" versus "as entered", the key rule moving to core, the schema name repeated in uninstall.sh, and broadwayd needing `-u`.
 - **Source:** senior engineer, PG-4d and PG-4e plans.
 - **Touches:** solution.md R-17, R-19
+
+## 2026-09-27 — Helper debug-output fix: ticket scope confirmed
+- **Kind:** decision
+- **Fact:** The architect ruled that every spawner drops `G_MESSAGES_DEBUG` from the child's environment. Product confirmed the scope: PG-4c covers the calendar helper and the AI helper spawns, and PG-4d covers "Test connection". Both backlog items were updated. The held PG-4d/PG-4e architecture notes were filed in the inbox.
+- **Source:** architect, 2026-09-27.
+- **Touches:** BACKLOG.md
