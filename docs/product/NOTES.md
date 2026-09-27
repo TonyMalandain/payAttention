@@ -249,3 +249,9 @@ Append only. Newest at the bottom.
   "password-protected file" becomes "password-[removed]", which is within D-027's accepted cost. A start time beyond what a date can hold is still not rejected; it is logged for the senior engineer, and its only source is the calendar reader, which validates times.
 - **Source:** software engineer, PG-4a round 1 fixes.
 - **Touches:** decisions.md D-027
+
+## 2026-09-27 — PG-4b plan taken
+- **Kind:** decision
+- **Fact:** The AI helper plan is accepted. When the owner's password store is locked, the helper never prompts. It reports no key, the rules decide, and the menu shows "AI unavailable — using rules". A keyless engine at a private address needs no key lookup. The headless keyring test was proven on this machine.
+- **Source:** senior engineer, PG-4b plan.
+- **Touches:** solution.md R-19
