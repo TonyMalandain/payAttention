@@ -147,8 +147,15 @@ Layer 1 covers the rest in pure code:
   copy's calendar after a merge); conferencing-link queries cut in
   `videoLink`, description and place, other links left whole (D-022); text
   passcodes (plurals too) replaced with `[removed]` to the end of the line
-  (D-025, D-027, D-029); invisible marks dropped, HTML line-end tags turned
-  into line ends, and phone dial-in strings replaced (D-029), in §6.2's order;
+  (D-025, D-027, D-029); HTML made plain text first (line-ending tags as line
+  ends, other tags dropped, entities decoded once), the whole shared
+  `INVISIBLE_MARKS` list dropped, no-break spaces and hyphens made plain,
+  `%xx` pauses and codes decoded, and phone dial-in strings replaced (D-029,
+  D-030), in §6.2's order; `cleanText` and `validateInvite` covering every
+  mark on the shared list; the dial-string scan staying linear on a long
+  digit run (a timing-bounded case, not a pattern-shape assertion). These
+  tests pin the formats we know; removal is best effort (D-030), so a green
+  run is not a claim that no passcode can pass;
 - the AI protocol validators: exactly the keys, both directions, at every
   level, and `retryAfterS` only with `rate-limited`;
 - the fingerprint (every invite field changes it, text past a cap does not);

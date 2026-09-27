@@ -343,37 +343,68 @@ warning, so the settings text and the code cannot drift apart.
   occurrence comes from (the snapshot's `sources[].name`, looked up by the
   event's `sourceUid`; the first source with a given uid wins). An unknown
   source gives `""`. Renaming a calendar changes the invite, so it re-asks.
-- **Passcodes (D-022, D-025, D-027, D-029).** On the raw text, before cleaning
-  and capping (cleaning joins lines, and the rules need line ends):
+- **Passcodes (D-022, D-025, D-027, D-029, D-030).** On the raw text, before
+  cleaning and capping (cleaning joins lines, and the rules need line ends).
+  **Removal is best effort (D-030):** the owner chose to send the whole invite
+  (D-020), so these steps lower the risk and promise nothing. An unusual or
+  deliberately disguised passcode may still reach the engine, and Settings
+  says so next to the "whole invite is sent" warning (§6.9). A new format that
+  slips through is a known limit, not a contract breach; a rule for it is a
+  product call, not an automatic fix.
   - `videoLink` is cut at its first `?` or `#`, and its scheme is written
     `https://` in lower case (the allowlist accepts any case; §6.6 requires it).
   - `description` and `place` go through these steps, in this order in core
-    (`core/invite.js`, `withoutPasscodes`):
-    1. **Invisible marks** (U+200B to U+200F, U+2060, U+FEFF, U+00AD) are
-       dropped, so none can hide a keyword (D-029).
-    2. **Conferencing queries:** every link whose host is on core's
+    (`core/invite.js`, `withoutPasscodes`). Plain text comes first so every
+    later rule sees one format, not HTML and text mixed (D-030):
+    1. **HTML to plain text:** a line-ending tag becomes a line break, so
+       step 8 stops there: `<br …>` (attributes allowed), and the closers
+       `</p>`, `</li>`, `</div>`, `</tr>`, `</td>`, `</h1>`–`</h6>`, any case.
+       Every other tag is dropped. A tag is `<`, an optional `/`, a letter,
+       then name characters ending at a space, `/` or `>`, so `<https://…>`
+       and `a < b` stay as text. No tag is sent (D-029, D-030).
+    2. **Entities decoded,** once, after the tags are gone: decimal `&#…;`,
+       hex `&#x…;`, and `&nbsp;` `&shy;` `&amp;` `&lt;` `&gt;` `&quot;`
+       `&apos;`. One pass, so `&lt;br&gt;` becomes text and is not a line end,
+       and `&amp;#8203;` stays `&#8203;`. An entity naming no valid character
+       stays as written (D-030).
+    3. **Invisible marks** are dropped, so none can hide a keyword. The list is
+       core's one shared `INVISIBLE_MARKS` (`core/aiProtocol.js`): soft hyphen
+       U+00AD, combining grapheme joiner U+034F, Arabic letter mark U+061C,
+       U+200B–U+200F, U+202A–U+202E, U+2060–U+2064, U+2066–U+2069, U+FEFF
+       (D-029, D-030). `cleanText` uses the same list (below).
+    4. **Separators made plain:** no-break spaces (U+00A0, U+202F) become a
+       space and U+2010/U+2011 become `-`, so a dial string written with them
+       still matches (D-030).
+    5. **Conferencing queries:** every link whose host is on core's
        conferencing allowlist is cut at its first `?` or `#` (a trailing
        `.,;:!?` is kept). Links to other hosts are left whole (D-020).
-    3. **HTML line ends:** `<br>`, `<br/>`, `</p>`, `</li>` and `</div>` (any
-       case) become a line break, so step 5 sees the line end; the tag is not
-       sent (D-029).
-    4. **Dial-in strings:** a phone number (optional `tel:` and `+`, at least 7
+    6. **Percent-encoded pauses and codes** `%2C` `%3B` `%23` `%2A` (any case)
+       are decoded, only right after a digit, `,`, `;`, `#` or `*` (or another
+       of them), so other text with `%` is untouched (D-030).
+    7. **Dial-in strings:** a phone number (optional `tel:` and `+`, at least 7
        digits, groups split by up to 3 of space, tab, `.`, `-`, `(`, `)`)
-       directly followed by `#` or `*`, or by `,`/`;` then a digit, `#` or `*`,
-       is replaced whole, codes included, with `[removed]`. A plain number, or
-       one followed by `, ` as in a list, stays (D-029).
-    5. **Text passcodes:** after "passcode", "password", "pwd" or "PIN", or
+       directly followed (after up to 3 spaces or tabs) by `#` or `*`, or by
+       `,`/`;` then a digit, `#` or `*`, is replaced whole, codes included,
+       with `[removed]`. A plain number, or one followed by `, ` as in a list,
+       stays. Fewer than 7 digits is never a dial string: it cannot be told
+       from a room number or an extension (D-029). **Must stay linear:** each
+       number is found once and the scan resumes after it (D-030); a
+       backtracking pattern over a long digit run is a hang in the shell.
+    8. **Text passcodes:** after "passcode", "password", "pwd" or "PIN", or
        their plurals (any case, whole word; D-029), the separators (`:` `=`
        `#` `-`, whitespace including line breaks) and the fillers "is" /
        "code" are kept, and **the rest of that line** is replaced with
        `[removed]` (D-027). A value alone on the next line is therefore removed
        too. A rest with no letter or digit holds no code and is kept. The word
        itself is kept.
-    6. **Cleaning**, then 7. **the cap** (below). Removal runs before the cap,
-       so a cut cannot leave half a passcode.
-- **Every text field** is cleaned before capping: control characters and
-  Unicode bidi controls are removed, and runs of whitespace are collapsed to
-  one space. Then it is cut to its cap (one character less, plus "…"). Names
+    9. **Cleaning**, then 10. **the cap** (below). Removal runs before the
+       cap, so a cut cannot leave half a passcode.
+- **Every text field** is cleaned before capping, by core's one `cleanText`:
+  made well formed, control characters turned to spaces, the whole shared
+  `INVISIBLE_MARKS` list removed, runs of whitespace collapsed to one space,
+  trimmed. `validateInvite` rejects any text field that `cleanText` would
+  change, so an invite carrying any mark on the list fails with `bad-invite`
+  (D-030). Then it is cut to its cap (one character less, plus "…"). Names
   ≤ 80 characters, email addresses ≤ 254, calendar ≤ 80.
 - **Hard size cap: the serialised invite is at most 8 192 UTF-8 bytes.** If
   the caps above still exceed it, drop guests from the end (`guestsTotal`
@@ -382,7 +413,7 @@ warning, so the settings text and the code cannot drift apart.
 - **Never sent:** UIDs (event and calendar), occurrence or series keys, the
   owner's own addresses, rooms and resources, the query or fragment of any
   conferencing link, a passcode written as text, a phone dial-in string with
-  its codes, invisible marks, the HTML line-end tags, the rule's verdict and
+  its codes, invisible marks, any HTML tag, the rule's verdict and
   reason, and anything about overrides. Non-conferencing links inside the
   description and place are sent as written (D-020). The calendar *name* is
   sent (D-024; it was on this list until 2026-09-27).
@@ -590,9 +621,10 @@ to a private host. The body:
 2. What remains must parse as exactly one JSON object. Otherwise → `null`.
 3. `verdict` must be exactly `"must"` or `"ignore"`. `reason` must be a
    string. Any other key is ignored and never read.
-4. Normalise `reason`: remove control characters (including newlines) and
-   Unicode bidi controls (U+202A–U+202E, U+2066–U+2069); collapse whitespace;
-   trim; cut to 80 characters (79 plus "…"). If it is empty after that → `null`.
+4. Normalise `reason` with the same `cleanText` as the invite (§6.2):
+   control characters (including newlines) become spaces, the whole shared
+   `INVISIBLE_MARKS` list is removed (not only the bidi controls; D-030),
+   whitespace collapsed, trimmed; cut to 80 characters (79 plus "…"). If it is empty after that → `null`.
 
 The reason is shown as plain text, never markup (existing UI rule). Nothing
 in a reply can reach anything other than `verdict` and `reason` of an eligible
@@ -607,7 +639,8 @@ choose only its own verdict, because each request carries one invite.
   saved for this address" or "no key".
 - The warning comes from the PRD. The "leaves your computer" part shows for
   any endpoint that is not `loopback` (§6.4). Core's labelled field list (§6.2)
-  is shown with it.
+  is shown with it, and so is a line saying that passcode and dial-in removal
+  is best effort (D-030; wording is the product's).
 - "Test connection" spawns `ai/main.js` with `configure` from the fields as
   entered, then `probe`, and shows a clear yes, or no with the failure code in
   plain words. It never sends calendar data.

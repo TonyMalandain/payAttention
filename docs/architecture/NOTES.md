@@ -519,3 +519,31 @@ Append only. Newest at the bottom.
 - **Why:** Marks go first so none can hide a keyword; HTML ends become line ends before the line-based passcode rule; dial strings go before the keyword rule because they carry codes with no keyword.
 - **Source:** extension/core/invite.js:24-74 (PG-4a2); inbox entry.
 - **Touches:** interfaces.md §6.2, testing-and-build.md layer 1 — folded.
+
+## 2026-09-27 — Invite text: plain text first (D-030)
+- **Kind:** interface
+- **Fact:** `withoutPasscodes` now runs: HTML to plain text, entities decoded once, shared invisible marks dropped, separators made plain, conferencing queries cut, `%xx` decoded, dial strings removed, text passcodes removed, cleaned, capped.
+- **Why:** Rule-by-rule fixes kept meeting new formats; converting to one format first closes whole classes of leak. Entities after tags, in one pass, so an encoded tag stays text and is never read as a line end.
+- **Source:** extension/core/invite.js:24-122 (PG-4a3); inbox entry.
+- **Touches:** interfaces.md §6.2, testing-and-build.md layer 1 — folded.
+
+## 2026-09-27 — One shared INVISIBLE_MARKS list
+- **Kind:** interface
+- **Fact:** `core/aiProtocol.js` exports `INVISIBLE_MARKS`; `cleanText` (invite fields and AI reasons) and the invite builder both use it, and `validateInvite` rejects any text `cleanText` would change.
+- **Why:** Two lists drift; a mark the builder misses but the validator allows could hide a keyword. One list makes "cleaned" mean the same thing everywhere.
+- **Source:** extension/core/aiProtocol.js:52-76, 128-130.
+- **Touches:** interfaces.md §6.2, §6.8 — folded.
+
+## 2026-09-27 — Passcode removal is best effort
+- **Kind:** constraint
+- **Fact:** Removal of passcodes and dial-in strings is a courtesy, not a guarantee; Settings says so beside the "whole invite is sent" warning.
+- **Why:** The owner chose to send the whole invite (D-020); chasing every crafted format has no end (D-030). A new format that slips through is a known limit, and adding a rule for it is a product call.
+- **Source:** docs/product/decisions.md D-030.
+- **Touches:** interfaces.md §6.2, §6.9; testing-and-build.md — folded.
+
+## 2026-09-27 — Dial-string scan must stay linear
+- **Kind:** constraint
+- **Fact:** The dial-in rule finds each number once and resumes after it; no backtracking pattern over digit runs.
+- **Why:** Invite text is untrusted and runs inside gnome-shell; a super-linear regex on a long digit run freezes the desktop.
+- **Source:** extension/core/invite.js:36-39, 82-97.
+- **Touches:** interfaces.md §6.2 step 7 — folded.
