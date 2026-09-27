@@ -16,23 +16,6 @@ const SCHEMA_ID = 'org.gnome.shell.extensions.payattention';
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 8, 28, 14, 0, 0);
 
-/**
- * gnome-shell adds connectObject/disconnectObject to every GObject
- * (misc/signalTracker.js); plain gjs does not. A minimal stand-in, test only.
- */
-function withSignalTracker(settings) {
-    const ids = new Map();
-    settings.connectObject = (signal, handler, owner) => {
-        ids.set(owner, [...(ids.get(owner) ?? []), settings.connect(signal, handler)]);
-    };
-    settings.disconnectObject = owner => {
-        for (const id of ids.get(owner) ?? [])
-            settings.disconnect(id);
-        ids.delete(owner);
-    };
-    return settings;
-}
-
 function sleep(ms) {
     return new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
         resolve();
@@ -56,7 +39,7 @@ function answersWith(key) {
 }
 
 async function main() {
-    const settings = withSignalTracker(new Gio.Settings({ schema_id: SCHEMA_ID }));
+    const settings = new Gio.Settings({ schema_id: SCHEMA_ID });
     const changes = [];
     let reader = new StoreReader(settings, () => changes.push('change'));
     let writer = new StoreWriter(settings);
@@ -164,7 +147,7 @@ async function main() {
         ['constructor', 'destroy', 'readAiAnswers', 'readOverrides', 'readSettings', 'readTravel']),
     'the reader has only reads');
     check(Object.keys(reader).length === 0, 'the reader exposes no field');
-    const delayed = withSignalTracker(new Gio.Settings({ schema_id: SCHEMA_ID }));
+    const delayed = new Gio.Settings({ schema_id: SCHEMA_ID });
     delayed.delay();
     const delayedReader = new StoreReader(delayed, () => changes.push('delayed change'));
     delayedReader.readSettings();

@@ -29,6 +29,7 @@ function readDict(settings, key) {
 
 export class StoreReader {
     #settings;
+    #changedId = 0;
 
     /**
      * The store's reader facet: reads only. It holds the Gio.Settings in a
@@ -39,10 +40,10 @@ export class StoreReader {
      */
     constructor(settings, onChange) {
         this.#settings = settings;
-        settings.connectObject('changed', (_s, key) => {
+        this.#changedId = settings.connect('changed', (_s, key) => {
             if (!INTERNAL_KEYS.includes(key))
                 onChange();
-        }, this);
+        });
     }
 
     /** @returns {import('../core/types.js').Settings} */
@@ -81,7 +82,7 @@ export class StoreReader {
     destroy() {
         if (!this.#settings)
             return;
-        this.#settings.disconnectObject(this);
+        this.#settings.disconnect(this.#changedId);
         this.#settings = null;
     }
 }

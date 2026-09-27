@@ -161,18 +161,15 @@ const REMOTE_SOURCE = [
 ].join('\n');
 
 /**
- * A private EDS with the fixture calendar, on its own dbus-daemon.
+ * Writes the fixture sources (Fixture, Broken, Hidden, and Remote when withRemote) and the
+ * fixture calendar under <home>/config/evolution/sources and <home>/data/evolution/calendar.
+ * Creates <home>/cache. Never starts anything.
  *
- * @param {string} name a short label; the home is <repo>/.test-home/helper-<name>
- * @param {number} baseMs H, the whole hour the fixture times are relative to
- * @param {{withRemote?: boolean}} [options] withRemote adds 'remote-cal', a
- *   CalDAV source on a closed loopback port (remote, never reachable)
- * @returns {Promise<{home:string, env:object, stop:() => Promise<void>}>}
+ * @param {string} home
+ * @param {number} baseMs
+ * @param {{withRemote?: boolean}} [options]
  */
-export async function createIsolatedEds(name, baseMs, { withRemote = false } = {}) {
-    const home = path.join(repoRoot, '.test-home', `helper-${name}`);
-    // Cleaned at start, not at the end, so there is no race with EDS still writing.
-    fs.rmSync(home, { recursive: true, force: true });
+export function writeFixtureCalendars(home, baseMs, { withRemote = false } = {}) {
     const sources = path.join(home, 'config/evolution/sources');
     const calendar = path.join(home, 'data/evolution/calendar/fixture-cal');
     fs.mkdirSync(sources, { recursive: true });
@@ -188,6 +185,22 @@ export async function createIsolatedEds(name, baseMs, { withRemote = false } = {
     fs.writeFileSync(path.join(calendar, 'calendar.ics'), fixtureIcs(baseMs));
     if (withRemote)
         fs.writeFileSync(path.join(sources, 'remote-cal.source'), REMOTE_SOURCE);
+}
+
+/**
+ * A private EDS with the fixture calendar, on its own dbus-daemon.
+ *
+ * @param {string} name a short label; the home is <repo>/.test-home/helper-<name>
+ * @param {number} baseMs H, the whole hour the fixture times are relative to
+ * @param {{withRemote?: boolean}} [options] withRemote adds 'remote-cal', a
+ *   CalDAV source on a closed loopback port (remote, never reachable)
+ * @returns {Promise<{home:string, env:object, stop:() => Promise<void>}>}
+ */
+export async function createIsolatedEds(name, baseMs, { withRemote = false } = {}) {
+    const home = path.join(repoRoot, '.test-home', `helper-${name}`);
+    // Cleaned at start, not at the end, so there is no race with EDS still writing.
+    fs.rmSync(home, { recursive: true, force: true });
+    writeFixtureCalendars(home, baseMs, { withRemote });
 
     // Never spread process.env: it carries the real DBUS_SESSION_BUS_ADDRESS.
     const env = {
