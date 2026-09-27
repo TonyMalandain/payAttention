@@ -152,3 +152,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** Zoom and Teams invites usually repeat the passcode as plain text. Removing it only from links (D-022) left it going to the engine anyway.
 **Costs accepted:** A description that uses one of these words for something else loses the word after it. The verdict does not depend on it.
 **Source:** the product manager, closing a senior-engineer finding.
+
+### D-026 — The project is licensed under the Apache License 2.0 — 2026-09-27
+**Decision:** We chose the Apache License 2.0 for the whole project. It replaces the "GPL-2.0-or-later" an engineer had put in the build file without a decision.
+**Why:** The owner's choice.
+**Costs accepted:** GNOME's review rules say an extension must be distributable under terms compatible with GPL-2.0-or-later. Apache 2.0 is compatible with GPL-3.0 but not with GPL-2.0 alone. A reviewer on extensions.gnome.org could question it if the extension is ever published there. It does not affect installing it from the repository.
+**Source:** the owner, 2026-09-27.

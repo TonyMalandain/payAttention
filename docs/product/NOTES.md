@@ -196,3 +196,16 @@ Append only. Newest at the bottom.
 - **Fact:** The architect flagged that the PG-4a plan predates D-025. The engineer building PG-4a was told that D-025 overrides the plan (text passcodes are removed in core, before the description is cut). No further ticket is needed.
 - **Source:** architect report; product manager's PG-4a build brief.
 - **Touches:** decisions.md D-025
+
+## 2026-09-27 — Two owner requests: Extension Manager details link, licence
+- **Kind:** decision
+- **Profiles:** Installer
+- **Fact:** "See Details" in Extension Manager fails because no project address is declared (backlog PG-5). The licence is Apache 2.0 (D-026, backlog PG-6). An engineer had set GPL-2.0-or-later without a decision; this was drift, now replaced.
+- **Source:** the owner, 2026-09-27; GNOME extension review guidelines (licence compatibility, project address).
+- **Touches:** decisions.md D-026, BACKLOG.md
+
+## 2026-09-27 — Repository address unknown
+- **Kind:** question
+- **Fact:** No GitHub repository or git remote exists for the project. PG-5 needs the address. Assumed https://github.com/TonyMalandain/payAttention.
+- **Source:** checked with the owner's GitHub login (TonyMalandain).
+- **Touches:** BACKLOG.md PG-5

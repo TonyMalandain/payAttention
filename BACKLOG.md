@@ -31,6 +31,27 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - **PG-4e — Uninstall `--purge` (S).** Also erases the key and the stored AI answers.
 - **Owner's machine (not product work):** the NVIDIA driver is not built for the running kernel, so a local engine runs on the processor (about 5 to 20 s per verdict, estimated).
 
+## Now — small fixes from the owner
+
+- **PG-5 — "See Details" in Extension Manager opens the GitHub repository (S).**
+  - **What changes for the owner:** in Extension Manager, "See Details" opens the project's GitHub page instead of showing an error.
+  - **Who it is for:** Installer.
+  - **Why it fails today:** the extension does not declare a project address, so the link has nowhere to go.
+  - **Done when:**
+    - the extension declares the repository address;
+    - "See Details" opens it (checked by hand in Extension Manager after reinstalling);
+    - the README links to it too.
+  - **Blocked on:** the repository's address. No GitHub repository exists yet. Assumed `https://github.com/TonyMalandain/payAttention`, to be confirmed by the owner.
+- **PG-6 — Apply the Apache License 2.0 (S)** (D-026).
+  - **What changes for the owner:** the project states its licence clearly.
+  - **Who it is for:** Installer, and anyone who reuses the code.
+  - **Done when:**
+    - a `LICENSE` file holds the full Apache 2.0 text;
+    - the build file's licence field says `Apache-2.0` (replacing `GPL-2.0-or-later`);
+    - each source file carries a one-line licence tag;
+    - the README has a "License" section;
+    - the packed extension includes the licence.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
