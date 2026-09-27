@@ -40,7 +40,7 @@ If payAttention is running, it stops at once, and no alert stays on screen. It n
 
 A plain uninstall keeps your stored AI answers, and any AI engine keys in your keyring, and says so. `--purge` erases both, and only payAttention's own keys: nothing else in your keyring is touched.
 
-If your keyring is locked, `--purge` stops before erasing anything else, and asks you to unlock it and run it again.
+If your keyring is locked or cannot be reached, `--purge` still removes the extension, but it erases neither the keys nor your saved settings. It tells you so. Unlock the keyring and run it again to finish.
 
 To reinstall after uninstalling, run `npm run install:local`, then log out and back in, because GNOME loads extension code only at login.
 

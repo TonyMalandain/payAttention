@@ -42,7 +42,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
       - PG-4d: a loopback engine is reached directly, never through a proxy (`interfaces.md` §6.7; `extension/ai/transport.js:45`, `proxy_resolver: null`).
     - **PG-4c2 — One bad invite never blocks the others (S). DONE**, accepted on mutation evidence (10 of 10 caught). In `extension/shell/aiQueue.js` (the `lost` branch), from the second `lost` in a row on the same meeting, that meeting backs off (1 min, doubling up to 30) and joins `failedKeys`, so the queue moves on. Spec: `interfaces.md` §6.5 "Lost streak". Done when unit tests prove a meeting whose invite always crashes the helper does not stop other meetings getting AI answers. Runs after the PG-4c fix round (same file).
     - **PG-4d — Settings page (S).** Mode switch, endpoint, model, key, "Test connection", and the warning. The warning must include the D-030 wording: "Passcodes and dial-in numbers are removed first, on a best-effort basis." "Test connection" also drops `G_MESSAGES_DEBUG` from the helper it spawns (§1 "Environment").
-    - **PG-4e — Uninstall `--purge` (S).** Also erases the key and the stored AI answers.
+    - **PG-4e — Uninstall `--purge` (S). ACCEPTED** (review round 1). One leftover: move the `OTHER_SCHEMA` block above `finish()`'s why-comment in `tests/ai/gjs/keyring.js`, and refresh that file's header. This goes with the next engineer run. Also erases the key and the stored AI answers.
 - **Owner's machine (not product work):** the NVIDIA driver is not built for the running kernel, so a local engine runs on the processor (about 5 to 20 s per verdict, estimated).
 
 ## Now — small fixes from the owner
