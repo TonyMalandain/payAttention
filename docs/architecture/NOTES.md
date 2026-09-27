@@ -575,3 +575,45 @@ Append only. Newest at the bottom.
 - **Why:** "Order 1234567 #urgent" is not a dial string; Outlook HTML carries passcodes behind those constructs.
 - **Source:** extension/core/invite.js:36-55, 57-107; inbox.
 - **Touches:** interfaces.md §6.2 — folded. The `ai/stdio.js` duplicate was already recorded (boundaries.md, NOTES 2026-09-27).
+
+## 2026-09-27 — D-031: engine down split from per-meeting failure
+- **Kind:** interface
+- **Fact:** §6.5 now keeps two failure states: `engineDown` (engine-level failures, budget refusal, lost helper, client failure; cleared by a verdict or `bad-reply`) and `failedKeys` (any `failed`, cleared by that key's verdict); withholding uses both, and the status is `unavailable` only while a waiting meeting has engine down or its key failed.
+- **Why:** One sticky flag both withheld and drove the menu line, so one bad invite kept "AI unavailable" on while every other meeting had a current answer (D-031 part 1).
+- **Source:** docs/product/decisions.md D-031; docs/plans/PG-4c.md:289-310; inbox.
+- **Touches:** interfaces.md §6.5, data.md, ADR-0010 amendment — folded.
+
+## 2026-09-27 — D-031: unreachable codes pause the engine, capped at 90 s, spends returned
+- **Kind:** constraint
+- **Fact:** `network`/`timeout`/`tls`/`server` pause the engine 30 s doubling to 90 s; outage probes do not advance per-meeting retry; their spends (and `lost`'s) are refunded via `RequestBudget.refund`.
+- **Why:** Per-meeting backoff alone reaches 30 min and 30 waiting meetings spend the 120/h budget in about 4 min, so recovery could take an hour. 90 s is the largest cap keeping first answer ≤ 5 min: 100 s in-flight + 90 s pause + 1 s pump + 90 s answer ≈ 281 s.
+- **Source:** D-031; constraints.md timeouts (90 s local, watchdog +10 s); arithmetic, not measured.
+- **Touches:** interfaces.md §6.5, constraints.md — folded.
+
+## 2026-09-27 — Option not taken: separate engine health check
+- **Kind:** decision
+- **Fact:** Recovery probes are real asks of the soonest waiting meeting, not a `/models` or ping request.
+- **Why:** A second request shape widens the helper protocol and proves only that the address answers; the real ask is both the probe and the work.
+- **Source:** assumed (design judgement).
+- **Touches:** ADR-0010 amendment — folded.
+
+## 2026-09-27 — ADR-0010 Consequences contradicted §6.3 on engine change
+- **Kind:** decision
+- **Fact:** After an engine or model change, stored answers become stale and keep applying while re-asked; ADR-0010 wrongly said rule verdicts show. Corrected in place with a dated note.
+- **Why:** Drift inside the record; §6.3 and data.md were the intent (flicker avoidance is the ADR's own deciding reason).
+- **Source:** inbox (PG-4c plan finding).
+- **Touches:** ADR-0010 — folded.
+
+## 2026-09-27 — constraints.md "tick does not read AI state" tightened
+- **Kind:** constraint
+- **Fact:** The tick reads the queue's last published frozen state and makes one call, the daily prune (in-memory filter + coalesced write); it never calls or waits on the helper.
+- **Why:** The old wording was false as written and a reviewer would have flagged a correct build.
+- **Source:** docs/plans/PG-4c.md:42-46; inbox.
+- **Touches:** constraints.md — folded.
+
+## 2026-09-27 — PG-4d/PG-4e plan notes folded
+- **Kind:** boundary
+- **Fact:** prefs.js stays one root file (widgets, keyring write, probe run) with decisions in `core/aiSetup.js`; key rule is `isSendableKey`/`MAX_KEY_LENGTH` in `core/aiEngine.js`; §6.9 now "as applied"; `uninstall.sh` repeats the key schema name, guarded by the uninstall check; `gtk4-broadwayd -u` and `glib-compile-resources` listed for tests.
+- **Why:** GNOME loads prefs.js from the root; a directory for one file is structure without a second caller. Acting on unapplied fields could save a key under an address it is never sent to. A shell script cannot import core after removal. broadwayd without `-u` listens on TCP on every interface.
+- **Source:** docs/plans/PG-4d.md:41-42, 56, 83; docs/plans/PG-4e.md:45; inbox.
+- **Touches:** interfaces.md §6.7, §6.9; boundaries.md; data.md; testing-and-build.md — folded.

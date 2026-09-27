@@ -106,6 +106,16 @@ in an environment built with `env -i`. A private bus alone is not isolation
 `gnome-keyring-daemon`, which opens `$XDG_DATA_HOME/keyrings/`, so with the real
 home it opens the owner's real keyring file.
 
+Programs these layers need beyond Node and gjs: `dbus-daemon`
+(`dbus-run-session`), `gnome-keyring-daemon`, `glib-compile-schemas`, and, for
+the prefs tests (PG-4d: the real `prefs.js` against a stub
+`ExtensionPreferences` registered as a GResource, on a private headless GTK
+display), `glib-compile-resources` and `gtk4-broadwayd`. **`gtk4-broadwayd`
+must always be started with `-u <socket in the private XDG_RUNTIME_DIR>`.**
+Without `-u` it opens an HTTP server on TCP port 8080 + display on every
+interface, which would expose the test window to the network (measured,
+PG-4d plan). The harness checks every program is present before it starts.
+
 Rules the tests hold:
 
 - **Never a real engine.** The harness refuses any endpoint whose host is not
@@ -176,7 +186,15 @@ The controller is tested with fake AI clients:
 - one that never answers: every alert step must still appear at its time;
 - one that fails: stale entries are withheld, so the rules decide;
 - a budget test: the 121st request in an hour is not sent, and the status is
-  `unavailable`.
+  `unavailable`;
+- a recovery test (D-031): an engine failing with `network` is probed only at
+  the end of each pause (30 s, 60 s, 90 s, 90 s…), the probes' spends are
+  returned, and once it answers, the soonest waiting meeting is asked within
+  91 s of the engine returning, even after a full hour of outage;
+- a truthfulness test (D-031): the status is `ok` while meetings wait for
+  their first answer with the engine fine, `unavailable` while any waiting
+  meeting's last ask failed or the engine is down, and `ok` again once each
+  waiting meeting has a current answer or the failed ones pass `cutoff`.
 
 ## Layer 3 — shell smoke test (headless gnome-shell)
 

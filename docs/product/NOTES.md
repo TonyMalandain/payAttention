@@ -330,3 +330,14 @@ Append only. Newest at the bottom.
 - **Fact:** The review found that the network library's default 60 s socket timeout cut local engines off before the 90 s deadline and reported it as a network failure. For the owner, whose GPU driver is not loaded, a local model running on the processor could hit this every time, so AI mode would never work. Sent to a fix round. The other checks held: the key never leaks, no redirects are followed, the size cap holds, the keyring never prompts, and no test reaches a real service. The proxy note (a system proxy without loopback in its ignore list) is left for the architect after its current run.
 - **Source:** reviewer, PG-4b round 1.
 - **Touches:** solution.md R-18
+
+## 2026-09-27 — D-031 mechanism accepted
+- **Kind:** decision
+- **Fact:** The architect's rule is accepted:
+  - "unavailable" shows only while a waiting meeting falls back because the engine is down or its own ask failed;
+  - engine-level pauses run 30 s, doubling, capped at 90 s;
+  - probes made while the engine is down do not push back retries and do not spend budget.
+
+  After the engine returns, the first answer arrives within about 281 s (by arithmetic), which is within D-031's 5 minutes. The PG-4c plan goes back to its planner for revision.
+- **Source:** architect, interfaces.md §6.5.
+- **Touches:** decisions.md D-031

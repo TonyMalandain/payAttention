@@ -56,7 +56,9 @@ with the address. The API key is not a setting. It is in the keyring, keyed by
 the normalised endpoint (ADR-0009). The libsecret schema name and attribute are
 defined once, in `core/aiEngine.js` (`ENGINE_KEY_SCHEMA_NAME`,
 `ENGINE_KEY_ATTRIBUTE`), so prefs (writer) and the AI helper (reader) cannot
-disagree on the stored format. An endpoint with no key is a keyless
+disagree on the stored format. The one repeat is `scripts/uninstall.sh`
+(`--purge`), which cannot import core; the uninstall check fails if the two
+drift (`boundaries.md`, known duplicates). An endpoint with no key is a keyless
 engine. Switching endpoints and back finds the old key again, and a key is
 never sent to an address it was not saved for.
 
@@ -150,8 +152,8 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
   calendar name (D-024), time, length, status, busy/free, description, place,
   video link, organiser, or any guest, including one guest's response. So does a different endpoint or
   model, or a new prompt version. A stale answer still applies while it is
-  asked again, unless the AI is unavailable or that ask failed
-  (`interfaces.md` §6.3 and §6.5). The new answer overwrites the entry.
+  asked again, unless the engine is down or that meeting's own last ask
+  failed (`interfaces.md` §6.3 and §6.5). The new answer overwrites the entry.
 - **What it holds that is new:** `reason` is text written by the model from
   the whole invite (D-020), so it may paraphrase the title or name a person
   ("1:1 with Dana, client"). Accepted, because it lets a lock and unlock

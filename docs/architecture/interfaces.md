@@ -504,39 +504,113 @@ computer. Every other class leaves it.
 
 ### 6.5 Controller behaviour (shell, internal but binding)
 
+*Revised 2026-09-27 for D-031 (a truthful "AI unavailable" line, and recovery
+within 5 minutes after an unreachable engine returns). The names in brackets
+are the PG-4c plan's (`shell/aiQueue.js`, `shell/aiBudget.js`).*
+
 - **Queue.** After each `judge`, the controller collects the `aiAsk`s whose
   occurrence starts no earlier than `now − cutoff`, and queues them, soonest
   start first. **At most one request is in flight.**
+- **Waiting meeting.** A judged occurrence with an `aiAsk`, a non-null start,
+  and `start ≥ now − cutoff`. This is the queue's pick test without the retry
+  check. Every rule below that says "waiting" means exactly this set.
+- **Two pieces of failure state**, in memory, per engine (both emptied when
+  the engine changes):
+  - **engine down** (`engineDown`, boolean): the engine cannot be asked right
+    now, or its last ask did not reach it. Set and cleared only as the table
+    below says.
+  - **failed keys** (`failedKeys`): keys whose own most recent ask ended in
+    `failed`, whatever the code. A key leaves the set only on its own verdict
+    or an engine change. This set is kept on its own; it is **not** derived
+    from the per-occurrence retry records, which it no longer matches.
 - **What it passes to `judge`.** The stored `ai-verdicts` entries, except
-  that it withholds the entry of a key that has an outstanding `aiAsk` when:
-  - the AI status is `unavailable`, or
-  - that key's own most recent ask failed.
-
-  The rules then decide those meetings (D-019). Only keys with an `aiAsk`
-  can hold a stale entry, so the controller never computes a fingerprint. A
-  change of status re-runs `judge`.
-- **Never on the alert path.** The tick and `plan()` never read the queue and
-  never wait for it. An answer is written to `ai-verdicts` through the store
+  that it withholds the entry of a key that has an outstanding `aiAsk` when
+  engine down is set, or that key is in failed keys. The rules then decide
+  those meetings (D-019). Only keys with an `aiAsk` can hold a stale entry, so
+  the controller never computes a fingerprint. A change of engine down,
+  failed keys or the answers re-runs `judge`; a change of status alone needs
+  only a render. Withholding never changes which keys carry `aiAsk`, so the
+  status (below) and `judge` never feed each other in a loop.
+- **Never on the alert path.** The tick and `plan()` never call the queue or
+  the AI helper, and never wait for them; the render reads only the frozen
+  state the queue last published (answers, failed keys, engine down, status),
+  like overrides. An answer is written to `ai-verdicts` through the store
   (coalesced, like alert state), and then `judge` re-runs, as it does after an
   override.
-- **Retry.** After a failure for one occurrence, it is not asked again for
-  1 min, then 2, 4 and so on, up to 30 min (in memory). After `auth`, `config`
-  or `no-key`, the whole engine pauses for 30 min, or until `verdict-source`,
-  `ai-endpoint` or `ai-model` changes, so a bad key is never hammered. A key
-  saved in prefs is in the keyring, which the shell cannot see. It applies to
-  the next request, because the helper looks the key up per request. After
-  fixing a key, the owner can switch the mode off and on to end the pause at
-  once. After `rate-limited`, the engine pauses for `Retry-After` if given
-  (capped at 30 min), else 5 min.
+- **What each outcome does.** "Unreachable" codes are `network`, `timeout`
+  (the helper's or the shell watchdog's), `tls` and `server`
+  (`ENGINE_UNREACHABLE_CODES`).
+
+  | Outcome | engine down | failed keys | per-occurrence retry | engine pause | the spend for this ask |
+  |---|---|---|---|---|---|
+  | `verdict` | clear | remove the key | delete the key's record | unreachable backoff reset to none | kept |
+  | `failed`, unreachable code | set | add the key | advanced **only if engine down was clear when this ask was sent**; otherwise left as it was | `pausedUntil = max(pausedUntil, now + w)`, `w = nextEnginePauseMs(previous w)`: 30 s, doubling, **capped at 90 s** | **returned** to the budget |
+  | `failed`, `auth` / `config` / `no-key` | set | add | advanced | 30 min, or until `verdict-source`, `ai-endpoint` or `ai-model` changes | kept |
+  | `failed`, `rate-limited` | set | add | advanced | `Retry-After` if given (capped at 30 min), else 5 min | kept |
+  | `failed`, `bad-reply` | clear (the engine did reply) | add | advanced | unreachable backoff reset to none | kept |
+  | `failed`, `bad-request` | unchanged | add | advanced | none | kept |
+  | `lost` (helper could not start, exited, or broke the protocol) | set | unchanged | none | none (the client's own restart backoff limits it) | **returned** |
+  | the budget refuses a send | set | unchanged | none | none | nothing was spent |
+  | the client could not be created, or settling threw | set | unchanged | none | none | — |
+
+  - "Advanced" means the key's record becomes `{waitMs: w, retryAt: now + w}`
+    with `w = nextAskRetryMs(previous waitMs or null)`: 1 min, doubling, up to
+    30 min. The queue does not pick a key before its `retryAt`.
+  - The ask's token records whether engine down was set when it was sent
+    (`downAtSend`). So the first unreachable failure while the engine was
+    fine counts against that meeting (it may be the meeting's own fault, for
+    example an invite that always times out), but the probes made during an
+    outage do not push any meeting's retry further out.
+  - Returned spend: `RequestBudget.refund(engineTag, sentAt)` removes the one
+    spend recorded at the ask's `sentAt` for that engine (a no-op if it has
+    aged out). Checking and spending stay one call (`trySpend`).
+  - **During any pause nothing is sent, so nothing is spent.** The only
+    requests an outage costs are the probes at the end of each pause, and
+    those are returned. So an outage never leaves the budget lower than the
+    answered traffic alone would have.
+  - A bad key is never hammered: `auth`, `config` and `no-key` pause for
+    30 min. A key saved in prefs is in the keyring, which the shell cannot
+    see. It applies to the next request, because the helper looks the key up
+    per request. After fixing a key, the owner can switch the mode off and on
+    to end the pause at once.
+  - `unreachable backoff reset to none`: the next unreachable failure pauses
+    30 s again. An engine change also resets it and ends any pause.
+- **Recovery bound (D-031).** Say the engine becomes reachable at time R.
+  - No ask in flight at R: the pause in force ends by R + 90 s. The next pump
+    (within 1 s) sends the soonest waiting meeting, because outage probes did
+    not advance any retry and returned their spends. First ask by R + 91 s.
+  - An ask in flight at R that still fails: it ends by the helper's deadline
+    or the watchdog, at most `timeoutMs + 10 s` after it was sent (100 s for
+    a local engine). Then a pause of at most 90 s. First ask by R + 191 s;
+    with the engine's own answer time of at most `timeoutMs` (90 s), the
+    first answer arrives by about R + 281 s, inside 5 minutes.
+  - One verdict clears engine down, so the remaining waiting meetings follow
+    one at a time, soonest first.
+  - Two cases are outside the bound, on purpose: a budget already exhausted
+    by *answered* requests (it would block with or without the outage), and a
+    meeting held by its own retry from failures while the engine was fine
+    (it would not be asked without the outage either).
 - **Budget.** At most 120 requests per rolling hour and 1 000 per rolling
   24 h, per `engineTag` (assumed; `constraints.md`). This is held in memory,
-  so a lock resets it. Stored answers make that harmless in practice. When the
-  budget blocks a waiting ask, the status is `unavailable`.
-- **Status for the View**, one of: `off` (rules mode or not set up); `ok`;
-  `unavailable` (the most recent completed attempt failed, the helper could
-  not start, or the budget blocks a waiting ask, and nothing has succeeded
-  since). With `unavailable`, the menu shows "AI unavailable — using rules".
-  The status is not persisted.
+  so a lock resets it. Stored answers make that harmless in practice. Spends
+  for unreachable and `lost` outcomes are returned (table above). When the
+  budget blocks a waiting ask, engine down is set.
+- **Status for the View**, one of:
+  - `off`: rules mode, or no usable engine;
+  - `unavailable`: **at least one waiting meeting is decided by the rules
+    because of a failure**, that is, engine down is set, or that meeting's
+    key is in failed keys;
+  - `ok`: otherwise. This includes meetings not yet asked for the first time
+    while the engine is fine: the rules stand in for them, but nothing failed.
+
+  With `unavailable`, the menu shows "AI unavailable — using rules"; with
+  `ok` or `off` it shows no such line. So the line is hidden when every
+  waiting meeting has a current answer (there are then no waiting meetings),
+  and when the only failed meetings have started more than `cutoff` ago.
+  The status is computed at the end of **every** pump, whatever path it took
+  (watchdog, pause, not ready, nothing to pick, budget, send), and after every
+  settle, from the judged list and cutoff of the last pump and the current
+  time. It is published only when it changes. It is not persisted.
 - **Helper lifecycle.** Spawn when there is something to ask and none is
   running. Send `configure`, then requests. Kill it (SIGKILL) in `disable()`,
   when `verdict-source` leaves `ai`, and when `ai-endpoint` or `ai-model`
@@ -627,7 +701,11 @@ to a private host. The body:
   `server`; timeout → `timeout`; a body over 1 MiB after decoding →
   `bad-reply` (read with a cap, so a hostile engine cannot exhaust memory).
 - A stored key that is not 1–4 096 visible ASCII characters gives `config`
-  and is never sent (it could split a header). An empty key is keyless.
+  and is never sent (it could split a header). An empty key is keyless. The
+  rule is defined once, in `core/aiEngine.js` (`isSendableKey`,
+  `MAX_KEY_LENGTH`): the helper uses it before sending, and prefs uses it
+  before saving, so the owner cannot save a key that would silently never be
+  sent (PG-4d).
 - **One deadline**, `timeoutMs`, covers the key lookup, the request and the
   single `response_format` retry, so an answer never comes later than
   `timeoutMs` + about 1 s and stays inside the shell's watchdog.
@@ -662,6 +740,17 @@ choose only its own verdict, because each request carries one invite.
   any endpoint that is not `loopback` (§6.4). Core's labelled field list (§6.2)
   is shown with it, and so is a line saying that passcode and dial-in removal
   is best effort (D-030; wording is the product's).
-- "Test connection" spawns `ai/main.js` with `configure` from the fields as
-  entered, then `probe`, and shows a clear yes, or no with the failure code in
-  plain words. It never sends calendar data.
+- **Everything acts on the settings as applied, never as typed.** Saving
+  the key, "Remove" and "Test connection" use the saved `ai-endpoint` and
+  `ai-model`, and are greyed out while an edit to either is not yet applied.
+  So a key is always saved under the address it will be sent to, and a test
+  always tests what the shell will use (PG-4d; accepted by product).
+- "Test connection" spawns `ai/main.js` with `configure` from the applied
+  settings, then `probe`, and shows a clear yes, or no with the failure code
+  in plain words. It never sends calendar data.
+- **Where the code sits.** `prefs.js` stays one file at the extension root
+  (GNOME loads it from there). It holds the widgets, the keyring write, and
+  the one-off helper run for "Test connection". Every decision (what to show,
+  whether a pasted key is usable, what a probe outcome means in words) is in
+  pure core, `core/aiSetup.js`, and is tested under Node. Prefs gets its own
+  directory only if a second gi module is needed beside it.

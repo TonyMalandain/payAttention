@@ -44,7 +44,7 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
 | `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
-| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, and the endpoint rules) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
+| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, the endpoint rules, the key rule in `aiEngine.js`, and every Settings decision in `aiSetup.js`) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
 The "must not import" column is enforced with ESLint `no-restricted-imports` per
 directory, so a breach fails lint rather than review. Two parts are not enforced
@@ -71,6 +71,18 @@ creating a `Gio.Settings`.
   `ai/` may not import `helper/`. Accepted debt (PG-4b). Repaying it means a
   shared "gjs subprocess stdio" module both helpers may import, which is a
   boundary change and needs the architect.
+- **Known duplicate: the keyring schema name in `scripts/uninstall.sh`.**
+  `ENGINE_KEY_SCHEMA_NAME` is defined once in `core/aiEngine.js`, but a shell
+  script cannot import core, and by the time `--purge` clears the keyring the
+  installed copy of core is already gone. So the script repeats the name, with
+  a comment naming the constant. Guarded, not trusted: the uninstall check
+  seeds keyring items with core's constant and fails if the script leaves any
+  (PG-4e). Accepted; there is nothing cheaper that works after removal.
+- **`prefs.js` has three jobs, one of them decisions-free.** Widgets, the
+  keyring write, and the one-off "Test connection" helper run stay in
+  `prefs.js` (GNOME loads it from the extension root). All the decisions are
+  in `core/aiSetup.js` (`interfaces.md` §6.9). No `prefs/` directory until a
+  second gi module is needed beside it.
 - **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
   in `tests/unit/` only if it has no `gi://` and no `resource://` imports; its
   GNOME parts are injected (`interfaces.md` §3).

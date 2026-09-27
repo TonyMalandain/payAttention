@@ -46,10 +46,12 @@ open window go with it. So:
 | AI request timeout (in the AI helper) | 90 s for a loopback or private endpoint, 45 s for a public one | assumed; a cold local model on CPU with a whole invite is the slow case |
 | AI watchdog in the shell | request timeout + 10 s, then kill and respawn the AI helper | assumed |
 | AI requests in flight | at most 1, soonest meeting first | local engines serialise anyway; keeps cloud rate limits simple. Nothing waits for the queue. Revisit trigger in ADR-0010 |
-| AI retry per occurrence | 1 min, doubling, capped at 30 min; engine pause on `auth`/`config`/`no-key` for 30 min or until an engine setting changes; on `rate-limited`, `Retry-After` (≤ 30 min) or 5 min | assumed |
-| AI request budget | ≤ 120 per rolling hour and ≤ 1 000 per rolling 24 h, per endpoint and model; in memory | assumed. AI mode asks about every meeting, and every RSVP re-asks one. The owner's calendar needs about 5–30 an hour at first sight and a handful after that (estimated from 26 occurrences in 7 days, measured) |
+| AI retry per occurrence | 1 min, doubling, capped at 30 min; not advanced by an unreachable failure of an ask sent while the engine was already down | assumed; `interfaces.md` §6.5 |
+| AI engine pause | `network`/`timeout`/`tls`/`server`: 30 s, doubling, capped at 90 s, reset by any engine reply; `auth`/`config`/`no-key`: 30 min or until an engine setting changes; `rate-limited`: `Retry-After` (≤ 30 min) or 5 min | 90 s cap: D-031 (answers resume within 5 min of the engine returning; worst case about 281 s for a local engine, §6.5); the rest assumed |
+| AI recovery after an unreachable engine returns | first ask within 91 s (nothing in flight), within 191 s (a failing ask in flight); first answer within 5 min | D-031 |
+| AI request budget | ≤ 120 per rolling hour and ≤ 1 000 per rolling 24 h, per endpoint and model; in memory. Spends for unreachable and `lost` outcomes are returned, so an outage never lowers it (D-031) | assumed. AI mode asks about every meeting, and every RSVP re-asks one. The owner's calendar needs about 5–30 an hour at first sight and a handful after that (estimated from 26 occurrences in 7 days, measured) |
 | First-sight AI verdicts | rule verdicts stand until answered, then turn into AI verdicts one at a time. A changed invite keeps its previous AI answer while it is re-asked | ADR-0010 |
-| An alert waits for the AI | **never**. `plan()` and the tick do not read AI state | D-019 / PRD addendum 2026-09-27 |
+| An alert waits for the AI | **never**. `plan()` and the tick never call the AI queue or the AI helper and never wait on them. The render reads only the frozen AI state the queue last published (answers, failed keys, engine down, status), as it reads overrides. The one call from the tick is the daily prune, which asks the queue to drop old answers in memory and schedule a coalesced store write; it never talks to the helper and cannot throw into the tick | D-019 / PRD addendum 2026-09-27; `interfaces.md` §6.5 |
 
 ## Scale
 

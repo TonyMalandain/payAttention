@@ -1,7 +1,7 @@
 # ADR-0010 — AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite, as stored data that never sits on the alert path
 - **Date:** 2026-09-27
 - **Kind:** reversible, except the stored formats: the `verdict-source`, `ai-endpoint`, `ai-model` and `ai-verdicts` schema keys (`data.md`). None of them has shipped yet.
-- **Status:** amended 2026-09-27 (see the end: D-022 to D-025)
+- **Status:** amended 2026-09-27 (see the end: D-022 to D-025; D-031)
 - **Supersedes:** ADR-0008 (AI second opinion on "unsure" verdicts only, from the D-018 facts)
 
 ## Context
@@ -92,8 +92,8 @@ silenced.** In detail:
 - **Controller:** a key with an outstanding ask has either no entry or a
   stale one, and the controller knows these keys from `judge`'s output. It
   withholds those keys' stored entries from `judge` (in memory; the store keeps
-  them) when the AI status is `unavailable`, and for any key whose own most
-  recent ask failed. The rules then decide those meetings, as D-019 requires.
+  them) when the engine is down, and for any key whose own most recent ask
+  failed *(wording amended 2026-09-27 for D-031; see the end)*. The rules then decide those meetings, as D-019 requires.
   It never has to compute a fingerprint itself. The rest of the queue, the
   retry rules and the status are in `interfaces.md` §6.5.
 - **Never on the alert path.** The tick and `plan()` never read or wait for
@@ -119,9 +119,15 @@ silenced.** In detail:
   A keyless local engine is just an empty key.
 - Harder: request volume grows with the calendar and with RSVP churn. This is
   bounded by the budget in `constraints.md` and by stored answers. On first
-  sight, and after an engine or model change, the owner sees rule verdicts that
-  turn into AI verdicts one at a time, soonest meeting first. On the CPU this
-  can take minutes for a full day.
+  sight the owner sees rule verdicts that turn into AI verdicts one at a time,
+  soonest meeting first. On the CPU this can take minutes for a full day.
+  *(Corrected 2026-09-27: this bullet first said an engine or model change
+  also shows rule verdicts. It does not.)* After an engine or model change the
+  engine tag in every fingerprint differs, so each stored answer becomes a
+  **stale** answer and keeps applying while its meeting is asked again, as for
+  a changed invite (`interfaces.md` §6.3, `data.md`). Only a meeting with no
+  stored answer, or one withheld because the engine is down or its own ask
+  failed, shows the rule verdict.
 - **Stale answers can be wrong for a while.** If an invite changes from "FYI"
   to something that matters, the old ignorable answer applies until the
   re-ask completes, which is seconds to about a minute on the CPU. It is asked
@@ -182,3 +188,37 @@ its details change. `interfaces.md` §6.1, §6.2 and §6.6 hold the contract.
   protocol module comes in transitively for its enum lists). The invite
   *builder* lives outside them, in `core/invite.js`, so the helper cannot
   build or reshape an invite; it can only check one.
+
+## Amendment 2026-09-27 — D-031: a truthful "unavailable" line, and recovery within 5 minutes
+
+Made before anything in this ADR shipped, after the product manager closed the
+PG-4c plan's findings. The decision (option 2) stands. `interfaces.md` §6.5
+holds the exact rule; this records why it has that shape.
+
+- **"Unavailable" was one flag doing two jobs.** It withheld stale answers
+  and it drove the menu line, and it stayed set until any answer arrived. A
+  single bad invite (`bad-reply`) could then drop every stale answer and keep
+  the line on for hours. It is now split: an *engine down* flag (set by
+  engine-level failures, the budget, a lost helper; cleared by an engine
+  reply) and a per-meeting *failed* set. Withholding uses both. The menu line
+  is computed from what is true now: it shows only while at least one waiting
+  meeting is decided by the rules because of a failure.
+- **Unreachable is an engine state, not a meeting's fault.** `network`,
+  `timeout`, `tls` and `server` pause the whole engine for 30 s, doubling,
+  capped at 90 s, so an outage costs one probe per pause instead of one
+  request per meeting per minute. Probes sent while the engine is already
+  down do not push any meeting's own retry further out, and their spends are
+  returned to the budget. That is what makes recovery fast: without it,
+  30 waiting meetings failing once a minute would spend the hourly budget in
+  four minutes, and the per-meeting retries would reach 30 min.
+- **The 90 s cap is sized from D-031's 5 minutes**, not from load: a failing
+  ask in flight can take `timeoutMs + 10 s` (100 s locally), then one pause,
+  then the engine's own answer time (up to 90 s): about 281 s.
+- **Options not taken.** Keeping per-meeting backoff only (fails the bound
+  and the budget). A separate health-check request to the engine (a second
+  request shape, and it proves the address answers, not that a verdict
+  comes back; a real ask of the soonest meeting is both the probe and the
+  work). Not counting failures in the budget at all (a cloud engine that
+  answers `bad-reply` or `auth` did work, and those stay counted).
+- **Cost accepted** (D-031): the line can appear and disappear as meetings
+  are asked, and the engine is probed up to 40 times an hour while down.
