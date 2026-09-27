@@ -189,3 +189,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** A warning that stays on when nothing is wrong teaches the owner to ignore it, which is the problem the product exists to fix. A local engine that is stopped and restarted is the normal case, and an hour of rules-only behaviour after a restart would look broken.
 **Costs accepted:** The line can appear and disappear as meetings are asked. The engine may be asked slightly more often while it recovers.
 **Source:** the product manager, closing senior-engineer findings (PG-4c plan).
+
+### D-032 — Verdicts can be previewed from a terminal; no nested desktop — 2026-09-27
+**Decision:** We chose a terminal preview command (R-20) as the way to check verdicts without logging out. We rejected running a second GNOME desktop in a window.
+**Why:** The owner's choice. The owner also asked that it not be "a cheap trick… tightly coupled to the gnome-extension framework". It must reuse the same core and calendar access as the extension.
+**Costs accepted:** The preview shows verdicts, not the alerts themselves. Checking the look of alerts still needs a login, or the screenshots.
+**Source:** the owner, 2026-09-27.

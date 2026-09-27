@@ -385,3 +385,22 @@ Append only. Newest at the bottom.
 - **Fact:** All AI-mode tickets (PG-4a to PG-4e, with PG-4a2, PG-4a3 and PG-4c2) are accepted. The full checks were run by the product manager on the combined tree: lint clean, 1370 unit, build, 188 helper, smoke PASS. R-18 and R-19 are now `real` (verified in code). The extension was reinstalled with `npm run install:local`; it loads at the owner's next login. The real-session check of AI mode is PG-2 step 8.
 - **Source:** product manager.
 - **Touches:** solution.md R-18, R-19; BACKLOG.md PG-2
+
+## 2026-09-27 — Preview command chosen (R-20, D-032)
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner rejected the nested GNOME desktop and accepted a terminal preview of verdicts, as long as it is not a trick coupled to the extension.
+- **Source:** the owner, 2026-09-27.
+- **Touches:** solution.md R-20, decisions.md D-032
+
+## 2026-09-27 — Handoff: GNOME-independent core, swappable calendar source and shell
+- **Kind:** handoff
+- **Fact:** The owner, verbatim: "intuitively, the gnome-extension should be a shell and the core capabilities should be reusable. Same with access to the calendar information. That the gnome-specific parts should be well encapsulated into a contained component that can later be changed for something else, like an O365 one, or a Google one, etc. There's no reason for the core logic to be dependent on gnome." Measured today: core/ has 0 GNOME imports (22 files). The controller, AI queue and view are GNOME-free. Calendar reading and AI access are separate processes behind a JSON protocol, with the calendar reader built on EDS and the key store on the GNOME keyring. The UI, prefs and settings store are GNOME-bound. This is architecture, so the architect owns it.
+- **Source:** the owner; measurement by the product manager.
+- **Touches:** docs/architecture/
+
+## 2026-09-27 — Scope unchanged: GNOME only
+- **Kind:** decision
+- **Fact:** Supporting O365 or Google calendars directly, or other desktops, is still out of scope ("GNOME only" in solution.md). The owner asked that the architecture keep those doors open, not that they be built. A new product decision is needed to ship any of them.
+- **Source:** product manager, reading the owner's message.
+- **Touches:** solution.md exclusions

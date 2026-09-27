@@ -106,6 +106,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
      - Note: the GPU driver is not built for the running kernel, so a local model runs on the processor and may be slow.
   - The full checklist is in `docs/architecture/testing-and-build.md`, under the real-session section.
 
+## Next — verdict preview command (PG-8, size M)
+
+- **PG-8 — See what payAttention would decide, from a terminal** (R-20, D-032).
+  - **What changes for the owner:** one command lists upcoming meetings with verdict, reason, online or in person, and "AI:" when AI mode is on. It uses the extension's own saved settings, overrides and AI engine, reads the real calendars, and never shows an alert or changes anything.
+  - **Who it is for:** Calendar owner, Installer.
+  - **Done when:**
+    - it runs with no login or logout;
+    - its verdicts match what the extension decides for the same meetings (tested);
+    - it reuses the same core, calendar reader and AI helper, with no copy of logic;
+    - the README shows how to use it.
+  - **Next step:** the architect confirms the GNOME-free core and the swappable parts (calendar source, settings, key store), then designs the command as a second front end.
+
 ## Next — polish (PG-4f, size S)
 
 - The `tests/ai/gjs/keyring.js` comment move and header refresh (the PG-4e leftover).
