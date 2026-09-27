@@ -15,7 +15,7 @@ import { startFakeEngine } from './fakeEngine.js';
 import { killOnPrivateBus } from '../helper/isolatedEds.js';
 import { normalizeDomains, parseList } from '../../extension/core/display.js';
 import {
-    AI_WARNING, VERDICT_SOURCES, FAILURE_TEXT, describeEndpoint, describeKey, describeMode,
+    AI_WARNING, VERDICT_SOURCES, FAILURE_TEXT, NOT_TESTED, TESTING, describeEndpoint, describeKey, describeMode,
 } from '../../extension/core/aiSetup.js';
 import { INVITE_FIELDS } from '../../extension/core/aiProtocol.js';
 import { PROBE_INVITE } from '../../extension/core/aiPrompt.js';
@@ -91,7 +91,7 @@ describe('the Verdicts page', { skip: SKIP }, () => {
         assert.deepEqual(seen.modeLabels, VERDICT_SOURCES.map(s => s.label));
         assert.equal(seen.selected, 0);
         assert.equal(seen.modeSubtitle, describeMode({ verdictSource: 'rules' }));
-        assert.equal(seen.testResult, 'Not tested yet.');
+        assert.equal(seen.testResult, NOT_TESTED);
         assert.deepEqual(seen.titles, {
             'payattention-ai-endpoint': 'Address',
             'payattention-ai-model': 'Model',
@@ -113,7 +113,8 @@ describe('the Verdicts page', { skip: SKIP }, () => {
     });
 
     test('endpoint: only a usable address is stored, normalised', async () => {
-        const { applied, unapplied, longModel, trimmedModel, emptyModel } = merged((await drive(session, 'endpoint')).steps);
+        const { applied, unapplied, longModel, trimmedModel, emptyModel } =
+            merged((await drive(session, 'endpoint', [throwawayKey()])).steps);
         const text = a => describeEndpoint(a).text;
         assert.deepEqual(applied, [
             { input: 'HTTP://LOCALHOST:11434/v1/', stored: 'http://localhost:11434/v1', text: 'http://localhost:11434/v1',
@@ -126,9 +127,10 @@ describe('the Verdicts page', { skip: SKIP }, () => {
             { input: 'http://10.0.0.5:8080/v1', stored: 'http://10.0.0.5:8080/v1', text: 'http://10.0.0.5:8080/v1',
                 error: false, where: text('http://10.0.0.5:8080/v1') },
         ]);
+        const allSensitive = { 'payattention-ai-key': true, 'payattention-ai-key-remove': true, 'payattention-ai-test': true };
         const allInsensitive = { 'payattention-ai-key': false, 'payattention-ai-key-remove': false, 'payattention-ai-test': false };
-        assert.deepEqual(unapplied, { before: true, endpointEditing: allInsensitive, endpointBack: true,
-            modelEditing: allInsensitive, modelBack: true });
+        assert.deepEqual(unapplied, { before: allSensitive, endpointEditing: allInsensitive, endpointBack: allSensitive,
+            modelEditing: allInsensitive, modelBack: allSensitive });
         assert.deepEqual(longModel, { stored: 'llama3', error: true });
         assert.deepEqual(trimmedModel, { stored: 'llama3', text: 'llama3', error: false });
         assert.deepEqual(emptyModel, { stored: '' });
@@ -175,6 +177,14 @@ describe('the API key', { skip: SKIP }, () => {
         assert.deepEqual(seen.notShown, { first: true, second: true });
     });
 
+    test('a key typed but not saved is cleared when the address changes', () => {
+        assert.equal(seen.addressChanged.typedKeyCleared, true);
+    });
+
+    test('the saved key line is empty while its lookup is pending', () => {
+        assert.equal(seen.addressChanged.statusWhilePending, '');
+    });
+
     test('keys are per address', () => {
         assert.equal(seen.perAddress, true);
     });
@@ -194,6 +204,10 @@ describe('the API key', { skip: SKIP }, () => {
 
     test('no key may be saved for plain http to another computer', () => {
         assert.deepEqual(seen.noKeyHere, { keySensitive: false, removeSensitive: false, unchanged: true });
+    });
+
+    test('a key saved for plain http to another computer can still be removed, but not replaced', () => {
+        assert.deepEqual(seen.removableHere, { keySensitive: false, removeSensitive: true, count: 0, removeSensitiveAfter: false });
     });
 
     test('another program\'s keyring item is never touched', () => {
@@ -249,8 +263,8 @@ describe('Test connection', { skip: SKIP }, () => {
         const r = await drive(session, 'probe', [E.endpoint, closed, K]);
         const seen = merged(r.steps);
 
-        assert.deepEqual(seen.refusedKey, { during: { text: 'Testing…', sensitive: false }, ...answered(FAILURE_TEXT.auth, false) });
-        assert.deepEqual(seen.yes, { during: { text: 'Testing…', sensitive: false }, ...answered('Yes: the engine answered.', true) });
+        assert.deepEqual(seen.refusedKey, { during: { text: TESTING, sensitive: false }, ...answered(FAILURE_TEXT.auth, false) });
+        assert.deepEqual(seen.yes, { during: { text: TESTING, sensitive: false }, ...answered('Yes: the engine answered.', true) });
         assert.equal(seen.yesWithKey.text, 'Yes: the engine answered.');
         assert.equal(seen.closed.text, FAILURE_TEXT.network);
         assert.equal(seen.noModel.text, 'No: enter a model name first.');

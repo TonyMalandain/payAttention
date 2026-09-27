@@ -32,6 +32,11 @@ export const KEY_SAVE_FAILED = 'Could not save the key: the keyring refused it o
 /** Shown when the keyring refused or could not be reached while removing a key. */
 export const KEY_REMOVE_FAILED = 'Could not remove the key: the keyring refused or could not be reached.';
 
+/** The Test connection result before any run, and again after the settings it tested change. */
+export const NOT_TESTED = 'Not tested yet.';
+/** The Test connection result while a run is in flight. */
+export const TESTING = 'Testing…';
+
 /** What each failure code of the probe means to the owner. Frozen; exactly the keys of AI_FAILURE_CODES. */
 export const FAILURE_TEXT = Object.freeze({
     'timeout': 'No: the engine did not answer in time.',

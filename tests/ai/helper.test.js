@@ -193,6 +193,23 @@ test('the Soup session has no timer of its own: the deadline is the only one', {
     assert.equal(JSON.parse(run.stdout.trim()).timeout, 0);
 });
 
+test('a loopback engine is reached directly, never through a proxy; other engines use the desktop proxy', { skip: SKIP }, () => {
+    // interfaces.md §6.7: a proxy would receive the key in clear, and the invite would leave the computer.
+    const urls = {
+        'http://127.0.0.1:11434/v1/chat/completions': true,
+        'http://localhost:11434/v1/chat/completions': true,
+        'http://[::1]:11434/v1/chat/completions': true,
+        'http://10.0.0.5:8080/v1/chat/completions': false,
+        'https://api.example.test/v1/chat/completions': false,
+    };
+    const probe = path.join(import.meta.dirname, 'gjs/sessionProxy.js');
+    const run = spawnSync('gjs', ['-m', probe, ...Object.keys(urls)], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(run.status, 0, run.stderr);
+    const seen = JSON.parse(run.stdout.trim());
+    for (const [url, direct] of Object.entries(urls))
+        assert.deepEqual(seen[url], { direct, timeout: 0 }, url);
+});
+
 describe('AI helper failures, through the real Soup stack', { skip: SKIP }, () => {
     let session, engine;
     let helper = null;

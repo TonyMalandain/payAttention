@@ -17,7 +17,7 @@ import Secret from 'gi://Secret';
 import System from 'system';
 
 import { ENGINE_KEY_SCHEMA } from '../../../extension/ai/keyring.js';
-import { KEY_SAVE_FAILED, checkKey, describeKey } from '../../../extension/core/aiSetup.js';
+import { KEY_SAVE_FAILED, NOT_TESTED, TESTING, checkKey, describeKey } from '../../../extension/core/aiSetup.js';
 
 const EXTENSION_DIR = Gio.File.new_for_uri(import.meta.url).get_parent()
     .resolve_relative_path('../../../extension').get_path();
@@ -34,8 +34,6 @@ const SHOWN_PROPERTIES = ['text', 'title', 'subtitle', 'label', 'description'];
 // The harness rule "never a real engine": Test connection runs only against 127.0.0.1.
 const LOOPBACK_ENGINE = /^http:\/\/127\.0\.0\.1:\d+\/v1$/;
 const TEST_WAIT_MS = 20000;
-const TESTING = 'Testing…';
-const NOT_TESTED = 'Not tested yet.';
 
 /** Prints one observation for Node. */
 function step(object) {
@@ -264,7 +262,7 @@ const SCENARIOS = {
     },
 
     // The address and model rows: what is stored, and what is refused.
-    endpoint: async Prefs => {
+    endpoint: async (Prefs, [key]) => {
         const window = await openWindow(Prefs);
         const settings = window._settings;
         const row = find(window, 'payattention-ai-endpoint');
@@ -282,16 +280,22 @@ const SCENARIOS = {
             .map(n => [n, find(window, n).get_sensitive()]));
         const model = find(window, 'payattention-ai-model');
         apply(model, 'llama3');
-        const testRow = find(window, 'payattention-ai-test');
-        const before = testRow.get_sensitive();
+        // An address that allows a key, with one saved: every control is sensitive before the edit,
+        // so the greying below is caused by the edit alone.
+        apply(row, ENGINE_ONE);
+        apply(find(window, 'payattention-ai-key'), key);
+        await waitFor(() => find(window, 'payattention-ai-key-status').subtitle === describeKey('saved', true), WAIT_MS,
+            'the key saved before the edits');
+        await waitFor(() => find(window, 'payattention-ai-key').get_sensitive(), WAIT_MS, 'the key row sensitive after the save');
+        const before = sensitive();
         row.text = 'http://127.0.0.1:1/v1';
         const endpointEditing = sensitive();
         row.text = settings.get_string('ai-endpoint');
-        const endpointBack = testRow.get_sensitive();
+        const endpointBack = sensitive();
         model.text = 'other-model';
         const modelEditing = sensitive();
         model.text = settings.get_string('ai-model');
-        const modelBack = testRow.get_sensitive();
+        const modelBack = sensitive();
         step({ unapplied: { before, endpointEditing, endpointBack, modelEditing, modelBack } });
 
         apply(model, 'm'.repeat(201));
@@ -357,7 +361,10 @@ const SCENARIOS = {
         step({ notShown: { first: !shows(window, k1), second: !shows(second, k1) } });
         second.close();
 
+        // A key typed but not saved belongs to the old address: changing the address clears it.
+        keyRow.text = k2;
         apply(endpointRow, ENGINE_TWO);
+        step({ addressChanged: { typedKeyCleared: keyRow.text === '', statusWhilePending: status.subtitle } });
         await statusIs(describeKey('none', true), 'status none for engine-two');
         apply(endpointRow, ENGINE_ONE);
         await statusIs(describeKey('saved', true), 'status saved for engine-one again');
@@ -400,6 +407,25 @@ const SCENARIOS = {
             noKeyHere: {
                 keySensitive, removeSensitive,
                 unchanged: keyringItems(ENGINE_KEY_SCHEMA, {}).length === before,
+            },
+        });
+
+        // A key saved there some other way can still be removed: removal is always safe.
+        Secret.password_store_sync(ENGINE_KEY_SCHEMA, { endpoint: PRIVATE_HTTP }, Secret.COLLECTION_DEFAULT,
+            'saved some other way', k1, null);
+        apply(endpointRow, ENGINE_TWO);
+        await statusIs(describeKey('none', true), 'status none for engine-two before the plain http key');
+        apply(endpointRow, PRIVATE_HTTP);
+        await statusIs(describeKey('saved', false), 'status saved, key not allowed');
+        const removableKeySensitive = keyRow.get_sensitive();
+        const removableRemoveSensitive = remove.get_sensitive();
+        remove.emit('clicked');
+        await statusIs(describeKey('none', false), 'status none after Remove on plain http');
+        step({
+            removableHere: {
+                keySensitive: removableKeySensitive, removeSensitive: removableRemoveSensitive,
+                count: keyringItems(ENGINE_KEY_SCHEMA, { endpoint: PRIVATE_HTTP }).length,
+                removeSensitiveAfter: remove.get_sensitive(),
             },
         });
 

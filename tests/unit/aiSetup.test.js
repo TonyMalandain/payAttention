@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
     AI_WARNING, VERDICT_SOURCES, PROBE_ID, PROBE_WATCHDOG_EXTRA_MS, KEY_SAVE_FAILED, KEY_REMOVE_FAILED, FAILURE_TEXT,
+    NOT_TESTED, TESTING,
     describeMode, describeEndpoint, describeKey, checkKey, probeInput, probeResultFromLines, probeResultWhenStopped,
 } from '../../extension/core/aiSetup.js';
 import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
@@ -279,4 +280,14 @@ describe('probeResultWhenStopped', () => {
             assert.ok(Object.isFrozen(r));
         });
     }
+});
+
+describe('the Test connection row before an answer', () => {
+    test('before any run, and after the settings change', () => {
+        assert.equal(NOT_TESTED, 'Not tested yet.');
+    });
+
+    test('while a run is in flight', () => {
+        assert.equal(TESTING, 'Testing…');
+    });
 });

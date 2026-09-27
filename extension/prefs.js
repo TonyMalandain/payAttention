@@ -20,7 +20,7 @@ import {
 import { INVITE_FIELDS } from './core/aiProtocol.js';
 import { HELPER_ENV_UNSET } from './core/protocol.js';
 import {
-    AI_WARNING, VERDICT_SOURCES, KEY_SAVE_FAILED, KEY_REMOVE_FAILED, describeMode, describeEndpoint, describeKey, checkKey,
+    AI_WARNING, VERDICT_SOURCES, KEY_SAVE_FAILED, KEY_REMOVE_FAILED, NOT_TESTED, TESTING, describeMode, describeEndpoint, describeKey, checkKey,
     probeInput, probeResultFromLines, probeResultWhenStopped,
 } from './core/aiSetup.js';
 
@@ -57,9 +57,6 @@ function buttonRow(title, onActivated) {
 }
 
 const asIs = items => items;
-
-const NOT_TESTED = 'Not tested yet.';
-const TESTING = 'Testing…';
 
 /** The engine key schema (ADR-0009). Built per call: nothing at module scope. */
 function engineKeySchema() {
@@ -324,12 +321,15 @@ function verdictsPage(settings, helperPath, cancellable) {
         const keyAllowed = describeEndpoint(settings.get_string('ai-endpoint')).keyAllowed;
         testRow.sensitive = !editing && !testRunning;
         keyRow.sensitive = !editing && keyAllowed && !keySaving;
-        removeButton.sensitive = !editing && keyAllowed && keySaved;
+        // Removing is always safe, so it does not depend on keyAllowed: saving does.
+        removeButton.sensitive = !editing && keySaved;
     };
 
     const refreshKey = async () => {
         const generation = ++keyGeneration;
         const address = settings.get_string('ai-endpoint');
+        // Empty until the answer, so the line never describes the previous address.
+        keyStatusRow.subtitle = '';
         const state = await keyState(address, cancellable);
         if (generation !== keyGeneration || cancellable.is_cancelled())
             return;
@@ -442,7 +442,11 @@ function verdictsPage(settings, helperPath, cancellable) {
 
     endpointRow.connect('changed', updateSensitivity);
     modelRow.connect('changed', updateSensitivity);
-    settings.connect('changed::ai-endpoint', refresh);
+    settings.connect('changed::ai-endpoint', () => {
+        // A key typed but not saved was meant for the previous address.
+        keyRow.text = '';
+        refresh();
+    });
     settings.connect('changed::ai-model', refresh);
 
     refresh();

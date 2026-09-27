@@ -7,7 +7,7 @@
 import Soup from 'gi://Soup?version=3.0';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import { mayCarryKey } from '../core/aiEngine.js';
+import { mayCarryKey, endpointClass } from '../core/aiEngine.js';
 
 /** The largest response body read, in bytes after content decoding. */
 export const MAX_RESPONSE_BYTES = 1048576;
@@ -37,12 +37,20 @@ function closeQuietly(stream) {
 
 export class HttpTransport {
     /**
-     * Creates one Soup.Session for the life of the process, with its timeout set to 0 (the deadline below is the
-     * only timer). libsoup 3 defaults it to 60 s, which cut a slow local engine off as network before its deadline.
-     * idle-timeout keeps its default: it only closes pooled connections with no request in flight.
+     * Creates two Soup.Sessions for the life of the process, each with its timeout set to 0 (the deadline below is
+     * the only timer). libsoup 3 defaults it to 60 s, which cut a slow local engine off as network before its
+     * deadline. idle-timeout keeps its default: it only closes pooled connections with no request in flight.
+     * _session honours the desktop proxy; _directSession has no proxy resolver, for loopback engines
+     * (interfaces.md §6.7: a proxy would receive the key in clear, and the invite would leave the computer).
      */
     constructor() {
         this._session = new Soup.Session({ timeout: 0 });
+        this._directSession = new Soup.Session({ timeout: 0, proxy_resolver: null });
+    }
+
+    /** The session a request to url goes through: direct for a loopback host, the desktop proxy otherwise. */
+    _sessionFor(url) {
+        return endpointClass(url) === 'loopback' ? this._directSession : this._session;
     }
 
     /**
@@ -100,9 +108,10 @@ export class HttpTransport {
                 if (bearer !== null)
                     msg.request_headers.append('Authorization', `Bearer ${bearer}`);
 
-                this._session.send_async(msg, GLib.PRIORITY_DEFAULT, cancellable, (_s, res) => {
+                const session = this._sessionFor(url);
+                session.send_async(msg, GLib.PRIORITY_DEFAULT, cancellable, (_s, res) => {
                     try {
-                        const stream = this._session.send_finish(res);
+                        const stream = session.send_finish(res);
                         // status_code, not get_status(): gjs throws on codes missing from the enum (429).
                         const status = msg.status_code;
                         const retryAfter = msg.response_headers.get_one('Retry-After');
