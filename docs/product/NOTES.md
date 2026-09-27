@@ -318,3 +318,9 @@ Append only. Newest at the bottom.
 - **Fact:** The architect ruled that every spawner drops `G_MESSAGES_DEBUG` from the child's environment. Product confirmed the scope: PG-4c covers the calendar helper and the AI helper spawns, and PG-4d covers "Test connection". Both backlog items were updated. The held PG-4d/PG-4e architecture notes were filed in the inbox.
 - **Source:** architect, 2026-09-27.
 - **Touches:** BACKLOG.md
+
+## 2026-09-27 — PG-4c plan taken; D-031
+- **Kind:** decision
+- **Fact:** The PG-4c plan is accepted. Its two product-facing findings were closed as D-031: a truthful "AI unavailable" line, and recovery within 5 minutes without burning the budget. The architect was asked for the mechanism before the build. The build will also carry the spawn-environment rule (drop `G_MESSAGES_DEBUG`), which post-dates the plan.
+- **Source:** senior engineer, PG-4c plan.
+- **Touches:** decisions.md D-031, solution.md R-18

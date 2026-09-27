@@ -183,3 +183,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** Rule-by-rule fixes kept finding new formats (reviews of PG-4a and PG-4a2). Plain text first closes whole classes of leak at once. The owner chose to send the whole invite (D-020), so removal is a courtesy that lowers risk, not a promise. Chasing every crafted format has no end.
 **Costs accepted:** An unusual or deliberately disguised passcode may still reach the engine. HTML formatting is not sent, which the engine does not need.
 **Source:** the product manager, closing reviewer findings (PG-4a2 round 1).
+
+### D-031 — The "AI unavailable" line is truthful, and AI mode recovers within 5 minutes — 2026-09-27
+**Decision:** We chose two rules. (1) The menu shows "AI unavailable — using rules" only while at least one upcoming meeting is being decided by the rules because an ask failed or cannot be made. When every eligible meeting has a current AI answer, the line is hidden. (2) When an engine that could not be reached becomes reachable again, AI answers resume within 5 minutes. Failed attempts while it was down must not use up the request budget in a way that delays this.
+**Why:** A warning that stays on when nothing is wrong teaches the owner to ignore it, which is the problem the product exists to fix. A local engine that is stopped and restarted is the normal case, and an hour of rules-only behaviour after a restart would look broken.
+**Costs accepted:** The line can appear and disappear as meetings are asked. The engine may be asked slightly more often while it recovers.
+**Source:** the product manager, closing senior-engineer findings (PG-4c plan).
