@@ -131,14 +131,6 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - The Settings Model field follows an outside change of `ai-model`.
 - Lint: a `..` in the middle of a path (`../core/../shell/store.js`) still sidesteps every pattern. The architect decides a robust rule (for example resolving paths in a custom rule).
 
-## (old) polish list
-
-- The `tests/ai/gjs/keyring.js` comment move and header refresh (the PG-4e leftover).
-- Settings page:
-  - a refused key's red style clears when the address change empties the field;
-  - the address field follows a change made outside the window;
-  - Remove reflects the new address as soon as the lookup ends.
-
 ## Housekeeping (engineering)
 
 - The plans in `docs/plans/` do not show the deviations accepted in review (the PG-1b start-up sync order, the PG-1c takeover panel layout, the menu idle rebuild, the compact takeover). Update them if the plans are reused.
