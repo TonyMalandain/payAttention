@@ -116,7 +116,11 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - its verdicts match what the extension decides for the same meetings (tested);
     - it reuses the same core, calendar reader and AI helper, with no copy of logic;
     - the README shows how to use it.
-  - **Next step:** the architect confirms the GNOME-free core and the swappable parts (calendar source, settings, key store), then designs the command as a second front end.
+  - Architecture: ADR-0011 (ports and adapters), ADR-0012 and `interfaces.md` §7 (the preview design). Product: D-033.
+  - Build order:
+    - **PG-8a — Move the GNOME-free orchestration into `extension/app/` (M, move only).** It moves controller, aiQueue, aiBudget, health, backoff, view and soundCue, with a lint block like core's. Done when all tests pass unchanged and lint forbids GNOME imports in `app/`.
+    - **PG-8b — Extract the verdict component and split the store into reader and writer (M).** Hard prerequisite for PG-8c. Done when the controller uses the new component, the existing controller tests keep their meaning, and the reader side cannot write.
+    - **PG-8c — The preview command (M).** `extension/preview/`, shipped in the zip. Done when the four parity checks in §7 pass and the README shows how to run it.
 
 ## Next — polish (PG-4f, size S)
 

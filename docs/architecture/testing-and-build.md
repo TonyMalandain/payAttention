@@ -32,7 +32,13 @@ running shell, removes the install directory, and takes the UUID out of
 `/org/gnome/shell/extensions/payattention/`. From PG-4, `--purge` also clears
 the keyring items of the AI key schema (ADR-0009), and a plain uninstall
 reports them as kept. It never touches calendars, other extensions, other
-settings, or other keyring items. It is safe to run twice.
+settings, or other keyring items. It is safe to run twice. On a **locked** keyring
+`Secret.password_clear` returns false with no error and removes nothing
+(measured, PG-4e), so `--purge` searches again after clearing and fails
+(exit 1, "your keyring is locked … Saved settings were not erased.") while any
+item of the schema remains. It clears keys before settings, so a locked
+keyring leaves both in place. An unreachable Secret Service also fails
+`--purge`: the script cannot tell "no items" from "unreachable".
 
 ## Layer 1 — core unit tests (Node)
 

@@ -195,3 +195,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner's choice. The owner also asked that it not be "a cheap trick… tightly coupled to the gnome-extension framework". It must reuse the same core and calendar access as the extension.
 **Costs accepted:** The preview shows verdicts, not the alerts themselves. Checking the look of alerts still needs a login, or the screenshots.
 **Source:** the owner, 2026-09-27.
+
+### D-033 — The preview never saves AI answers, even if that means asking the engine twice — 2026-09-27
+**Decision:** We chose to let the preview command ask the AI engine for meetings with no current stored answer, keep those answers in memory only, and never write them. The extension then asks again on its own.
+**Why:** "The preview never changes anything" (R-20) is what makes it safe to run at any time, and it is enforced by design (read-only settings access).
+**Costs accepted:** In AI mode with a cloud engine, previewed meetings are sent and paid for twice. With both running, the engine can receive up to 240 requests an hour. A "stored answers only" option can be added if the cost matters.
+**Source:** the product manager, closing an architect finding (ADR-0012).

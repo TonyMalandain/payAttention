@@ -52,6 +52,9 @@ open window go with it. So:
 | AI request budget | ≤ 120 per rolling hour and ≤ 1 000 per rolling 24 h, per endpoint and model; in memory. Spends for unreachable and `lost` outcomes are returned, so an outage never lowers it (D-031) | assumed. AI mode asks about every meeting, and every RSVP re-asks one. The owner's calendar needs about 5–30 an hour at first sight and a handful after that (estimated from 26 occurrences in 7 days, measured) |
 | First-sight AI verdicts | rule verdicts stand until answered, then turn into AI verdicts one at a time. A changed invite keeps its previous AI answer while it is re-asked | ADR-0010 |
 | An alert waits for the AI | **never**. `plan()` and the tick never call the AI queue or the AI helper and never wait on them. The render reads only the frozen AI state the queue last published (answers, failed keys, engine down, status), as it reads overrides. The one call from the tick is the daily prune, which asks the queue to drop old answers in memory and schedule a coalesced store write; it never talks to the helper and cannot throw into the tick | D-019 / PRD addendum 2026-09-27; `interfaces.md` §6.5 |
+| Verdict preview: wait for calendars (PG-8) | first accepted snapshot within 30 s, else exit 3 | assumed; `interfaces.md` §7.3 |
+| Verdict preview: wait for the AI (PG-8) | until no eligible meeting is waiting, at most 5 min; then unanswered meetings print their rule verdict | assumed, matched to the 5-min first-answer target (D-031) |
+| Verdict preview: engine load | its own in-memory budget (120/h); with the extension running, an engine may see up to 240 asks/h. Preview answers are never stored, so the extension asks again | ADR-0012 |
 
 ## Scale
 

@@ -33,6 +33,12 @@ of one in-shell part and one small helper process.
  answers → store (ai-verdicts) → judge(…, aiVerdicts) ; the tick and plan() never wait for it
 ```
 
+**Ports and adapters (ADR-0011).** The rules (`core/`) and the orchestration
+are GNOME-free; each GNOME part is an adapter behind a named port
+(`boundaries.md`). A second front end, the terminal verdict preview (R-20,
+ADR-0012, `interfaces.md` §7), is designed to reuse the verdict pipeline, the
+calendar helper and the AI helper, and never to write or alert.
+
 ## Subsystems and what each is for
 
 | Subsystem | Directory | Responsible for |

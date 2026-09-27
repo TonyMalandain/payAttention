@@ -652,3 +652,73 @@ Append only. Newest at the bottom.
 - **Why:** Product rule: one meeting's invite must never block AI answers for other meetings. Before this, `lost` left no retry record, so an invite that crashed the helper every time stayed at the queue head forever and AI mode quietly stopped. Two, not one, so a single system-killed helper costs a meeting nothing. `downAtSend` cannot gate it: the first `lost` sets engine down, so the re-ask is always sent "while down". Option not taken: have the client report whether the helper was handed the invite (would spare innocent keys during a spawn failure) — a change to `AiOutcome` for a case where nothing can be asked anyway. Accepted price: while the helper cannot start, waiting keys back off one by one (first retry 1 min).
 - **Source:** inbox (PG-4c review); `extension/shell/aiQueue.js:346-351` (lost path, no retry), `extension/shell/aiHelperClient.js:75, 202, 242` (the three `lost` sources).
 - **Touches:** interfaces.md §6.5 table and "Lost streak" note, constraints.md "AI retry per occurrence" — folded. Carried by a small follow-up to PG-4c (S: `shell/aiQueue.js` and its tests only).
+
+## 2026-09-27 — Handoff taken: owner's ports-and-adapters principle
+- **Kind:** decision
+- **Fact:** Took the product handoff of the owner's "the gnome-extension should be a shell" statement (product NOTES, 2026-09-27); recorded as ADR-0011 (three rings core/app/adapters, named ports, only the verdict component calls judge).
+- **Why:** The preview (R-20) is the first second front end; without a named principle it would copy the composition.
+- **Source:** the owner via product NOTES; code read at 8cc50e5.
+- **Touches:** ADR-0011, boundaries.md, overview.md — folded.
+
+## 2026-09-27 — Leak: verdict pipeline private to the alert controller
+- **Kind:** boundary
+- **Fact:** Engine sync, AI pump, dirty flag and the two-pass judge with withheld answers live in `extension/shell/controller.js:217-272, 376-383`; the constructor writes (prune, line 117).
+- **Why:** A second front end could only reuse it by building the whole controller, which writes and ticks; this blocks PG-8's "no copy" and "never writes".
+- **Source:** extension/shell/controller.js.
+- **Touches:** interfaces.md §7.2 — designed.
+
+## 2026-09-27 — Leak: store port is one read-write facet
+- **Kind:** interface
+- **Fact:** StorePort (`controller.js:21-37`) has no read-only facet; §7.2 splits it into reader and writer.
+- **Why:** "Never writes" should be structural (the preview is never handed a writer), not a promise.
+- **Source:** extension/shell/controller.js:21-37.
+- **Touches:** interfaces.md §7.2 — designed.
+
+## 2026-09-27 — Snapshot protocol is source-neutral
+- **Kind:** interface
+- **Fact:** The Occurrence DTO is iCalendar-shaped; Graph and Google Calendar expose every field it needs; `backend`, `remote`, `connection` are EDS-named and now defined by meaning.
+- **Why:** The owner asked whether an O365/Google reader could replace EDS; the answer is yes as a new reader process with no protocol change. A network-backed reader would still need an ADR (network is the AI helper's only).
+- **Source:** interfaces.md §1; Graph `iCalUId`/`showAs`/`onlineMeeting`, Google `iCalUID`/`originalStartTime` (from knowledge, not re-verified today — assumed).
+- **Touches:** interfaces.md §1, ADR-0011 — folded.
+
+## 2026-09-27 — Option not taken: full re-layout outside extension/
+- **Kind:** decision
+- **Fact:** core/ and app/ stay under `extension/`; the only move is gi-free modules from `shell/` to a new `app/`.
+- **Why:** Every front end (extension, prefs, preview) runs from the installed pack; moving code out of the pack root costs a build assembly step and every import path for no present caller. Revisit if anything ships outside the GNOME zip.
+- **Source:** assumed (design judgement).
+- **Touches:** ADR-0011.
+
+## 2026-09-27 — Preview runtime is gjs, not Node
+- **Kind:** stack
+- **Fact:** PG-8 is a gjs program in `extension/preview/`, shipped in the pack and run from the install directory (ADR-0012).
+- **Why:** Node has no EDS or GSettings binding; it would need second implementations of the helper supervisors and a dconf reader (a copy), and would make Node a runtime dependency. Running from the installed copy is the only way the previewed code is the installed code.
+- **Source:** extension/shell/calendarFeed.js, aiHelperClient.js, helperProcess.js; testing-and-build.md (schemas compiled into the install dir).
+- **Touches:** ADR-0012, interfaces.md §7.3.
+
+## 2026-09-27 — Preview read-only by delay-apply plus reader facet
+- **Kind:** constraint
+- **Fact:** The preview calls `Gio.Settings.delay()` before reading and never `apply()`, and holds only the store's reader facet; a keyfile-backend test checks no bytes change.
+- **Why:** Belt and braces: the facet stops writes by design, delay-apply stops an accidental one from reaching dconf, the test proves it.
+- **Source:** assumed (design); GSettings delay-apply semantics.
+- **Touches:** interfaces.md §7.3, ADR-0012.
+
+## 2026-09-27 — Terminal injection from invite titles
+- **Kind:** constraint
+- **Fact:** Every calendar- or engine-derived string the preview prints goes through `core/aiProtocol.js` `cleanText` (controls incl. ESC/C1 to spaces, bidi overrides removed).
+- **Why:** Titles come from strangers; a raw ESC sequence in a title can rewrite the owner's terminal. Reusing cleanText keeps one cleaning rule.
+- **Source:** extension/core/aiProtocol.js:71-77.
+- **Touches:** interfaces.md §7.3 — folded.
+
+## 2026-09-27 — Inbox PG-4e purge measurement folded
+- **Kind:** constraint
+- **Fact:** `--purge` on a locked keyring fails (exit 1) because `password_clear` returns false silently; keys are cleared before settings.
+- **Why:** Was in the inbox only; the PG-4d entries were already folded (entry "PG-4d/PG-4e plan notes folded").
+- **Source:** docs/inbox.md (PG-4e).
+- **Touches:** testing-and-build.md — folded. The inbox entries stay: the inbox header says the owner removes them.
+
+## 2026-09-27 — Preview may double engine asks
+- **Kind:** for-product
+- **Fact:** In AI mode the preview asks the engine for meetings with no current stored answer and never stores the answers, so the extension asks again; with both running an engine sees up to 240 asks/h.
+- **Why:** "Never changes anything" (PG-8) forbids sharing answers through the store; the price is cost on a cloud engine and invites sent twice.
+- **Source:** ADR-0012.
+- **Touches:** docs/inbox.md (for-product), README when PG-8 is built.

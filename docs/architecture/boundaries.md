@@ -18,6 +18,8 @@ extension/              the pack source: exactly what ships in the zip
   ai/                   the AI helper program (run as a subprocess, only in AI mode; ADR-0010)
   shell/                in-shell services: calendar feed, store, controller, environment
   ui/                   actors: indicator + menu, card, takeover, sound
+  app/                  (from the app/ split, ADR-0011) gi-free orchestration: controller, verdict component, AI queue, health, view
+  preview/              (from PG-8, ADR-0012) the terminal verdict preview, a second front end
 tests/
   unit/                 node --test suites for extension/core and the gi-free shell modules
   helper/               node --test suites that run the helper against an isolated EDS
@@ -34,6 +36,33 @@ Everything under `extension/` other than the files `gnome-extensions pack` picks
 by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 `schemas/`) must be passed with `--extra-source`. See `testing-and-build.md`.
 
+## Ports and adapters (ADR-0011)
+
+Three rings; dependencies point inward only. `core/` holds the rules (pure).
+`app/` holds the application orchestration, pure JavaScript with every outside
+part injected (created by the `app/` split, `interfaces.md` §7.1; until then
+these modules sit in `shell/`). Everything that touches gjs, GLib, GNOME or the
+network is an adapter. A front end (the extension, the preview) only composes
+adapters with `app/`; only the verdict component calls `core/judge.js`.
+
+| Port | Adapter | Where it lives |
+|---|---|---|
+| Calendar source (snapshot protocol, §1) | EDS reader process | `helper/`; client `shell/calendarFeed.js`, `shell/helperProcess.js` |
+| Settings and overrides store (reader + writer facets) | GSettings | `shell/store.js`, `shell/settingsKeys.js`; edited by `prefs.js` |
+| Key store (read only by the AI adapter) | libsecret | `ai/keyring.js` (read), `prefs.js` (write), `scripts/uninstall.sh` (clear) |
+| AI engine (AI protocol, §6.6) | AI helper process | `ai/`; client `shell/aiHelperClient.js` |
+| Clock | `Date.now`, injected | composition roots |
+| Ticker | `GLib.timeout_add` | `shell/ticker.js` |
+| Environment: idle, resume (Shell process only) | Shell idle monitor, LoginManager | `shell/environment.js` |
+| UI sink (Shell process only) | St/Clutter actors, modal grab | `ui/` |
+| Link launcher (Shell process only) | `Gio.AppInfo` + Shell launch context | `shell/launcher.js` |
+
+- **Known leak: the key-store adapter is in three places** (ADR-0011 Leak 4):
+  the libsecret schema is built in `ai/keyring.js` and again in `prefs.js`,
+  and `scripts/uninstall.sh` repeats its name. Accepted until a second key
+  store exists; repaying it is the same boundary change as the `stdio.js`
+  duplicate below.
+
 ## Import rules
 
 | Directory | May import | Must not import |
@@ -43,6 +72,8 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 | `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, exactly `core/aiProtocol.js`, `core/aiPrompt.js` and `core/aiEngine.js` (the lint allowlist; `core/protocol.js` arrives only transitively, for its enum lists) | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
 | `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
 | `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
+| `app/` (from the `app/` split, §7.1) | other `app/` modules, `core/` | as `core/`: anything `gi://` or `resource://`, any Node built-in, the `system` built-in; `shell/`, `ui/`, `helper/`, `ai/`, `preview/` |
+| `preview/` (from PG-8, §7.3) | `core/` except `judge.js`, `plan.js`, `alertState.js`; the verdict component in `app/`; `shell/store.js`, `shell/calendarFeed.js`, `shell/aiHelperClient.js`, `shell/helperProcess.js`, `shell/ticker.js`; `gi://` Gio, GLib; the `system` built-in | `app/aiQueue.js`, `ui/`, `shell/environment.js`, `shell/launcher.js`, `helper/`, `ai/`, `resource:///org/gnome/shell/...`, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, Soup, Secret, ECal/EDataServer/ICalGLib |
 | `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, the endpoint rules, the key rule in `aiEngine.js`, and every Settings decision in `aiSetup.js`) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
@@ -137,3 +168,4 @@ creating a `Gio.Settings`.
 | AI settings (`verdict-source`, `ai-endpoint`, `ai-model`) | prefs.js | store, prefs.js |
 | AI answers (`ai-verdicts`) | store (on controller request, from AI helper replies) | controller, into `judge` |
 | AI engine keys (GNOME keyring, ADR-0009) | prefs.js | AI helper only; `scripts/uninstall.sh --purge` clears |
+| Everything above, for the preview (ADR-0012) | nothing: the preview writes no data | preview reads settings, overrides, travel and AI answers through the store's reader facet, with the settings object in delay-apply mode |

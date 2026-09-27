@@ -404,3 +404,9 @@ Append only. Newest at the bottom.
 - **Fact:** Supporting O365 or Google calendars directly, or other desktops, is still out of scope ("GNOME only" in solution.md). The owner asked that the architecture keep those doors open, not that they be built. A new product decision is needed to ship any of them.
 - **Source:** product manager, reading the owner's message.
 - **Touches:** solution.md exclusions
+
+## 2026-09-27 — Architect's decoupling review taken
+- **Kind:** decision
+- **Fact:** ADR-0011 records the owner's principle: core rules in `core/`, GNOME-free orchestration in `app/`, and GNOME as adapters, with dependencies pointing inward. Two leaks block the preview: the verdict pipeline is private to the alert controller, and the store port has no read-only side. The calendar snapshot is source-neutral, so an O365 or Google reader could feed it. Product accepted the double engine asks (D-033). The code stays inside `extension/` in separated folders (the architect's recommendation). The owner may ask for a top-level split before ticket PG-8a lands. Other findings accepted: the preview needs the desktop session (no SSH), and the waits are assumed at 30 s for calendars and at most 5 min for AI answers. The inbox was emptied; the architect had already folded its entries.
+- **Source:** architect, ADR-0011, ADR-0012, interfaces.md §7.
+- **Touches:** decisions.md D-033, BACKLOG.md PG-8
