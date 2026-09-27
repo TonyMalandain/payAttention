@@ -14,7 +14,7 @@ Run in this order. Each must pass before the next is worth running.
 | 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. |
 | 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/` and the gi-free shell modules, plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
-| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --force --out-dir=dist`. From PG-4, also `--extra-source=ai` (ADR-0010). |
+| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=ui --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`; LICENSE and NOTICE ship since PG-6, and the script checks the zip holds them). From PG-4, also `--extra-source=ai` (ADR-0010). |
 | 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (below). From PG-4 the same script also runs `tests/ai/**/*.test.js`: the AI helper against a fake engine (Layer 2b). |
 | 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below). |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
@@ -146,7 +146,9 @@ Layer 1 covers the rest in pure code:
   `calendar` field after `title` (≤ 80, `""` for an unknown source, the kept
   copy's calendar after a merge); conferencing-link queries cut in
   `videoLink`, description and place, other links left whole (D-022); text
-  passcodes replaced with `[removed]` to the end of the line (D-025, D-027);
+  passcodes (plurals too) replaced with `[removed]` to the end of the line
+  (D-025, D-027, D-029); invisible marks dropped, HTML line-end tags turned
+  into line ends, and phone dial-in strings replaced (D-029), in §6.2's order;
 - the AI protocol validators: exactly the keys, both directions, at every
   level, and `retryAfterS` only with `rate-limited`;
 - the fingerprint (every invite field changes it, text past a cap does not);
@@ -306,6 +308,9 @@ it. The journal holds no title, invite field, reason or key.
 - **`gnome-extensions pack` includes only** `metadata.json`, `extension.js`,
   `prefs.js`, `stylesheet.css` and `schemas/` by default. Every code directory
   must be listed with `--extra-source`, or the installed extension fails to import.
+- **Checking the zip under `pipefail`: use `grep -x … >/dev/null`, not `grep -q`.**
+  `grep -q` exits at the first match, `unzip -Z1` then dies of SIGPIPE, and
+  `pipefail` fails the build (`scripts/build.sh`).
 - **`gnome-extensions install` compiles the schemas** into the install directory
   (`schemas/gschemas.compiled` appeared). No manual `glib-compile-schemas` step is
   needed for install; the dry-run in the build is only a validity check.

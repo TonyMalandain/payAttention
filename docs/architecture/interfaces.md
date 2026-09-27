@@ -343,22 +343,34 @@ warning, so the settings text and the code cannot drift apart.
   occurrence comes from (the snapshot's `sources[].name`, looked up by the
   event's `sourceUid`; the first source with a given uid wins). An unknown
   source gives `""`. Renaming a calendar changes the invite, so it re-asks.
-- **Passcodes (D-022, D-025, D-027).** On the raw text, before cleaning and
-  capping (cleaning joins lines, and the rule needs line ends):
+- **Passcodes (D-022, D-025, D-027, D-029).** On the raw text, before cleaning
+  and capping (cleaning joins lines, and the rules need line ends):
   - `videoLink` is cut at its first `?` or `#`, and its scheme is written
     `https://` in lower case (the allowlist accepts any case; §6.6 requires it).
-  - In `description` and `place`, every link whose host is on core's
-    conferencing allowlist is cut the same way (a trailing `.,;:!?` is
-    kept). Links to other hosts are left whole (D-020).
-  - In `description` and `place`, after the word "passcode", "password",
-    "pwd" or "PIN" (any case, whole word), the separators (`:` `=` `#` `-`,
-    whitespace including line breaks) and the fillers "is" / "code" are
-    kept, and **the rest of that line** is replaced with `[removed]`
-    (D-027). A value alone on the next line is therefore removed too. A rest
-    with no letter or digit holds no code and is kept. The word itself is
-    kept. It runs before the cap, so a cut cannot leave half a passcode.
-    Order in core (`core/invite.js`): conferencing queries, then text
-    passcodes, then cleaning, then the cap.
+  - `description` and `place` go through these steps, in this order in core
+    (`core/invite.js`, `withoutPasscodes`):
+    1. **Invisible marks** (U+200B to U+200F, U+2060, U+FEFF, U+00AD) are
+       dropped, so none can hide a keyword (D-029).
+    2. **Conferencing queries:** every link whose host is on core's
+       conferencing allowlist is cut at its first `?` or `#` (a trailing
+       `.,;:!?` is kept). Links to other hosts are left whole (D-020).
+    3. **HTML line ends:** `<br>`, `<br/>`, `</p>`, `</li>` and `</div>` (any
+       case) become a line break, so step 5 sees the line end; the tag is not
+       sent (D-029).
+    4. **Dial-in strings:** a phone number (optional `tel:` and `+`, at least 7
+       digits, groups split by up to 3 of space, tab, `.`, `-`, `(`, `)`)
+       directly followed by `#` or `*`, or by `,`/`;` then a digit, `#` or `*`,
+       is replaced whole, codes included, with `[removed]`. A plain number, or
+       one followed by `, ` as in a list, stays (D-029).
+    5. **Text passcodes:** after "passcode", "password", "pwd" or "PIN", or
+       their plurals (any case, whole word; D-029), the separators (`:` `=`
+       `#` `-`, whitespace including line breaks) and the fillers "is" /
+       "code" are kept, and **the rest of that line** is replaced with
+       `[removed]` (D-027). A value alone on the next line is therefore removed
+       too. A rest with no letter or digit holds no code and is kept. The word
+       itself is kept.
+    6. **Cleaning**, then 7. **the cap** (below). Removal runs before the cap,
+       so a cut cannot leave half a passcode.
 - **Every text field** is cleaned before capping: control characters and
   Unicode bidi controls are removed, and runs of whitespace are collapsed to
   one space. Then it is cut to its cap (one character less, plus "…"). Names
@@ -369,7 +381,8 @@ warning, so the settings text and the code cannot drift apart.
   Typical invites are 0.5 to 2 KB.
 - **Never sent:** UIDs (event and calendar), occurrence or series keys, the
   owner's own addresses, rooms and resources, the query or fragment of any
-  conferencing link, a passcode written as text, the rule's verdict and
+  conferencing link, a passcode written as text, a phone dial-in string with
+  its codes, invisible marks, the HTML line-end tags, the rule's verdict and
   reason, and anything about overrides. Non-conferencing links inside the
   description and place are sent as written (D-020). The calendar *name* is
   sent (D-024; it was on this list until 2026-09-27).

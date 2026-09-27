@@ -505,3 +505,17 @@ Append only. Newest at the bottom.
 - **Why:** Drift: the doc stated intent, the config never caught up. Intent is the doc.
 - **Source:** docs/plans/PG-4b.md:24.
 - **Touches:** boundaries.md
+
+## 2026-09-27 — Build ships LICENSE and NOTICE
+- **Kind:** constraint
+- **Fact:** The pack command adds `--extra-source=../LICENSE --extra-source=../NOTICE`; `scripts/build.sh` checks the zip with `grep -x`, not `grep -q`.
+- **Why:** Apache-2.0 requires both files in what ships (PG-6); `grep -q` exits early, `unzip` dies of SIGPIPE and `pipefail` fails the build.
+- **Source:** scripts/build.sh:15-21; inbox entry from the PG-6/PG-7 engineer.
+- **Touches:** testing-and-build.md (build row, pitfalls) — folded.
+
+## 2026-09-27 — Invite text removal order after D-029
+- **Kind:** interface
+- **Fact:** Description and place now go: invisible marks, conferencing queries, HTML line ends, dial-in strings, text passcodes (plurals included), cleaning, cap.
+- **Why:** Marks go first so none can hide a keyword; HTML ends become line ends before the line-based passcode rule; dial strings go before the keyword rule because they carry codes with no keyword.
+- **Source:** extension/core/invite.js:24-74 (PG-4a2); inbox entry.
+- **Touches:** interfaces.md §6.2, testing-and-build.md layer 1 — folded.
