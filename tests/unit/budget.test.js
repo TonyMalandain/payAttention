@@ -38,7 +38,7 @@ test('plan over 500 meetings takes under 1 ms on average', () => {
     assert.ok(mean < 1, `plan mean ${mean.toFixed(3)} ms`);
 });
 
-test('judge over 2 000 events takes under 20 ms on average', () => {
+function twoThousandEvents() {
     const titles = ['Sync', 'Client call', 'Lunch', 'Weekly review', 'Board prep', 'Focus time', '1:1 Dana', 'Planning'];
     const events = [];
     for (let i = 0; i < 2000; i++) {
@@ -52,7 +52,22 @@ test('judge over 2 000 events takes under 20 ms on average', () => {
                 att(`d${i}@acme.test`)],
         }));
     }
-    const snap = snapshot(events);
+    return snapshot(events);
+}
+
+test('judge over 2 000 events takes under 20 ms on average', () => {
+    const snap = twoThousandEvents();
     const mean = meanMs(() => judge(snap, CONFIG, NO_OVERRIDES, {}), 10, 2);
     assert.ok(mean < 20, `judge mean ${mean.toFixed(3)} ms`);
+});
+
+// Judge runs per snapshot and per stored answer, never per tick (controller.js _judgeDirty).
+// 200 ms is an order-of-magnitude guard (assumed): every eligible event builds an invite and a fingerprint.
+test('judge in AI mode over 2 000 events takes under 200 ms on average', () => {
+    const snap = twoThousandEvents();
+    const config = { ...CONFIG, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
+    const out = judge(snap, config, NO_OVERRIDES, {}, {});
+    assert.ok(out.filter(r => r.aiAsk).length > 1000, 'most events are asked');
+    const mean = meanMs(() => judge(snap, config, NO_OVERRIDES, {}, {}), 10, 2);
+    assert.ok(mean < 200, `judge (AI mode) mean ${mean.toFixed(3)} ms`);
 });

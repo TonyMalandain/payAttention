@@ -1,6 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractUrls, parseHttpsUrl, isConferenceUrl } from '../../extension/core/links.js';
+import {
+    extractUrls, parseHttpsUrl, isConferenceUrl, withoutQuery, withoutConferenceQueries,
+} from '../../extension/core/links.js';
 
 describe('conferencing links', () => {
     const accepted = [
@@ -84,5 +86,36 @@ describe('parsing https links', () => {
 
     test('an empty path is /', () => {
         assert.deepEqual(parseHttpsUrl('https://whereby.com'), { host: 'whereby.com', path: '/' });
+    });
+});
+
+describe('D-022: conferencing link queries are cut', () => {
+    test('withoutQuery cuts at the first ? or #', () => {
+        assert.equal(withoutQuery('https://us02web.zoom.us/j/81234?pwd=abc#success'), 'https://us02web.zoom.us/j/81234');
+        assert.equal(withoutQuery('https://zoom.us/j/1#x?y'), 'https://zoom.us/j/1');
+    });
+
+    test('a link without a query is unchanged', () => {
+        assert.equal(withoutQuery('https://meet.google.com/abc-defg-hij'), 'https://meet.google.com/abc-defg-hij');
+    });
+
+    test('conferencing links in text lose their query; other links and trailing punctuation stay', () => {
+        assert.equal(
+            withoutConferenceQueries('Join https://zoom.us/j/1?pwd=x. Docs: https://docs.example.test/a?id=7'),
+            'Join https://zoom.us/j/1. Docs: https://docs.example.test/a?id=7');
+    });
+
+    test('a Teams meetup-join link loses its context query', () => {
+        assert.equal(
+            withoutConferenceQueries('Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc/0?context=%7b%22Tid%22%7d now'),
+            'Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc/0 now');
+    });
+
+    test('&amp; inside a Zoom query goes with the query', () => {
+        assert.equal(withoutConferenceQueries('https://zoom.us/j/1?pwd=abc&amp;uname=x!'), 'https://zoom.us/j/1!');
+    });
+
+    test('text with no links is unchanged', () => {
+        assert.equal(withoutConferenceQueries('Room 4, bring notes?'), 'Room 4, bring notes?');
     });
 });

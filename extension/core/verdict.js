@@ -4,7 +4,7 @@ import { findWord } from './words.js';
 /** Every reason code a JudgedOccurrence can carry. Frozen. */
 export const REASON_CODES = Object.freeze(['override-must', 'override-ignore', 'cancelled', 'declined', 'not-invited',
     'all-day', 'free', 'ignore-word', 'important-word', 'organizer', 'external', 'no-guests', 'large', 'small',
-    'maybe', 'insufficient-data', 'test']);
+    'maybe', 'insufficient-data', 'test', 'ai-must', 'ai-ignore']);
 
 const plural = n => (n === 1 ? '1 guest' : `${n} guests`);
 
@@ -83,4 +83,15 @@ export function overrideVerdict(value) {
     return value === 'must'
         ? result('must', 'override-must', 'you marked this must-attend')
         : result('ignore', 'override-ignore', 'you marked this ignore');
+}
+
+/**
+ * The verdict when a stored AI answer applies.
+ *
+ * @param {'must'|'ignore'} value
+ * @param {string} reason already normalised (normaliseReason)
+ * @returns {{verdict:'must'|'ignore', reasonCode:'ai-must'|'ai-ignore', reason:string}} reason is 'AI: ' + reason
+ */
+export function aiVerdict(value, reason) {
+    return result(value, value === 'must' ? 'ai-must' : 'ai-ignore', 'AI: ' + reason);
 }

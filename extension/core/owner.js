@@ -8,8 +8,8 @@ function domainOf(address) {
     return address.slice(address.lastIndexOf('@') + 1);
 }
 
-// Guests are people: rooms and resources never count (D-011).
-const PERSON_CUTYPES = ['individual', 'unknown', 'group'];
+/** People who count as guests: rooms and resources never do (D-011). Frozen. */
+export const PERSON_CUTYPES = Object.freeze(['individual', 'unknown', 'group']);
 
 // Best first. Anything else maps to 'unanswered'.
 const PARTSTAT_PRECEDENCE = ['accepted', 'tentative', 'needs-action', 'delegated', 'other', 'declined'];
@@ -43,6 +43,49 @@ export function ownerIdentity(snapshot, config) {
         domains = [...addresses].map(domainOf);
     }
     return { addresses, domains: new Set(domains) };
+}
+
+function partstatRank(p) {
+    const i = PARTSTAT_PRECEDENCE.indexOf(p);
+    return i === -1 ? PARTSTAT_PRECEDENCE.length : i;
+}
+
+/**
+ * The owner's own answer, the best by PARTSTAT_PRECEDENCE among their attendee entries.
+ *
+ * @param {import('./types.js').OccurrenceDTO} event
+ * @param {{addresses:Set<string>, domains:Set<string>}} identity
+ * @returns {import('./types.js').PartStat|'unknown'} 'unknown' when the owner has no attendee entry
+ */
+export function ownerResponse(event, identity) {
+    const own = event.attendees
+        .filter(a => identity.addresses.has(normaliseAddress(a.email)))
+        .map(a => a.partstat);
+    return own.length === 0 ? 'unknown' : own.toSorted((a, b) => partstatRank(a) - partstatRank(b))[0];
+}
+
+/**
+ * Attendees who are guests: CUTYPE in PERSON_CUTYPES, not the owner, first
+ * occurrence of each non-empty normalised address, in DTO order. The organiser
+ * is not added (interfaces §6.2).
+ *
+ * @param {import('./types.js').OccurrenceDTO} event
+ * @param {{addresses:Set<string>, domains:Set<string>}} identity
+ * @returns {import('./types.js').Attendee[]} the DTO records, not copies
+ */
+export function guestAttendees(event, identity) {
+    const seen = new Set();
+    const guests = [];
+    for (const a of event.attendees) {
+        if (!PERSON_CUTYPES.includes(a.cutype))
+            continue;
+        const email = normaliseAddress(a.email);
+        if (identity.addresses.has(email) || (email !== '' && seen.has(email)))
+            continue;
+        seen.add(email);
+        guests.push(a);
+    }
+    return guests;
 }
 
 /**

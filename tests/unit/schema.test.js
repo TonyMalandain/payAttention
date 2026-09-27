@@ -35,9 +35,10 @@ const OTHER_KEYS = {
     'alert-state': ['s', "''"],
     'health-data-at': ['x', '0'],
     'health-provider-at': ['x', '0'],
+    'ai-verdicts': ['s', "''"],
 };
 
-const TYPE_OF_KIND = { int: 'i', bool: 'b', strv: 'as' };
+const TYPE_OF_KIND = { int: 'i', bool: 'b', strv: 'as', str: 's' };
 
 /** Every <key> of the schema: name → {type, default, range}. */
 function readSchema() {
@@ -57,6 +58,8 @@ function parseDefault(kind, text) {
         return Number(text);
     if (kind === 'bool')
         return text === 'true' ? true : text === 'false' ? false : text;
+    if (kind === 'str')
+        return text.replace(/^'(.*)'$/s, '$1');
     return text === '[]' ? [] : text;
 }
 
@@ -107,6 +110,15 @@ describe('schema equals DEFAULT_SETTINGS and data.md', () => {
         assert.deepEqual([...schema.keys()].sort(), expected);
     });
 
+    test('verdict-source: exactly the choices rules and ai, and its default is one of them', () => {
+        const xml = fs.readFileSync(SCHEMA_FILE, 'utf8');
+        const body = xml.match(/<key\s+name="verdict-source"[\s\S]*?<\/key>/)?.[0];
+        assert.ok(body, 'no key verdict-source');
+        const choices = [...body.matchAll(/<choice\s+value="([^"]*)"\s*\/>/g)].map(m => m[1]);
+        assert.deepEqual(choices, ['rules', 'ai']);
+        assert.ok(choices.includes(parseDefault('str', schema.get('verdict-source').default)));
+    });
+
     test('every key has a summary', () => {
         const xml = fs.readFileSync(SCHEMA_FILE, 'utf8');
         for (const m of xml.matchAll(/<key\s+name="([^"]+)"[\s\S]*?<\/key>/g))
@@ -126,6 +138,8 @@ describe('settings keys', () => {
         assert.deepEqual(byField.extraOwnerAddresses, { field: 'extraOwnerAddresses', key: 'extra-owner-addresses', kind: 'strv' });
         assert.equal(byField.soundEnabled.kind, 'bool');
         assert.equal(byField.cutoffMinutes.kind, 'int');
+        assert.deepEqual(byField.verdictSource, { field: 'verdictSource', key: 'verdict-source', kind: 'str' });
+        assert.equal(byField.aiModel.kind, 'str');
     });
 
     test('frozen', () => {
@@ -134,7 +148,7 @@ describe('settings keys', () => {
     });
 
     test('the internal keys', () => {
-        assert.deepEqual(INTERNAL_KEYS, ['alert-state', 'health-data-at', 'health-provider-at']);
+        assert.deepEqual(INTERNAL_KEYS, ['alert-state', 'health-data-at', 'health-provider-at', 'ai-verdicts']);
         assert.ok(Object.isFrozen(INTERNAL_KEYS));
     });
 });

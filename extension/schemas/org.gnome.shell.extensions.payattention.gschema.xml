@@ -91,6 +91,19 @@
       <default>true</default>
       <summary>Play a sound at insist and takeover</summary>
     </key>
+    <key name="verdict-source" type="s">
+      <choices><choice value="rules"/><choice value="ai"/></choices>
+      <default>'rules'</default>
+      <summary>Who decides verdicts: the rules or the AI engine</summary>
+    </key>
+    <key name="ai-endpoint" type="s">
+      <default>'http://127.0.0.1:11434/v1'</default>
+      <summary>The AI engine's address</summary>
+    </key>
+    <key name="ai-model" type="s">
+      <default>''</default>
+      <summary>The AI model name; empty means AI is not set up</summary>
+    </key>
     <key name="verdict-overrides" type="a{ss}">
       <default>{}</default>
       <summary>Meeting key to &quot;must&quot; or &quot;ignore&quot;, set from the menu and alerts</summary>
@@ -114,6 +127,10 @@
     <key name="health-provider-at" type="x">
       <default>0</default>
       <summary>Oldest calendar provider sync time, in epoch ms; 0 is unknown (internal)</summary>
+    </key>
+    <key name="ai-verdicts" type="s">
+      <default>''</default>
+      <summary>AI answers per meeting (JSON; internal)</summary>
     </key>
   </schema>
 </schemalist>

@@ -13,6 +13,11 @@ import { emptyAlertState, parseAlertState, serializeAlertState, reduce } from '.
 import { plan, actionFor } from '../../../extension/core/plan.js';
 import { testAlert } from '../../../extension/core/testAlert.js';
 import { formatClock, formatSince } from '../../../extension/core/display.js';
+import { aiEngine } from '../../../extension/core/aiEngine.js';
+import { validateInvite, cleanText, parseAiHelperLine, formatAiHelperMessage } from '../../../extension/core/aiProtocol.js';
+import { parseReply } from '../../../extension/core/aiPrompt.js';
+import { buildInvite } from '../../../extension/core/invite.js';
+import { hash53 } from '../../../extension/core/fingerprint.js';
 import '../../../extension/core/types.js';
 
 function check(condition, what) {
@@ -61,6 +66,19 @@ try {
     check(t.judged[0].key === 'test:0', 'test alert');
 
     check(typeof formatSince(0, 0) === 'string' && typeof formatClock(start) === 'string', 'display runs');
+
+    // AI mode (PG-4a): toWellFormed, \p{Cc} and Object.hasOwn must work under gjs.
+    check(aiEngine({ ...DEFAULT_SETTINGS, verdictSource: 'ai', aiModel: 'm' }) !== null, 'aiEngine');
+    const ai = { ...DEFAULT_SETTINGS, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
+    const aiJudged = judge(parsed.message, ai, { verdict: {}, mode: {} }, {}, {});
+    check(aiJudged[0].aiAsk !== undefined && validateInvite(aiJudged[0].aiAsk.invite).ok, 'judge: aiAsk with a valid invite');
+    check(typeof buildInvite === 'function', 'invite module');
+    check(hash53('payAttention') === '13284f83f114ec', 'hash53');
+    check(cleanText('\ud800') === '\ufffd', 'cleanText: lone surrogate');
+    check(cleanText('a\u0085b') === 'a b', 'cleanText: C1 control');
+    const reply = parseReply('<think>x</think>\n```json\n{"verdict":"ignore","reason":"r"}\n```');
+    check(reply !== null && reply.verdict === 'ignore', 'parseReply');
+    check(parseAiHelperLine(formatAiHelperMessage({ type: 'hello', protocol: 1 })).ok, 'AI protocol round-trip');
 
     print('CORE-GJS OK');
 } catch (e) {

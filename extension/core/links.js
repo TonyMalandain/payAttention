@@ -69,3 +69,28 @@ export function isConferenceUrl(url) {
         (host === e.host || host.endsWith('.' + e.host)) &&
         (e.pathPrefix === undefined || path.startsWith(e.pathPrefix)));
 }
+
+/**
+ * A link without its query and fragment (D-022: a passcode often travels there).
+ *
+ * @param {string} url
+ * @returns {string} url cut at its first '?' or '#'
+ */
+export function withoutQuery(url) {
+    return url.split(/[?#]/)[0];
+}
+
+/**
+ * Text with the query and fragment removed from every allowlisted conferencing
+ * link (D-022); other links and all other text unchanged.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function withoutConferenceQueries(text) {
+    return text.replace(URL_IN_TEXT, match => {
+        const core = match.replace(/[.,;:!?]+$/, '');
+        const trailing = match.slice(core.length);
+        return isConferenceUrl(core.replaceAll('&amp;', '&')) ? withoutQuery(core) + trailing : match;
+    });
+}

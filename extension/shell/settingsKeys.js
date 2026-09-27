@@ -6,6 +6,8 @@ function kindOf(value) {
         return 'int';
     if (typeof value === 'boolean')
         return 'bool';
+    if (typeof value === 'string')
+        return 'str';
     return 'strv';
 }
 
@@ -13,7 +15,7 @@ function kindOf(value) {
  * One entry per DEFAULT_SETTINGS field, in its order: the camelCase field,
  * its GSettings key (onlineHeadsupMinutes → online-headsup-minutes) and kind. Frozen.
  *
- * @type {ReadonlyArray<Readonly<{field: string, key: string, kind: 'int'|'bool'|'strv'}>>}
+ * @type {ReadonlyArray<Readonly<{field: string, key: string, kind: 'int'|'bool'|'strv'|'str'}>>}
  */
 export const SETTINGS_KEYS = Object.freeze(Object.entries(DEFAULT_SETTINGS).map(([field, value]) => Object.freeze({
     field,
@@ -22,4 +24,4 @@ export const SETTINGS_KEYS = Object.freeze(Object.entries(DEFAULT_SETTINGS).map(
 })));
 
 /** Keys never shown in prefs and never reported to the controller as a settings change. */
-export const INTERNAL_KEYS = Object.freeze(['alert-state', 'health-data-at', 'health-provider-at']);
+export const INTERNAL_KEYS = Object.freeze(['alert-state', 'health-data-at', 'health-provider-at', 'ai-verdicts']);

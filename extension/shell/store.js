@@ -13,6 +13,7 @@ const READERS = {
     int: (settings, key) => settings.get_int(key),
     bool: (settings, key) => settings.get_boolean(key),
     strv: (settings, key) => settings.get_strv(key),
+    str: (settings, key) => settings.get_string(key),
 };
 
 export class Store {

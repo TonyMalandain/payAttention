@@ -16,23 +16,34 @@
  *   inpersonHeadsupMinutes:number,inpersonNudgeMinutes:number,inpersonInsistMinutes:number,inpersonTakeoverMinutes:number,
  *   defaultTravelMinutes:number,headsupDisplaySeconds:number,snoozeMinutes:number,takeoverSnoozeMinutes:number,cutoffMinutes:number,
  *   largeMeetingSize:number,extraImportantWords:string[],extraIgnoreWords:string[],ownerDomains:string[],extraOwnerAddresses:string[],
- *   soundEnabled:boolean}} Settings */
+ *   soundEnabled:boolean,verdictSource:string,aiEndpoint:string,aiModel:string}} Settings */
 
-/** judge() reads only these fields of Settings.
+/** judge() reads only these fields of Settings, plus `ai`, which the caller adds for AI mode (absent or null = rules mode).
  * @typedef {{extraImportantWords:string[],extraIgnoreWords:string[],extraOwnerAddresses:string[],ownerDomains:string[],
- *   largeMeetingSize:number,defaultTravelMinutes:number}} JudgeConfig */
+ *   largeMeetingSize:number,defaultTravelMinutes:number,ai?:AiJudgeConfig|null}} JudgeConfig */
+/** @typedef {{engineTag:string,utcOffsetMinutes:number}} AiJudgeConfig   engineTag from aiEngine(); offset an integer -840..840 */
+/** @typedef {Record<string,{fp:string,verdict:'must'|'ignore',reason:string}>} AiAnswers   occurrence key -> stored answer; other fields (such as `at`) ignored */
+
+/** The bounded invite sent to the AI engine (interfaces.md §6.2, D-024), keys in INVITE_FIELDS order.
+ * @typedef {{title:string,calendar:string,start:string,minutes:number,allDay:boolean,recurring:boolean,
+ *   status:'confirmed'|'tentative'|'cancelled'|'none',busy:'busy'|'free'|'unknown',description:string,place:string,
+ *   videoLink:string|null,you:{response:PartStat|'unknown',organiser:boolean},organiser:{name:string,email:string}|null,
+ *   guests:{name:string,email:string,response:PartStat,role:'chair'|'required'|'optional'|'other'}[],
+ *   guestsTotal:number}} Invite */
 
 /** @typedef {{verdict:Record<string,string>,mode:Record<string,string>}} Overrides   keys: 'occ:…' or 'series:…'; values 'must'|'ignore' / 'online'|'in-person' (others ignored) */
 /** @typedef {Record<string,number>} TravelTimes   place key -> minutes */
 
 /** @typedef {'override-must'|'override-ignore'|'cancelled'|'declined'|'not-invited'|'all-day'|'free'|'ignore-word'|
- *   'important-word'|'organizer'|'external'|'no-guests'|'large'|'small'|'maybe'|'insufficient-data'|'test'} ReasonCode */
+ *   'important-word'|'organizer'|'external'|'no-guests'|'large'|'small'|'maybe'|'insufficient-data'|'test'|
+ *   'ai-must'|'ai-ignore'} ReasonCode */
 
 /** @typedef {{key:string,seriesKey:string,recurring:boolean,title:string,start:number|null,end:number|null,allDay:boolean,
  *   verdict:'must'|'ignore',reason:string,reasonCode:ReasonCode,verdictOverridden:boolean,
  *   mode:'online'|'in-person',modeOverridden:boolean,joinUrl:string|null,
  *   placeText:string,placeKey:string|null,travelMinutes:number|null,travelIsDefault:boolean,
- *   deadline:number|null}} JudgedOccurrence */
+ *   deadline:number|null,ruleReason?:string,aiStale?:true,aiAsk?:{fp:string,invite:Invite}}} JudgedOccurrence
+ *   ruleReason only when an AI answer applies; aiStale only as true; aiAsk only when the meeting should be asked */
 
 /** @typedef {{headsUpMs:number,nudgeMs:number,insistMs:number,takeoverMs:number}} StepOffsets   ms BEFORE the deadline */
 /** @typedef {{online:StepOffsets,inPerson:StepOffsets,headsUpDisplayMs:number,snoozeMs:number,takeoverSnoozeMs:number,cutoffMs:number}} Timing */

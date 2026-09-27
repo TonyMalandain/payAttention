@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILTIN_IGNORE_WORDS, BUILTIN_IMPORTANT_WORDS } from '../../extension/core/words.js';
+import { REASON_CODES, aiVerdict } from '../../extension/core/verdict.js';
 import { T0, OWNER, SOURCE, CONFIG, att, event, judgeOne } from './support/builders.js';
 
 const sKey = 'series:evt-1';
@@ -316,5 +317,20 @@ describe('verdict: rule order', () => {
 
     test('free wins over a placeholder title', () => {
         expectVerdict(judgeOne(event({ transparency: 'transparent', summary: 'Lunch' })), 'ignore', 'free');
+    });
+});
+
+describe('verdict: AI answers (PG-4a)', () => {
+    test('REASON_CODES ends with the two AI codes and is still frozen', () => {
+        assert.deepEqual(REASON_CODES.slice(-3), ['test', 'ai-must', 'ai-ignore']);
+        assert.ok(Object.isFrozen(REASON_CODES));
+    });
+
+    test("aiVerdict('must')", () => {
+        assert.deepEqual(aiVerdict('must', 'x'), { verdict: 'must', reasonCode: 'ai-must', reason: 'AI: x' });
+    });
+
+    test("aiVerdict('ignore')", () => {
+        assert.deepEqual(aiVerdict('ignore', 'a hold'), { verdict: 'ignore', reasonCode: 'ai-ignore', reason: 'AI: a hold' });
     });
 });
