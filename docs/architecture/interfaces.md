@@ -150,7 +150,7 @@ Three pure functions. The names are indicative; the shapes are the contract.
 
 ## 3. Controller ↔ UI (internal)
 
-- The controller builds a display model (`View`) with the pure `shell/view.js`
+- The controller builds a display model (`View`) with the pure `app/view.js`
   from the Plan, the judged occurrences, and data health, and calls
   `ui.render(view)`. Everything about *what* to show is resolved there (travel only
   at steps 1–2, Join only with a link, never "no meetings" while stale), so `ui/`
@@ -160,11 +160,12 @@ Three pure functions. The names are indicative; the shapes are the contract.
   `runTestAlert`. The UI never reports `headsUpShown` (see §2).
 - `join` is handled by the controller: it opens the core-approved `joinUrl` and
   then dispatches `ack`.
-- Text formatting shared by `shell/view.js` and `prefs.js` is pure code in
+- Text formatting shared by `app/view.js` and `prefs.js` is pure code in
   `core/display.js`.
 - The controller receives its GNOME-facing parts (store, feed, environment, UI,
-  ticker) as injected factories, so `controller.js`, `view.js` and the small
-  pure shell helpers have no `gi://` imports and are unit-tested under Node.
+  ticker) as injected factories, so `app/controller.js`, `app/view.js` and the
+  other `app/` modules have no `gi://` imports (lint-enforced since PG-8a) and
+  are unit-tested under Node.
 
 ## 4. Extension object (stable, used by the smoke test)
 
@@ -211,7 +212,7 @@ the 5-minute re-snapshot. The `sync-failed` status keeps its meaning ("the
 refresh request could not be made") and is diagnostic only: it is logged, never
 used for health.
 
-**Shell rule (the one definition of "stale", in `shell/health.js`).**
+**Shell rule (the one definition of "stale", in `app/health.js`).**
 
 - *Provider clock, per source.* On each accepted snapshot, received at time `t`,
   every source with `ok && remote === true && connection === "connected"` is
@@ -284,7 +285,7 @@ constraints they must now meet.
      still alert.
   6. Menu status: when `since` falls before today's local midnight, show the
      weekday with the time, because persisted clocks make earlier days common.
-  7. Lint: forbid the `system` built-in in `shell/`, `ui/`, `extension.js`,
+  7. Lint: forbid the `system` built-in in `shell/`, `app/`, `ui/`, `extension.js`,
      `prefs.js` (`boundaries.md`).
 
 
@@ -511,11 +512,11 @@ why. `engineTag` = `normaliseEndpoint(endpoint) + "|" + model`.
 Where the invite goes, for the prefs warning: `loopback` stays on this
 computer. Every other class leaves it.
 
-### 6.5 Controller behaviour (shell, internal but binding)
+### 6.5 Controller behaviour (app, internal but binding)
 
 *Revised 2026-09-27 for D-031 (a truthful "AI unavailable" line, and recovery
 within 5 minutes after an unreachable engine returns). The names in brackets
-are the PG-4c plan's (`shell/aiQueue.js`, `shell/aiBudget.js`).*
+are the PG-4c plan's (`app/aiQueue.js`, `app/aiBudget.js`; in `shell/` until PG-8a).*
 
 - **Queue.** After each `judge`, the controller collects the `aiAsk`s whose
   occurrence starts no earlier than `now − cutoff`, and queues them, soonest
@@ -797,23 +798,24 @@ choose only its own verdict, because each request carries one invite.
   pure core, `core/aiSetup.js`, and is tested under Node. Prefs gets its own
   directory only if a second gi module is needed beside it.
 
-## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27, not yet built
+## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27; 7.1 built (PG-8a), 7.2 and 7.3 not yet
 
 Serves R-20 (the owner can see what payAttention would decide, without logging
 out) under D-032, and the owner's ports-and-adapters principle (ADR-0011).
 Backlog item PG-8. Two refactors come first (7.1, 7.2); the preview (7.3)
 depends on both.
 
-### 7.1 `app/`: the application ring (directory move, no behaviour change)
+### 7.1 `app/`: the application ring (directory move, no behaviour change) — built in PG-8a
 
-The gi-free modules leave `shell/` for `extension/app/`: `controller.js`,
+The gi-free modules left `shell/` for `extension/app/`: `controller.js`,
 `aiQueue.js`, `aiBudget.js`, `health.js`, `backoff.js`, `view.js`,
 `soundCue.js`. `app/` is linted exactly like `core/` (no `gi://`, no
 `resource://`, no Node built-ins, no `system`) and may import `core/`.
 `shell/` keeps only adapters: `store.js`, `settingsKeys.js`,
 `calendarFeed.js`, `helperProcess.js`, `aiHelperClient.js`, `ticker.js`,
 `launcher.js`, `environment.js`; it may import `app/` and `core/`. The build
-adds `--extra-source=app`. Not strictly needed by the preview, but without it
+adds `--extra-source=app` (`scripts/build.sh`, which also fails if
+`app/controller.js` is missing from the zip). Not strictly needed by the preview, but without it
 the preview's lint allowlist would name modules that then move.
 
 ### 7.2 The verdict component (app/, internal but binding: two callers)

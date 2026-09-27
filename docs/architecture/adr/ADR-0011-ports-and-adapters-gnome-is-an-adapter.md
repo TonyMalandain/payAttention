@@ -33,7 +33,8 @@ Conformance review, 2026-09-27 (code read at commit `8cc50e5`):
   Conforms.
 - **Leak 1 (blocks PG-8).** The verdict pipeline — read inputs, give the AI
   queue its engine, pump it, judge twice with withheld answers — lives inside
-  the alert `Controller` (`extension/shell/controller.js:217-272, 376-383`).
+  the alert `Controller` (`extension/shell/controller.js:217-272, 376-383`
+  as of this ADR; `extension/app/controller.js` since PG-8a).
   The only way to reuse it is to construct the whole controller, whose
   constructor writes (`_prune` at `controller.js:117` → `writeAlertState`,
   `pruneOccurrenceOverrides`, lines 268-274) and starts the alert ticker.

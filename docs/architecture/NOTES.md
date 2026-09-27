@@ -722,3 +722,24 @@ Append only. Newest at the bottom.
 - **Why:** "Never changes anything" (PG-8) forbids sharing answers through the store; the price is cost on a cloud engine and invites sent twice.
 - **Source:** ADR-0012.
 - **Touches:** docs/inbox.md (for-product), README when PG-8 is built.
+
+## 2026-09-27 — app/ paths folded after PG-8a
+- **Kind:** boundary
+- **Fact:** boundaries.md, interfaces.md (§2, §3, §6.5, §7.1), overview.md, testing-and-build.md and ADR-0011 Leak 1 now name `app/` for the seven moved modules; `app/` is in the "must not import" column of helper/, ai/, ui/ and prefs.js, and extension.js may import it.
+- **Why:** The docs still named `shell/`; the documented build command lacked `--extra-source=app` (and `ai`), so following it built a zip that fails to import.
+- **Source:** docs/inbox.md (PG-8a/8b plan findings, removed); scripts/build.sh; eslint.config.js; extension/extension.js:8-15; extension/shell/calendarFeed.js:11-12.
+- **Touches:** folded.
+
+## 2026-09-27 — One caller of core/judge.js gets a lint guard, in PG-8c
+- **Kind:** decision
+- **Fact:** Only `app/verdicts.js` may import `core/judge.js`; the lint guard is carried by PG-8c, not PG-8b.
+- **Why:** The guard is cheap and makes ADR-0011's single-caller rule structural; PG-8b is mid-build and its plan should not move under it, while PG-8c already edits eslint.config.js to forbid judge.js in preview/. The gap between the two is held by review.
+- **Source:** eslint.config.js; docs/plans/PG-8b.md; human request (caller's instruction to decide).
+- **Touches:** boundaries.md "One caller of core/judge.js" — folded.
+
+## 2026-09-27 — ESLint flat config replaces rule options per block
+- **Kind:** constraint
+- **Fact:** When two flat-config blocks match a file and both set `no-restricted-imports`, the later block's options replace the earlier ones, so a cross-cutting guard must be added into each directory's pattern list, not as its own block.
+- **Why:** A separate "judge.js" block would silently switch off the per-directory boundary rules for every file it matches.
+- **Source:** ESLint flat config semantics (rule config merge overrides options); eslint.config.js structure.
+- **Touches:** boundaries.md — folded.

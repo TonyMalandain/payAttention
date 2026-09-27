@@ -16,12 +16,12 @@ extension/              the pack source: exactly what ships in the zip
   core/                 pure logic: protocol validation, keys, judge, plan, reduce
   helper/               the calendar helper program (run as a subprocess)
   ai/                   the AI helper program (run as a subprocess, only in AI mode; ADR-0010)
-  shell/                in-shell services: calendar feed, store, controller, environment
+  shell/                GNOME adapters: calendar feed, store, AI client, ticker, environment, launcher
   ui/                   actors: indicator + menu, card, takeover, sound
-  app/                  (from the app/ split, ADR-0011) gi-free orchestration: controller, verdict component, AI queue, health, view
+  app/                  gi-free orchestration (ADR-0011): controller, AI queue and budget, health, backoff, view, sound cue; verdict component from PG-8b
   preview/              (from PG-8, ADR-0012) the terminal verdict preview, a second front end
 tests/
-  unit/                 node --test suites for extension/core and the gi-free shell modules
+  unit/                 node --test suites for extension/core, extension/app and gi-free shell modules
   helper/               node --test suites that run the helper against an isolated EDS
   fixtures/             synthetic snapshots (never real calendar data)
   ai/                   node --test suites that run the AI helper against a fake engine on 127.0.0.1
@@ -40,10 +40,11 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 
 Three rings; dependencies point inward only. `core/` holds the rules (pure).
 `app/` holds the application orchestration, pure JavaScript with every outside
-part injected (created by the `app/` split, `interfaces.md` §7.1; until then
-these modules sit in `shell/`). Everything that touches gjs, GLib, GNOME or the
+part injected (`interfaces.md` §7.1, built in PG-8a). Everything that touches gjs, GLib, GNOME or the
 network is an adapter. A front end (the extension, the preview) only composes
-adapters with `app/`; only the verdict component calls `core/judge.js`.
+adapters with `app/`; only the verdict component (`app/verdicts.js`, from
+PG-8b) calls `core/judge.js`. Until PG-8b lands, `app/controller.js` is that
+caller.
 
 | Port | Adapter | Where it lives |
 |---|---|---|
@@ -68,19 +69,29 @@ adapters with `app/`; only the verdict component calls `core/judge.js`.
 | Directory | May import | Must not import |
 |---|---|---|
 | `core/` | other `core/` modules only | anything `gi://`, anything `resource://`, any Node built-in. No clock reads, timers, or I/O: time is a parameter. |
-| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `ai/`, St/Clutter/Meta/Shell, Soup, Secret, the rest of `core/` |
-| `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, exactly `core/aiProtocol.js`, `core/aiPrompt.js` and `core/aiEngine.js` (the lint allowlist; `core/protocol.js` arrives only transitively, for its enum lists) | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
-| `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
-| `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
-| `app/` (from the `app/` split, §7.1) | other `app/` modules, `core/` | as `core/`: anything `gi://` or `resource://`, any Node built-in, the `system` built-in; `shell/`, `ui/`, `helper/`, `ai/`, `preview/` |
+| `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `app/`, `ui/`, `ai/`, St/Clutter/Meta/Shell, Soup, Secret, the rest of `core/` |
+| `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, exactly `core/aiProtocol.js`, `core/aiPrompt.js` and `core/aiEngine.js` (the lint allowlist; `core/protocol.js` arrives only transitively, for its enum lists) | `resource:///org/gnome/shell/...`, `shell/`, `app/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
+| `shell/` | `app/`, `core/` except `judge.js`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/`, `helper/`, `ai/`, `core/judge.js`, the `system` built-in |
+| `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `shell/` (so the store too), `app/`, `helper/`, `ai/`, the rest of `core/`, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
+| `app/` | other `app/` modules, `core/` (`core/judge.js` from `app/verdicts.js` only) | as `core/`: anything `gi://` or `resource://`, any Node built-in, the `system` built-in; `shell/`, `ui/`, `helper/`, `ai/`, `preview/`; `core/judge.js` outside `app/verdicts.js` |
 | `preview/` (from PG-8, §7.3) | `core/` except `judge.js`, `plan.js`, `alertState.js`; the verdict component in `app/`; `shell/store.js`, `shell/calendarFeed.js`, `shell/aiHelperClient.js`, `shell/helperProcess.js`, `shell/ticker.js`; `gi://` Gio, GLib; the `system` built-in | `app/aiQueue.js`, `ui/`, `shell/environment.js`, `shell/launcher.js`, `helper/`, `ai/`, `resource:///org/gnome/shell/...`, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, Soup, Secret, ECal/EDataServer/ICalGLib |
-| `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
-| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, the endpoint rules, the key rule in `aiEngine.js`, and every Settings decision in `aiSetup.js`) | Clutter, Meta, St, Shell, Soup, `shell/`, `ui/`, `helper/`, `ai/` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
+| `extension.js` | `shell/`, `app/`, `ui/`, the Extension base class | `core/`, `helper/`, `ai/`, ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
+| `prefs.js` | `gi://` Gtk 4, Adw, Gio, GLib, Secret 1 (to store and clear the AI key only, ADR-0009); `core/` (for defaults, built-in word lists, the invite field list it shows, the endpoint rules, the key rule in `aiEngine.js`, and every Settings decision in `aiSetup.js`) | Clutter, Meta, St, Shell, Soup, `shell/`, `app/`, `ui/`, `helper/`, `ai/`, `core/judge.js` (it may *spawn* `ai/main.js` for "Test connection", never import it) |
 
 The "must not import" column is enforced with ESLint `no-restricted-imports` per
 directory, so a breach fails lint rather than review. Two parts are not enforced
 by lint and are held by review only: `shell/` using St/Clutter, and `ui/`
 creating a `Gio.Settings`.
+
+- **One caller of `core/judge.js` (ADR-0011; decided 2026-09-27).** Only
+  `app/verdicts.js` may import it. Lint guard carried by PG-8c (which already
+  adds the `preview/` block that forbids `judge.js`); until it lands, review
+  holds it, and `app/controller.js` is the one caller until PG-8b replaces
+  it. ESLint flat config *replaces* a rule's options when two blocks match
+  the same file, so the guard is a pattern inside each directory's existing
+  `no-restricted-imports` list (and an `app/` pattern that `verdicts.js`
+  escapes), not a separate block, or it would silently disable the
+  per-directory rules. `tests/` may import `judge.js`.
 
 - **`GioUnix` in the helper (allowed 2026-09-26).** Since GLib 2.80 the Unix
   stream classes live in `GioUnix`; the old `Gio.Unix*Stream` names still work
@@ -88,8 +99,8 @@ creating a `Gio.Settings`.
   needs stdin and stdout as streams, so it imports `GioUnix`. No other directory
   needs it.
 - **The `system` built-in is the helper's only.** `System.exit` inside the shell
-  process would end the desktop session, so `shell/`, `ui/`, `extension.js` and
-  `prefs.js` must not import it.
+  process would end the desktop session, so `shell/`, `app/`, `ui/`,
+  `extension.js` and `prefs.js` must not import it.
 - **The AI helper checks invites, it never builds them** (ADR-0010,
   amended). Its allowlist leaves out `core/invite.js`, `judge.js` and the
   rest of core, so the helper cannot reshape what is sent, only refuse it.
@@ -114,9 +125,11 @@ creating a `Gio.Settings`.
   `prefs.js` (GNOME loads it from the extension root). All the decisions are
   in `core/aiSetup.js` (`interfaces.md` §6.9). No `prefs/` directory until a
   second gi module is needed beside it.
-- **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
-  in `tests/unit/` only if it has no `gi://` and no `resource://` imports; its
-  GNOME parts are injected (`interfaces.md` §3).
+- **Node-tested modules.** Everything in `app/` is unit-tested under Node; lint
+  keeps it gi-free (PG-8a), and its GNOME parts are injected (`interfaces.md`
+  §3). A `shell/` adapter may be imported by a Node test only if it has no
+  `gi://` and no `resource://` imports (today only `shell/settingsKeys.js`,
+  from `tests/unit/schema.test.js`).
 
 ## What each part must not know
 

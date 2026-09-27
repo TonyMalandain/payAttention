@@ -28,7 +28,7 @@ the agents read this before they read anything else.
 | architecture decision records (ADRs) | `docs/architecture/adr/ADR-NNNN-<slug>.md` |
 | architect working log | `docs/architecture/NOTES.md` |
 | extension UUID / install dir | `payattention@tonymalandain.github.io` → `~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/` |
-| extension source (what ships) | `extension/` (`core/` pure logic, `helper/` calendar subprocess, `shell/` in-shell services, `ui/` actors) |
+| extension source (what ships) | `extension/` (`core/` pure logic, `helper/` calendar subprocess, `app/` GNOME-free orchestration, `shell/` in-shell GNOME adapters, `ai/` AI subprocess, `ui/` actors) |
 | the plan for a task, before it is built | `docs/plans/<ticket>.md` (owned by the senior engineer) |
 | findings waiting for product or architecture | `docs/inbox.md`, entries tagged `for-product` / `for-architecture` |
 | how to run tests, lint, and build | `docs/architecture/testing-and-build.md` — in order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke` (scripts created by the engineers to that contract) |
