@@ -378,6 +378,16 @@ it. The journal holds no title, invite field, reason or key.
   give the object a stand-in, as `tests/smoke/store-check.js` does. Rule: run such
   checks inside the headless shell where possible; if a second plain-gjs check
   needs the stand-in, move it to one shared test helper rather than copy it.
+- **Counting `changed` signals cannot see a same-value write** (GSettings memory
+  backend, found in PG-8b). A `set_*` that stores the value already there emits
+  no `changed`, so a check like "writing X again does nothing" or "reading never
+  writes" passes whether or not the code wrote. Instead, call `delay()` on the
+  `Gio.Settings` under test and assert `!settings.get_has_unapplied()` after the
+  action (and again after any flush, such as `destroy()`): in delay mode every
+  write, same value or not, is held as unapplied. `tests/smoke/store-check.js`
+  does this for the reader ("reading never writes") and for the writer's
+  `ai-verdicts` seed. Keep counting signals only for checks that a *different*
+  value was written, or that a write was coalesced.
 
 ### EDS / libical API traps (measured, gjs 1.88.1, EDS 3.60)
 

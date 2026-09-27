@@ -146,15 +146,78 @@ Three pure functions. The names are indicative; the shapes are the contract.
   action is built by core (`actionFor(card, 'snooze')`) and carries the end time
   `plan` computed; the stored `alert-state` shape is unchanged. Verdict overrides,
   mode switches, and travel changes are not alert state; the controller writes
-  them to the store and re-runs `judge`.
+  them through the store's writer facet and tells the verdict component to
+  re-read them, which re-runs `judge` on the next tick (§3).
 
-## 3. Controller ↔ UI (internal)
+## 3. Controller ↔ verdict component ↔ UI (internal)
+
+*Revised 2026-09-27 after PG-8b (ADR-0011).*
+
+**Who holds what.** Two `app/` classes, one inside the other:
+
+- **`Verdicts`** (`app/verdicts.js`, the verdict component, §7.2) owns
+  everything between the inputs and the judged list: the store's reader
+  facet, the calendar feed, the `AiQueue`, the AI ticker, and the only call
+  to `core/judge.js`.
+- **`Controller`** (`app/controller.js`, the alert front end) builds one
+  `Verdicts` and owns the rest: the environment, the UI, the 1 s alert tick,
+  `plan`/`reduce` and alert state, sound, the test alert, the owner's
+  override and travel writes, prune, and the health clocks.
+
+**What `extension.js` injects into the controller** (all factories, so no
+`app/` module imports `gi://`; lint-enforced since PG-8a; everything is
+unit-tested under Node):
+
+| Dependency | Goes to | Adapter in the extension |
+|---|---|---|
+| `createStoreReader(onChange)` → `StoreReaderPort` | `Verdicts` | `shell/store.js` `StoreReader` |
+| `createStoreWriter()` → `StoreWriterPort` | controller | `shell/store.js` `StoreWriter` |
+| `createFeed(onUpdate)` → `FeedPort` | `Verdicts` | `shell/calendarFeed.js` |
+| `createAiClient(engine)`, `createAiTicker(onTick)` | `Verdicts` | `shell/aiHelperClient.js`, `shell/ticker.js` |
+| `createEnvironment(onResume)`, `createUi(dispatch)`, `createTicker(onTick)`, `launchUri`, `now` | controller (`now` to both) | `shell/environment.js`, `ui/ui.js`, `shell/ticker.js`, `shell/launcher.js` |
+
+The controller hands `Verdicts` a `writeAnswers` that calls
+`StoreWriter.writeAiAnswers` (coalesced). The port typedefs live with their
+consumer: `StoreReaderPort` and `FeedPort` in `app/verdicts.js`,
+`StoreWriterPort`, `EnvironmentPort`, `UiPort` and `UiAction` in
+`app/controller.js`. There is no single store port any more.
+
+**The store's two facets** (both over the one `Gio.Settings`; the split is
+the contract, ADR-0011/ADR-0012):
+
+- **`StoreReaderPort`**: `readSettings`, `readOverrides`, `readTravel`,
+  `readAiAnswers`, `destroy`. It connects to `changed` and calls `onChange`
+  for every key except `INTERNAL_KEYS` (`alert-state`, `health-*`,
+  `ai-verdicts`), so `ai-verdicts` is read once, to seed the queue, and the
+  queue's copy is the live one after that. It has no write method and keeps the
+  settings object in a private field, so nothing reached through it can write.
+  This is the only facet the preview is given.
+- **`StoreWriterPort`**: `readAlertState`/`writeAlertState` (coalesced),
+  `writeAiAnswers` (coalesced; writing the stored text again is a no-op),
+  `readHealthSeeds`/`writeHealthClocks`, `setVerdictOverride`,
+  `setModeOverride`, `setTravel`, `pruneOccurrenceOverrides`, and `destroy`
+  (flushes pending coalesced writes). It never connects to `changed`. The
+  writer's own reads are of keys only the alert front end uses (alert state,
+  health seeds).
+
+**What `Verdicts` exposes to the controller:** `judgedList(now)` →
+`{judged, byKey}` (recomputed only when an input moved, otherwise the same
+object); `inputs` → frozen `{settings, timing, overrides, travel}`; `ai` → the
+queue's last published state (`status` feeds the View); `feedFacts` →
+`{snapshot, acceptedAt, syncedAt}` for health and the clocks;
+`reloadOverridesAndTravel()` (called after every override or travel write);
+`refresh(reason)`; `pruneAiAnswers()` (never throws); `destroy()`. The
+controller destroys it before the writer, so no AI answer is written after
+the writer's final flush.
+
+**Controller ↔ UI:**
 
 - The controller builds a display model (`View`) with the pure `app/view.js`
-  from the Plan, the judged occurrences, and data health, and calls
-  `ui.render(view)`. Everything about *what* to show is resolved there (travel only
-  at steps 1–2, Join only with a link, never "no meetings" while stale), so `ui/`
-  only draws. `render` is idempotent: the same View twice changes nothing on screen.
+  from the Plan, the judged list, data health and `Verdicts.ai.status`, and
+  calls `ui.render(view)`. Everything about *what* to show is resolved there
+  (travel only at steps 1–2, Join only with a link, never "no meetings" while
+  stale), so `ui/` only draws. `render` is idempotent: the same View twice
+  changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
   `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`, `setTravel`,
   `runTestAlert`. The UI never reports `headsUpShown` (see §2).
@@ -162,10 +225,6 @@ Three pure functions. The names are indicative; the shapes are the contract.
   then dispatches `ack`.
 - Text formatting shared by `app/view.js` and `prefs.js` is pure code in
   `core/display.js`.
-- The controller receives its GNOME-facing parts (store, feed, environment, UI,
-  ticker) as injected factories, so `app/controller.js`, `app/view.js` and the
-  other `app/` modules have no `gi://` imports (lint-enforced since PG-8a) and
-  are unit-tested under Node.
 
 ## 4. Extension object (stable, used by the smoke test)
 
@@ -512,13 +571,19 @@ why. `engineTag` = `normaliseEndpoint(endpoint) + "|" + model`.
 Where the invite goes, for the prefs warning: `loopback` stays on this
 computer. Every other class leaves it.
 
-### 6.5 Controller behaviour (app, internal but binding)
+### 6.5 AI queue behaviour, inside the verdict component (app, internal but binding)
 
 *Revised 2026-09-27 for D-031 (a truthful "AI unavailable" line, and recovery
 within 5 minutes after an unreachable engine returns). The names in brackets
-are the PG-4c plan's (`app/aiQueue.js`, `app/aiBudget.js`; in `shell/` until PG-8a).*
+are the code's (`app/aiQueue.js`, `app/aiBudget.js`). Since PG-8b the queue,
+the AI ticker, the engine sync and the withholding two-pass `judge` belong
+to the verdict component (`app/verdicts.js`, §3, §7.2), not the alert
+controller; the rules below are the same for every front end that builds
+one (the extension, the preview).*
 
-- **Queue.** After each `judge`, the controller collects the `aiAsk`s whose
+- **Queue.** On each AI tick (1 s, only while an engine is set; skipped
+  while a re-judge is pending), the verdict component pumps the queue with
+  the last judged list, and the queue collects the `aiAsk`s whose
   occurrence starts no earlier than `now − cutoff`, and queues them, soonest
   start first. **At most one request is in flight.**
 - **Waiting meeting.** A judged occurrence with an `aiAsk`, a non-null start,
@@ -533,20 +598,22 @@ are the PG-4c plan's (`app/aiQueue.js`, `app/aiBudget.js`; in `shell/` until PG-
     `failed`, whatever the code. A key leaves the set only on its own verdict
     or an engine change. This set is kept on its own; it is **not** derived
     from the per-occurrence retry records, which it no longer matches.
-- **What it passes to `judge`.** The stored `ai-verdicts` entries, except
+- **What the verdict component passes to `judge`.** The stored `ai-verdicts` entries, except
   that it withholds the entry of a key that has an outstanding `aiAsk` when
   engine down is set, or that key is in failed keys. The rules then decide
   those meetings (D-019). Only keys with an `aiAsk` can hold a stale entry, so
-  the controller never computes a fingerprint. A change of engine down,
+  the verdict component never computes a fingerprint. A change of engine down,
   failed keys or the answers re-runs `judge`; a change of status alone needs
   only a render. Withholding never changes which keys carry `aiAsk`, so the
   status (below) and `judge` never feed each other in a loop.
 - **Never on the alert path.** The tick and `plan()` never call the queue or
   the AI helper, and never wait for them; the render reads only the frozen
   state the queue last published (answers, failed keys, engine down, status),
-  like overrides. An answer is written to `ai-verdicts` through the store
-  (coalesced, like alert state), and then `judge` re-runs, as it does after an
-  override.
+  like overrides. The tick's one path into `app/verdicts.js` is
+  `judgedList(now)`, which calls `judge` only, never the queue. An answer is
+  written to `ai-verdicts` through the injected `writeAnswers` (in the
+  extension, `StoreWriter.writeAiAnswers`, coalesced like alert state; in the
+  preview, memory), and then `judge` re-runs, as it does after an override.
 - **What each outcome does.** "Unreachable" codes are `network`, `timeout`
   (the helper's or the shell watchdog's), `tls` and `server`
   (`ENGINE_UNREACHABLE_CODES`).
@@ -798,7 +865,7 @@ choose only its own verdict, because each request carries one invite.
   pure core, `core/aiSetup.js`, and is tested under Node. Prefs gets its own
   directory only if a second gi module is needed beside it.
 
-## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27; 7.1 built (PG-8a), 7.2 and 7.3 not yet
+## 7. The verdict component and the verdict preview (ADR-0011, ADR-0012) — designed 2026-09-27; 7.1 built (PG-8a), 7.2 built (PG-8b), 7.3 not yet
 
 Serves R-20 (the owner can see what payAttention would decide, without logging
 out) under D-032, and the owner's ports-and-adapters principle (ADR-0011).
@@ -818,7 +885,7 @@ adds `--extra-source=app` (`scripts/build.sh`, which also fails if
 `app/controller.js` is missing from the zip). Not strictly needed by the preview, but without it
 the preview's lint allowlist would name modules that then move.
 
-### 7.2 The verdict component (app/, internal but binding: two callers)
+### 7.2 The verdict component (app/, internal but binding: two callers) — built in PG-8b as `app/verdicts.js` `Verdicts`; its surface is in §3
 
 One component in `app/` owns **everything between the inputs and the judged
 list**, and is the only caller of `core/judge.js`:
@@ -846,8 +913,9 @@ to reload), prune, and the health clocks.
 
 **The store splits into two facets.** The GSettings adapter implements both;
 the extension hands the verdict component the reader and keeps the writer for
-the controller. The preview is only ever given the reader. Names are the
-senior engineer's; the split is the contract.
+the controller. The preview is only ever given the reader. Built as
+`StoreReader` and `StoreWriter` in `shell/store.js` (§3); the split is the
+contract, the names are not.
 
 Tests: the existing controller suites (`tests/unit/controller*.test.js`) pass
 unchanged in meaning; the verdict component gets its own suite for the AI

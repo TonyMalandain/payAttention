@@ -42,9 +42,8 @@ Three rings; dependencies point inward only. `core/` holds the rules (pure).
 `app/` holds the application orchestration, pure JavaScript with every outside
 part injected (`interfaces.md` §7.1, built in PG-8a). Everything that touches gjs, GLib, GNOME or the
 network is an adapter. A front end (the extension, the preview) only composes
-adapters with `app/`; only the verdict component (`app/verdicts.js`, from
-PG-8b) calls `core/judge.js`. Until PG-8b lands, `app/controller.js` is that
-caller.
+adapters with `app/`; only the verdict component (`app/verdicts.js`, built
+in PG-8b) calls `core/judge.js`.
 
 | Port | Adapter | Where it lives |
 |---|---|---|
@@ -169,16 +168,25 @@ creating a `Gio.Settings`.
 
 ## Ownership of data
 
+*Revised 2026-09-27 after PG-8b.* "Store" is two facets over one
+`Gio.Settings` (`shell/store.js`, `interfaces.md` §3): the **reader**
+(`StoreReader`: reads and the change signal, no write method), held by the
+verdict component, and the **writer** (`StoreWriter`: every write the shell
+makes), held by the alert controller. The verdict component writes nothing
+itself; its one output to storage, AI answers, goes through the
+`writeAnswers` the controller injects.
+
 | Data | Owner (only writer) | Readers |
 |---|---|---|
 | Calendar events | the owner's calendar provider, via EDS | helper (read-only) |
-| Last snapshot and its freshness | calendar feed | controller |
-| Judged occurrences, Plan | controller (computed by core, in memory) | UI |
-| Settings keys | prefs.js and the store (for values set from the menu) | store, prefs.js |
-| Verdict overrides, mode overrides, travel times | store (on controller request) | store, prefs.js may clear |
-| Alert state | store (on controller request, via core `reduce`) | controller |
-| Persisted health clocks (`health-*` keys) | store (on controller request, in `disable()`) | controller, at `enable()` |
-| AI settings (`verdict-source`, `ai-endpoint`, `ai-model`) | prefs.js | store, prefs.js |
-| AI answers (`ai-verdicts`) | store (on controller request, from AI helper replies) | controller, into `judge` |
+| Last snapshot and its freshness | calendar feed (owned by the verdict component) | verdict component, into `judge`; controller, for health, via `feedFacts` |
+| Judged occurrences | verdict component (computed by core `judge`, in memory) | controller, via `judgedList` |
+| Plan | controller (computed by core `plan`, in memory) | UI |
+| Settings keys | prefs.js; the store writer for none today (the menu sets only overrides and travel) | store reader (→ verdict component), prefs.js |
+| Verdict overrides, mode overrides, travel times | store writer (on controller request), then the controller calls `reloadOverridesAndTravel()` | store reader (→ verdict component, into `judge`), prefs.js may clear |
+| Alert state | store writer (on controller request, via core `reduce`) | controller, through the writer (`readAlertState`) |
+| Persisted health clocks (`health-*` keys) | store writer (on controller request, in `disable()`) | controller, through the writer at `enable()` |
+| AI settings (`verdict-source`, `ai-endpoint`, `ai-model`) | prefs.js | store reader (→ verdict component), prefs.js |
+| AI answers (`ai-verdicts`) | store writer, coalesced, via the `writeAnswers` the controller gives the verdict component (from AI helper replies) | store reader (→ verdict component, seeds the AI queue and feeds `judge`) |
 | AI engine keys (GNOME keyring, ADR-0009) | prefs.js | AI helper only; `scripts/uninstall.sh --purge` clears |
 | Everything above, for the preview (ADR-0012) | nothing: the preview writes no data | preview reads settings, overrides, travel and AI answers through the store's reader facet, with the settings object in delay-apply mode |

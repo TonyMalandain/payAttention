@@ -743,3 +743,31 @@ Append only. Newest at the bottom.
 - **Why:** A separate "judge.js" block would silently switch off the per-directory boundary rules for every file it matches.
 - **Source:** ESLint flat config semantics (rule config merge overrides options); eslint.config.js structure.
 - **Touches:** boundaries.md — folded.
+
+## 2026-09-27 — PG-8b surface folded into interfaces §3 and §6.5
+- **Kind:** interface
+- **Fact:** interfaces.md §3 now describes Controller ↔ Verdicts ↔ UI: the controller's deps (`createStoreReader`/`createStoreWriter` replace `createStore`), which part each factory goes to, the two store facets' methods, and `Verdicts`' exposed surface; §6.5 now says the AI queue lives in the verdict component; §7 marks 7.2 built.
+- **Why:** The single `StorePort` is gone and port typedefs now live with their consumer (`StoreReaderPort`, `FeedPort` in `app/verdicts.js`; `StoreWriterPort` in `app/controller.js`), so the old §3 named a contract that no longer exists.
+- **Source:** extension/app/verdicts.js:14-58,93-174; extension/app/controller.js:18-60,141-150; extension/shell/store.js; extension/extension.js:24-26; commit 770c7dd.
+- **Touches:** interfaces.md §2, §3, §6.5, §7 — folded.
+
+## 2026-09-27 — Data ownership split by store facet
+- **Kind:** data
+- **Fact:** The verdict component reads through `StoreReader` and writes nothing itself (AI answers go through the controller-injected `writeAnswers`); every shell write goes through the controller's `StoreWriter`, which writes no owner settings key today.
+- **Why:** The reader facet is what makes "the preview never changes anything" (ADR-0012) structural rather than a promise; the ownership table must show that seam.
+- **Source:** extension/shell/store.js (StoreReader has no write method, private `#settings`); tests/smoke/store-check.js:162-175.
+- **Touches:** boundaries.md "Ownership of data" and the stale "until PG-8b lands" sentence; overview.md subsystem table (Store row, new Verdict component row, Controller row) — folded.
+
+## 2026-09-27 — `ai-verdicts` is read once, at construction
+- **Kind:** data
+- **Fact:** `ai-verdicts` is in `INTERNAL_KEYS`, so the reader's change signal never fires for it; the AI queue's in-memory answers are the live copy after the verdict component is built.
+- **Why:** Otherwise the extension's own coalesced answer writes would trigger a full input reload and re-judge on every answer.
+- **Source:** extension/shell/settingsKeys.js:30; extension/app/verdicts.js:76-79.
+- **Touches:** interfaces.md §3 — folded.
+
+## 2026-09-27 — Same-value GSettings writes are invisible to `changed`
+- **Kind:** constraint
+- **Fact:** On the memory backend a same-value write emits no `changed`, so tests must use `delay()` plus `get_has_unapplied()` to prove "no write happened".
+- **Why:** A signal-counting check passes whether or not the code wrote, so it cannot guard the reader's read-only promise or the writer's no-op re-write.
+- **Source:** tests/smoke/store-check.js:162-188; caller (PG-8b build).
+- **Touches:** testing-and-build.md "Pitfalls" — folded.
