@@ -22,7 +22,13 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   - **What changes for the owner:** a mode switch in Settings. In AI mode, verdicts come from the engine they connect (endpoint, model, API key), with an "AI:" reason. The rules take over if it is down.
   - **Who it is for:** Calendar owner, Installer.
   - **Done when:** see the addendum's "Done when".
-  - **Next step:** the architect revises ADR-0007 to ADR-0009 and `interfaces.md` §6 for D-019 and D-020, which replace "unsure only" and "facts only". Then plan, build, review.
+  - Architecture: ADR-0007, ADR-0009, ADR-0010, `interfaces.md` §6. Product rulings: D-019 to D-024.
+  - Build order (each: plan → build → review):
+    - **PG-4a — Core AI pieces (M).** Settings keys and defaults, endpoint rules, the invite builder with its limits (D-020, D-022, D-023, D-024), fingerprint, prompt text, reply and protocol checks, and `judge` taking stored AI answers. Done when unit tests prove each rule in the addendum that core owns.
+    - **PG-4b — AI helper (M).** A separate process that talks to the engine and reads the key from the password store. Done when tests against a fake engine pass, with no real cloud call.
+    - **PG-4c — Shell side (M).** The queue, keeping old answers while asking again, the fallback, the budget, and "AI:" / "AI unavailable" in the menu. Done when no alert ever waits on the AI (tested).
+    - **PG-4d — Settings page (S).** Mode switch, endpoint, model, key, "Test connection", and the warning.
+    - **PG-4e — Uninstall `--purge` (S).** Also erases the key and the stored AI answers.
 - **Owner's machine (not product work):** the NVIDIA driver is not built for the running kernel, so a local engine runs on the processor (about 5 to 20 s per verdict, estimated).
 
 ## Now — needs the owner (cannot be done unattended)
