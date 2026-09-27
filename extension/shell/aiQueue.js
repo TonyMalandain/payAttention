@@ -22,6 +22,8 @@ export const ENGINE_REFUSED_PAUSE_MS = 1_800_000;
 export const RATE_LIMIT_PAUSE_MS = 300_000;
 /** The shell's watchdog: an ask unanswered for engine.timeoutMs + this is a 'timeout'. */
 export const WATCHDOG_GRACE_MS = 10_000;
+/** From this many 'lost' outcomes in a row for one key, that key fails and backs off, so one crashing invite never blocks the queue. */
+export const LOST_STREAK_LIMIT = 2;
 
 const ENGINE_REFUSED_CODES = ['auth', 'config', 'no-key'];
 
@@ -170,6 +172,8 @@ export class AiQueue {
         this._answers = answers;
         this._inFlight = null;
         this._retry = new Map();
+        /** key → that key's own asks in a row that ended in 'lost' (§6.5 "Lost streak"). */
+        this._lostStreak = new Map();
         this._failedKeys = new Set();
         this._failedKeysChanged = false;
         this._engineDown = false;
@@ -209,6 +213,7 @@ export class AiQueue {
         this._client = null;
         this._inFlight = null;
         this._retry.clear();
+        this._lostStreak.clear();
         if (this._failedKeys.size > 0) {
             this._failedKeys.clear();
             this._failedKeysChanged = true;
@@ -337,6 +342,7 @@ export class AiQueue {
             this._answers = recordAiAnswer(this._answers, token.key,
                 { fp: token.fp, verdict: outcome.verdict, reason: outcome.reason }, now);
             this._writeAnswers(this._answers);
+            this._lostStreak.delete(token.key);
             this._engineDown = false;
             this._removeFailed(token.key);
             this._retry.delete(token.key);
@@ -346,10 +352,18 @@ export class AiQueue {
         if (outcome.type === 'lost') {
             this._logOnce('lost', () => console.warn('payattention: ai-helper-lost'));
             this._engineDown = true;
+            // Not gated on downAtSend: after the first 'lost' the engine is down, so a re-ask of a crashing invite always is.
+            const streak = (this._lostStreak.get(token.key) ?? 0) + 1;
+            this._lostStreak.set(token.key, streak);
+            if (streak >= LOST_STREAK_LIMIT) {
+                this._addFailed(token.key);
+                this._advanceRetry(token.key, now);
+            }
             this._budget.refund(token.engineTag, token.sentAt);
             return;
         }
 
+        this._lostStreak.delete(token.key);
         const code = outcome.code;
         this._logOnce('failed ' + code, () => console.warn(`payattention: ai-request-failed ${code}`));
         this._addFailed(token.key);

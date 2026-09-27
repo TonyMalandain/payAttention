@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 process.env.TZ = 'UTC';
 const {
     AiQueue, nextAskRetryMs, nextEnginePauseMs, isWaiting, aiStatusOf, aiJudgeConfig, withholdAnswers,
-    ENGINE_UNREACHABLE_CODES,
+    ENGINE_UNREACHABLE_CODES, LOST_STREAK_LIMIT,
 } = await import('../../extension/shell/aiQueue.js');
 const { emptyAiAnswers, parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
 const { AI_FAILURE_CODES } = await import('../../extension/core/aiProtocol.js');
@@ -836,5 +836,137 @@ describe('AiQueue', () => {
             assert.throws(() => new AiQueue({ ...ok, [name]: undefined }), TypeError, name);
         assert.throws(() => new AiQueue({ ...ok, answers: { v: 2, items: {} } }), TypeError);
         assert.throws(() => new AiQueue({ ...ok, answers: null }), TypeError);
+    });
+
+    describe('20. lost streak: one bad invite never blocks the others (§6.5)', () => {
+        const LOST = Object.freeze({ type: 'lost' });
+        const A = item(1, T0 + HOUR);
+        const B = item(2, T0 + 2 * HOUR);
+
+        test('LOST_STREAK_LIMIT is 2', () => {
+            assert.equal(LOST_STREAK_LIMIT, 2);
+        });
+
+        test('a meeting whose invite always crashes the helper does not stop a later meeting getting its answer', () => {
+            const q = makeQueue();
+            q.items = [A, B];
+            q.queue.setEngine(E1);
+            q.run(T0, T0 + 10 * S, a => q.client.answer(a.invite.n === 1 ? LOST : VERDICT));
+            assert.deepEqual(q.client.asks.slice(0, 3).map(a => a.invite.n), [1, 1, 2]);
+            assert.equal(q.state.answers[B.key]?.verdict, 'ignore');
+            assert.deepEqual([...q.state.failedKeys], [A.key]);
+            assert.equal(q.state.status, 'unavailable');
+        });
+
+        test('the first lost in a row costs nothing; the second adds the key and backs it off 1, 2, 4 min', () => {
+            const q = makeQueue();
+            q.items = [A];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(LOST);
+            assert.equal(q.state.failedKeys.size, 0, 'first lost: failed keys unchanged');
+            q.pump();
+            assert.equal(q.client.asks.length, 2, 'first lost: re-asked at once, no retry');
+            for (const waitMin of [1, 2, 4]) {
+                q.client.answer(LOST);
+                assert.deepEqual([...q.state.failedKeys], [A.key]);
+                const lostAt = q.now;
+                const asked = q.client.asks.length;
+                q.now = lostAt + waitMin * MIN - 1;
+                q.pump();
+                assert.equal(q.client.asks.length, asked, `nothing before ${waitMin} min`);
+                q.now = lostAt + waitMin * MIN;
+                q.pump();
+                assert.equal(q.client.asks.length, asked + 1, `asked again after ${waitMin} min`);
+            }
+        });
+
+        test('the second lost in a row still returns its spend', () => {
+            const q = makeQueue();
+            const done = Array.from({ length: 119 }, (_, i) => item(100 + i, T0 + 3 * HOUR + i * MIN));
+            q.items = done;
+            q.queue.setEngine(E1);
+            for (let i = 0; i < 119; i++) {
+                q.pump();
+                q.client.answer(VERDICT);
+            }
+            q.items = [A, ...done];
+            q.pump();
+            q.client.answer(LOST);
+            q.pump();
+            q.client.answer(LOST);
+            // A is held by its retry; 119 answered + two returned losses leave room for exactly one more.
+            const W = item(600, T0 + 20 * HOUR);
+            const V = item(601, T0 + 21 * HOUR);
+            q.items = [A, ...done, W, V];
+            q.pump();
+            assert.equal(q.client.asks.at(-1).invite.n, 600);
+            q.client.answer(VERDICT);
+            q.pump();
+            assert.equal(q.client.asks.at(-1).invite.n, 600, 'the 121st is refused');
+        });
+
+        test("a verdict of that key clears its streak: the next lost is a first again", () => {
+            const q = makeQueue();
+            q.items = [A];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(LOST);
+            q.pump();
+            q.client.answer(VERDICT);
+            q.items = [item(1, T0 + HOUR, 'fp-changed')];
+            q.pump();
+            q.client.answer(LOST);
+            assert.equal(q.state.failedKeys.size, 0);
+            q.pump();
+            assert.equal(q.client.asks.length, 4, 're-asked at once');
+        });
+
+        test("a failed outcome of that key clears its streak: the next lost is a first again", () => {
+            const q = makeQueue();
+            q.items = [A];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(LOST);
+            q.pump();
+            q.client.answer(failed('bad-request'));
+            q.now = T0 + MIN;
+            q.pump();
+            assert.equal(q.client.asks.length, 3);
+            q.client.answer(LOST);
+            q.pump();
+            assert.equal(q.client.asks.length, 4, 're-asked at once: no retry advanced');
+        });
+
+        test("another key's verdict does not clear the streak", () => {
+            const q = makeQueue();
+            q.items = [A, B];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(LOST);
+            q.items = [B];
+            q.pump();
+            q.client.answer(VERDICT);
+            q.items = [A, B];
+            q.pump();
+            assert.equal(q.client.asks.at(-1).invite.n, 1);
+            q.client.answer(LOST);
+            assert.deepEqual([...q.state.failedKeys], [A.key]);
+        });
+
+        test('an engine change clears every streak', () => {
+            const q = makeQueue();
+            q.items = [A];
+            q.queue.setEngine(E1);
+            q.pump();
+            q.client.answer(LOST);
+            q.queue.setEngine(E2);
+            q.pump();
+            assert.equal(q.client.engine, E2);
+            q.client.answer(LOST);
+            assert.equal(q.state.failedKeys.size, 0);
+            q.pump();
+            assert.equal(q.client.asks.length, 2, 're-asked at once on E2');
+        });
     });
 });
