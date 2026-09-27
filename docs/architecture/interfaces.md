@@ -549,7 +549,8 @@ are the PG-4c plan's (`shell/aiQueue.js`, `shell/aiBudget.js`).*
   | `failed`, `rate-limited` | set | add | advanced | `Retry-After` if given (capped at 30 min), else 5 min | kept |
   | `failed`, `bad-reply` | clear (the engine did reply) | add | advanced | unreachable backoff reset to none | kept |
   | `failed`, `bad-request` | unchanged | add | advanced | none | kept |
-  | `lost` (helper could not start, exited, or broke the protocol) | set | unchanged | none | none (the client's own restart backoff limits it) | **returned** |
+  | `lost` (helper could not start, exited, or broke the protocol), the key's **first in a row** | set | unchanged | none | none (the client's own restart backoff limits it) | **returned** |
+  | `lost`, the key's **second or later in a row** | set | add | advanced | none | **returned** |
   | the budget refuses a send | set | unchanged | none | none | nothing was spent |
   | the client could not be created, or settling threw | set | unchanged | none | none | — |
 
@@ -561,6 +562,30 @@ are the PG-4c plan's (`shell/aiQueue.js`, `shell/aiBudget.js`).*
     fine counts against that meeting (it may be the meeting's own fault, for
     example an invite that always times out), but the probes made during an
     outage do not push any meeting's retry further out.
+  - **Lost streak** (added 2026-09-27; product rule: one meeting's invite
+    must never block AI answers for other meetings). The queue keeps, in
+    memory, a per-key count of that key's own asks that ended in `lost` in a
+    row (`lostStreak`, a `Map` key → count, beside `_retry`). On `lost`, the
+    token's key count goes up by one; when the result is
+    `LOST_STREAK_LIMIT` (= 2, exported beside the other constants) or more,
+    the second `lost` row applies: the key is added to failed keys and its
+    retry is advanced, so the queue picks the next waiting meeting. Every
+    further `lost` of that key advances its retry again (1, 2, 4 … 30 min).
+    A key's count is deleted on any `verdict` or `failed` outcome **of that
+    key** (its ask reached the helper and came back), and every count is
+    cleared on an engine change, with `_retry`. Another key's outcome does
+    not reset it. `downAtSend` plays no part here: after the first `lost`
+    engine down is set, so the re-ask of a crashing invite is always sent
+    "while down", and must still count.
+  - Why two and not one: a single helper crash (killed by the system, a
+    one-off fault) should cost that meeting nothing. Why no cause test: the
+    outcome does not say whether the helper was ever handed the invite (a
+    spawn failure is also `lost`), and the protocol and `AiOutcome` stay as
+    they are. The price, accepted: while the helper cannot start at all,
+    waiting keys are backed off one after another. Nothing can be asked then
+    anyway, the status already reads `unavailable`, and the first retry is
+    only 1 min. A protocol mismatch stops the client for good (`ready` stays
+    false), so it never reaches this rule.
   - Returned spend: `RequestBudget.refund(engineTag, sentAt)` removes the one
     spend recorded at the ask's `sentAt` for that engine (a no-op if it has
     aged out). Checking and spending stay one call (`trySpend`).
@@ -588,8 +613,9 @@ are the PG-4c plan's (`shell/aiQueue.js`, `shell/aiBudget.js`).*
     one at a time, soonest first.
   - Two cases are outside the bound, on purpose: a budget already exhausted
     by *answered* requests (it would block with or without the outage), and a
-    meeting held by its own retry from failures while the engine was fine
-    (it would not be asked without the outage either).
+    meeting held by its own retry from failures while the engine was fine,
+    or from its own lost streak (it would not be asked without the outage
+    either).
 - **Budget.** At most 120 requests per rolling hour and 1 000 per rolling
   24 h, per `engineTag` (assumed; `constraints.md`). This is held in memory,
   so a lock resets it. Stored answers make that harmless in practice. Spends
