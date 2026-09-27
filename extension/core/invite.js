@@ -1,7 +1,7 @@
 // Turning one occurrence into the bounded invite the AI engine sees
-// (interfaces.md §6.2; D-020, D-022, D-024, D-025). Pure.
+// (interfaces.md §6.2; D-020, D-022, D-024, D-025, D-027). Pure.
 import { INVITE_CAPS, MAX_INVITE_BYTES, capText, cleanText, utf8Length } from './aiProtocol.js';
-import { ownerFacts, ownerResponse, guestAttendees } from './owner.js';
+import { ownerFacts, ownerResponse, guestAttendees, normaliseAddress } from './owner.js';
 import { detectAttendance } from './attendance.js';
 import { withoutQuery, withoutConferenceQueries } from './links.js';
 
@@ -11,15 +11,16 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BUSY = { opaque: 'busy', transparent: 'free' };
 const ROLES = { 'chair': 'chair', 'req-participant': 'required', 'opt-participant': 'optional' };
 
-// D-025: the value after one of these words, with an optional ":", "=", "#" or
-// "is" between, up to the next whitespace. Whole words, any case. Run on cleaned
-// text, so a value on the next line or behind a control character is still found.
-const TEXT_PASSCODE = /\b(passcode|password|pwd|pin)\b(\s*(?:[:=#]|is\b)\s*|\s+)\S+/gi;
+// D-025 as D-027 reads it: after one of these words (whole word, any case), the
+// separators and the filler words "is" and "code" are kept, and the rest of that
+// line goes. The lookahead-and-backreference makes the separator run atomic, so the
+// removed part never starts with a separator. Whitespace in the run includes line
+// breaks, so a value alone on the next line ("Passcode:\n123456") is still removed.
+// A rest with no letter or digit ("Forgot your password.") holds no code and stays.
+// Run before cleanText, which would join the lines.
+const TEXT_PASSCODE = /\b(passcode|password|pwd|pin)\b(?=((?:[\s:=#-]|\b(?:is|code)\b)*))\2(?=[^\r\n]*[\p{L}\p{N}])[^\r\n]+/giu;
 
 const clean = (text, cap) => capText(cleanText(text), cap);
-
-// The same normalisation as owner.js uses to compare addresses.
-const normaliseAddress = address => address.trim().toLowerCase().replace(/^mailto:/, '');
 
 const pad = (n, width = 2) => String(n).padStart(width, '0');
 
@@ -35,9 +36,9 @@ function lengthMinutes(event) {
     return Math.max(0, Math.round((event.end - event.start) / MINUTE));
 }
 
-/** Description or place text: conferencing queries cut (D-022), cleaned, text passcodes removed (D-025); not capped. */
+/** Description or place text: conferencing queries cut (D-022), text passcodes removed (D-025, D-027), cleaned; not capped. */
 function withoutPasscodes(text) {
-    return cleanText(withoutConferenceQueries(text)).replace(TEXT_PASSCODE, '$1$2[removed]');
+    return cleanText(withoutConferenceQueries(text).replace(TEXT_PASSCODE, '$1$2[removed]'));
 }
 
 function videoLinkOf(event) {
@@ -64,9 +65,12 @@ const person = p => ({
  * @param {number} utcOffsetMinutes integer, -840..840
  * @returns {Readonly<import('./types.js').Invite>} deep-frozen, keys in INVITE_FIELDS order,
  *          passes validateInvite
- * @throws {TypeError} when calendarName is not a string or utcOffsetMinutes is not an integer in range
+ * @throws {TypeError} when event.start is not a finite number, calendarName is not a string, or
+ *         utcOffsetMinutes is not an integer in range
  */
 export function buildInvite(event, identity, calendarName, utcOffsetMinutes) {
+    if (!Number.isFinite(event.start))
+        throw new TypeError('buildInvite: event.start must be a finite number of milliseconds');
     if (typeof calendarName !== 'string')
         throw new TypeError('buildInvite: calendarName must be a string');
     if (!Number.isInteger(utcOffsetMinutes) || Math.abs(utcOffsetMinutes) > MAX_OFFSET_MINUTES)

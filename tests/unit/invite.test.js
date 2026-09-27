@@ -233,7 +233,7 @@ describe('buildInvite: the 8 192-byte cap', () => {
     });
 });
 
-describe('buildInvite: D-025 passcodes written as text are removed', () => {
+describe('buildInvite: D-025 and D-027 passcodes written as text are removed to the end of the line', () => {
     const desc = text => build({ description: text }).description;
 
     test('"Passcode: 123456"', () => {
@@ -250,13 +250,45 @@ describe('buildInvite: D-025 passcodes written as text are removed', () => {
     });
 
     test('"is", no space, and any letter case', () => {
-        assert.equal(desc('The passcode is 9876 today'), 'The passcode is [removed] today');
-        assert.equal(desc('PASSWORD:hunter2 ok'), 'PASSWORD:[removed] ok');
+        assert.equal(desc('The passcode is 9876 today'), 'The passcode is [removed]');
+        assert.equal(desc('PASSWORD:hunter2 ok'), 'PASSWORD:[removed]');
         assert.equal(desc('Pwd = x1'), 'Pwd = [removed]');
     });
 
-    test('the word followed by an ordinary word loses that word (the cost D-025 accepts)', () => {
-        assert.equal(desc('The password policy review'), 'The password [removed] review');
+    test('the word followed by ordinary words loses the rest of its line (the cost D-027 accepts)', () => {
+        assert.equal(desc('The password policy review'), 'The password [removed]');
+    });
+
+    test('D-027: a code written in groups goes whole', () => {
+        assert.equal(desc('PIN: 263 947 381#'), 'PIN: [removed]');
+        assert.equal(desc('Passcode: 12 34 56'), 'Passcode: [removed]');
+    });
+
+    test('D-027: separators "-", ":", "=", "#" and the filler words "is" and "code" are kept', () => {
+        assert.equal(desc('Passcode - 123456'), 'Passcode - [removed]');
+        assert.equal(desc('Password is: abc123'), 'Password is: [removed]');
+        assert.equal(desc('PIN code: 1234'), 'PIN code: [removed]');
+        assert.equal(desc('pin CODE is # 55 66'), 'pin CODE is # [removed]');
+    });
+
+    test('D-027: a word that only starts like a filler word is part of the removed value', () => {
+        assert.equal(desc('PIN isolated 12 34'), 'PIN [removed]');
+    });
+
+    test('D-027: a Google Meet block keeps the text on the following lines', () => {
+        const meet = [
+            'Join with Google Meet: https://meet.google.com/abc-defg-hij',
+            'Or dial: (US) +1 234-567-8901 PIN: 263 947 381#',
+            'More phone numbers: https://tel.meet/abc-defg-hij',
+            'Agenda: quarterly planning',
+        ].join('\n');
+        assert.equal(desc(meet), 'Join with Google Meet: https://meet.google.com/abc-defg-hij ' +
+            'Or dial: (US) +1 234-567-8901 PIN: [removed] ' +
+            'More phone numbers: https://tel.meet/abc-defg-hij Agenda: quarterly planning');
+    });
+
+    test('D-027: a Windows line break ends the line too', () => {
+        assert.equal(desc('Passcode: 12 34\r\nThanks'), 'Passcode: [removed] Thanks');
     });
 
     test('whole words only: "spinning" does not match "pin"', () => {
@@ -264,18 +296,22 @@ describe('buildInvite: D-025 passcodes written as text are removed', () => {
         assert.equal(desc(text), text);
     });
 
-    test('the word with nothing after it, or joined by other punctuation, is left alone', () => {
+    test('the word with nothing after it, or followed by other punctuation, is left alone', () => {
         assert.equal(desc('Forgot your password.'), 'Forgot your password.');
-        assert.equal(desc('password-protected file'), 'password-protected file');
+        // D-027: "-" is a separator, so the rest of the line goes.
+        assert.equal(desc('password-protected file'), 'password-[removed]');
         assert.equal(desc('PIN'), 'PIN');
+        assert.equal(desc('Passcode: '), 'Passcode:');
+        assert.equal(desc('Passcode is'), 'Passcode is');
     });
 
     test('a value on the next line is removed too', () => {
         assert.equal(desc('Passcode:\n123456\nThanks'), 'Passcode: [removed] Thanks');
     });
 
-    test('every occurrence is removed', () => {
-        assert.equal(desc('Passcode: 111 then PIN: 222'), 'Passcode: [removed] then PIN: [removed]');
+    test('every occurrence is removed; a second one on the same line is inside the first removal', () => {
+        assert.equal(desc('Passcode: 111\nPIN: 222'), 'Passcode: [removed] PIN: [removed]');
+        assert.equal(desc('Passcode: 111 then PIN: 222'), 'Passcode: [removed]');
     });
 
     test('in the place too', () => {
@@ -283,7 +319,7 @@ describe('buildInvite: D-025 passcodes written as text are removed', () => {
     });
 
     test('a passcode in a non-conferencing link query is removed', () => {
-        assert.equal(desc('Docs https://docs.example.test/a?pwd=abc123 now'), 'Docs https://docs.example.test/a?pwd=[removed] now');
+        assert.equal(desc('Docs https://docs.example.test/a?pwd=abc123 now'), 'Docs https://docs.example.test/a?pwd=[removed]');
     });
 
     test('removed before the cap, so a cut cannot leave part of a passcode', () => {
@@ -307,6 +343,12 @@ describe('buildInvite: argument checks', () => {
         ['offset -841', 'Work', -841]]) {
         test(`${name} throws TypeError`, () => {
             assert.throws(() => buildInvite(event(), IDENT, cal, off), TypeError);
+        });
+    }
+
+    for (const start of [NaN, Infinity, -Infinity, undefined, '2026-09-28']) {
+        test(`start ${String(start)} throws TypeError`, () => {
+            assert.throws(() => build({ start }), TypeError);
         });
     }
 

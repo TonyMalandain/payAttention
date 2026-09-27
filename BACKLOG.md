@@ -88,6 +88,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 - The plans in `docs/plans/` do not show the deviations accepted in review (the PG-1b start-up sync order, the PG-1c takeover panel layout, the menu idle rebuild, the compact takeover). Update them if the plans are reused.
 - Two lint rules the architect logged as debt: forbid St/Clutter in `shell/`, and forbid creating settings in `ui/`.
+- `buildInvite` accepts a start time beyond the range of a date (above 8.64e15 ms) and produces an invalid invite. Widen the check (PG-4a leftover).
+- The PG-4a plan still says text passcodes are out of scope; D-025/D-027 superseded that.
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)

@@ -239,3 +239,13 @@ Append only. Newest at the bottom.
 - **Fact:** Both plans are accepted. GNOME's "None" alert sound is respected (D-028). The planner's probes briefly polluted the owner's sound lookup cache; it repaired the cache and verified both sounds resolve. The owner was told.
 - **Source:** senior engineer, PG-6 and PG-7 plans.
 - **Touches:** decisions.md D-028, BACKLOG.md
+
+## 2026-09-27 — D-027 readings accepted
+- **Kind:** decision
+- **Fact:** Two readings of D-027 were accepted:
+  - a code alone on the next line after a keyword is also removed, so the next line is lost;
+  - text after the keyword with no letter or digit is left alone ("Forgot your password.").
+
+  "password-protected file" becomes "password-[removed]", which is within D-027's accepted cost. A start time beyond what a date can hold is still not rejected; it is logged for the senior engineer, and its only source is the calendar reader, which validates times.
+- **Source:** software engineer, PG-4a round 1 fixes.
+- **Touches:** decisions.md D-027

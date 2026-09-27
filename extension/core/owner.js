@@ -1,6 +1,7 @@
 // Who the owner is, and where they stand in one meeting. Internal to core.
 
-function normaliseAddress(address) {
+/** An address as core compares it: trimmed, lower case, without "mailto:". */
+export function normaliseAddress(address) {
     return address.trim().toLowerCase().replace(/^mailto:/, '');
 }
 
