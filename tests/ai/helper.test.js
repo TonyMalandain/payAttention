@@ -184,6 +184,15 @@ describe('AI helper process', { skip: SKIP }, () => {
     });
 });
 
+test('the Soup session has no timer of its own: the deadline is the only one', { skip: SKIP }, () => {
+    // libsoup 3 defaults timeout to 60 s, which cut a slow local engine off as network before its deadline.
+    // idle-timeout is not asserted: it only closes pooled connections with no request in flight.
+    const probe = path.join(import.meta.dirname, 'gjs/sessionTimers.js');
+    const run = spawnSync('gjs', ['-m', probe], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(JSON.parse(run.stdout.trim()).timeout, 0);
+});
+
 describe('AI helper failures, through the real Soup stack', { skip: SKIP }, () => {
     let session, engine;
     let helper = null;
@@ -277,6 +286,14 @@ describe('AI helper failures, through the real Soup stack', { skip: SKIP }, () =
             choices: [{ message: { content: '{"verdict":"must","reason":"big"}' } }], pad: 'x'.repeat(2 * 1024 * 1024),
         });
         assert.deepEqual(await judgeWith({ status: 200, body: big }), failed('bad-reply'));
+    });
+
+    test('after a body over 1 MiB the connection is closed, not left half read', async () => {
+        const big = JSON.stringify({ pad: 'x'.repeat(4 * 1024 * 1024) });
+        assert.deepEqual(await judgeWith({ status: 200, body: big }), failed('bad-reply'));
+        const record = engine.requests.at(-1);
+        // The helper is still running: only its own close can end the connection.
+        await waitFor(() => record.socketClosedAt !== undefined, 3000, 'the oversize connection to close');
     });
 
     test('fenced JSON and a leading think block are read', async () => {

@@ -18,7 +18,8 @@ export function chatEnvelope(content) {
 
 /**
  * An HTTP (or HTTPS when tls is given) server on 127.0.0.1, port chosen by the OS.
- * Records every request as {method, path, headers, body, receivedAt}, and answeredAt when answered.
+ * Records every request as {method, path, headers, body, receivedAt}, answeredAt when answered,
+ * and socketClosedAt once its connection closes.
  * Answers queued handlers in order, then the default: 200 chatEnvelope('{"verdict":"must","reason":"fake engine"}').
  * Handler: {status, headers?, body} | {delayMs, status, headers?, body} | {hold: true} (never answers until close).
  *
@@ -41,6 +42,9 @@ export async function startFakeEngine(options = {}) {
                 body: Buffer.concat(chunks).toString('utf8'), receivedAt: Date.now(),
             };
             requests.push(record);
+            req.socket.once('close', () => {
+                record.socketClosedAt = Date.now();
+            });
             const handler = handlers.shift() ?? { status: 200, body: chatEnvelope(DEFAULT_CONTENT) };
             if (handler.hold)
                 return;

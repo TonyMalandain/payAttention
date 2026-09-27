@@ -24,10 +24,25 @@ function concat(chunks, total) {
     return all;
 }
 
+/** Closes a response stream without a cancellable, so the deadline's cancel cannot stop the close. */
+function closeQuietly(stream) {
+    stream.close_async(GLib.PRIORITY_DEFAULT, null, (_c, closeRes) => {
+        try {
+            stream.close_finish(closeRes);
+        } catch {
+            // The outcome is already decided; a failed close only loses connection reuse or cleanup.
+        }
+    });
+}
+
 export class HttpTransport {
-    /** Creates one Soup.Session for the life of the process, with its timeout property left at 0 (the deadline below is the only timer). */
+    /**
+     * Creates one Soup.Session for the life of the process, with its timeout set to 0 (the deadline below is the
+     * only timer). libsoup 3 defaults it to 60 s, which cut a slow local engine off as network before its deadline.
+     * idle-timeout keeps its default: it only closes pooled connections with no request in flight.
+     */
     constructor() {
-        this._session = new Soup.Session();
+        this._session = new Soup.Session({ timeout: 0 });
     }
 
     /**
@@ -119,18 +134,14 @@ export class HttpTransport {
                     const bytes = stream.read_bytes_finish(res);
                     const size = bytes.get_size();
                     if (size === 0) {
-                        stream.close_async(GLib.PRIORITY_DEFAULT, null, (_c, closeRes) => {
-                            try {
-                                stream.close_finish(closeRes);
-                            } catch {
-                                // The body is already read in full; a failed close only loses connection reuse.
-                            }
-                        });
+                        closeQuietly(stream);
                         onDone(new TextDecoder('utf-8').decode(concat(chunks, total)), false);
                         return;
                     }
                     total += size;
                     if (total > MAX_RESPONSE_BYTES) {
+                        // Closing a half-read body drops the connection instead of leaving it open until exit.
+                        closeQuietly(stream);
                         onDone(null, true);
                         return;
                     }
