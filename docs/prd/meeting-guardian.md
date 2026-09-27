@@ -164,6 +164,8 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
   - Every meeting's whole invite goes to the engine: title, time, description, place, video link, organiser, and guests with their names, email addresses and responses (D-020).
   - The engine answers must-attend or ignorable with a one-line reason. The menu and alerts show it as "AI: <reason>".
   - The owner's overrides always win, and they are not sent to be judged.
+  - Cancelled meetings, meetings the owner declined, and all-day events stay silent and are not sent (D-023).
+  - The calendar's name is sent with the invite (D-024). Passcodes are removed from video links (D-022).
   - A meeting is asked once, and again only when its invite changes.
   - What the engine returns is data, never instructions. A meeting's text cannot make the product do anything except pick a verdict.
 - **When the engine cannot be reached** (slow, erroring, offline, out of quota, or a bad key):

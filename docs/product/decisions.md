@@ -134,3 +134,15 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The engine only needs to know that a meeting is online. A passcode lets anyone who sees it join the meeting.
 **Costs accepted:** none of practical weight.
 **Source:** the product manager, closing an architect finding.
+
+### D-023 — In AI mode, cancelled, declined and all-day meetings stay silent without asking the AI — 2026-09-27
+**Decision:** We kept cancelled meetings, meetings the owner declined, and all-day events silent in AI mode, and did not send them to the engine.
+**Why:** These are facts, not judgments of importance. An all-day event has no start time for the alert ladder. Asking the AI could only turn a meeting the owner declined into an alert, which is noise the product exists to remove.
+**Costs accepted:** An all-day event that matters (an offsite) never alerts in either mode. It narrows "the AI decides every meeting" (D-019) to every meeting that can be attended.
+**Source:** the product manager, closing an architect finding.
+
+### D-024 — The calendar's name is sent with the invite — 2026-09-27
+**Decision:** We chose to include the name of the calendar a meeting comes from (for example "Family") in what is sent to the AI engine.
+**Why:** It is the strongest clue that separates family logistics from work meetings, which is the case that led to AI mode. It falls within "the whole invite" (D-020).
+**Costs accepted:** The owner's calendar names reach the engine, including a cloud one.
+**Source:** the product manager, closing an architect finding.

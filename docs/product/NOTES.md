@@ -178,3 +178,9 @@ Append only. Newest at the bottom.
 - **Fact:** (1) In AI mode, should cancelled, declined and all-day meetings stay silent without asking the AI? (2) Should the calendar name (for example "Family") be sent with the invite?
 - **Source:** architect finding; product manager.
 - **Touches:** decisions.md D-019, D-020
+
+## 2026-09-27 — Questions closed by the product manager
+- **Kind:** decision
+- **Fact:** Both open questions were product calls, not the owner's. They are closed as D-023 (cancelled, declined and all-day stay silent in AI mode) and D-024 (the calendar name is sent). The owner pointed out that neither needed him.
+- **Source:** the owner, 2026-09-27.
+- **Touches:** decisions.md, docs/prd/meeting-guardian.md
