@@ -442,3 +442,66 @@ Append only. Newest at the bottom.
 - **Why:** Stored text is untrusted input to `judge`; parsing it in core keeps it pure and testable like the other stored formats.
 - **Source:** inbox entry 2026-09-27.
 - **Touches:** data.md (when PG-4c is designed)
+
+## 2026-09-27 — Text passcodes: to end of line, on raw text (D-027)
+- **Kind:** interface
+- **Fact:** `core/invite.js` removes text passcodes to the end of the line, after cutting conferencing queries and before cleaning and the cap; §6.2 now says so.
+- **Why:** Cleaning joins lines, so the "end of line" rule must see raw text; the separator run spans line breaks, so a value on the next line still goes. The inbox said "after cleaning"; the code changed since (d5357f0).
+- **Source:** extension/core/invite.js:14-42; decisions.md D-027.
+- **Touches:** interfaces.md §6.2; testing-and-build.md Layer 1
+
+## 2026-09-27 — PG-4a design gaps closed in code
+- **Kind:** interface
+- **Fact:** `videoLink` scheme is lower-cased to `https://`; `normaliseAddress` is exported from `core/owner.js` and shared; `buildInvite` throws on a non-finite start.
+- **Why:** The allowlist accepts any case but §6.6 requires `https://`; one normaliser keeps invite and owner matching aligned; a throw stops a future direct caller building an invalid invite silently.
+- **Source:** extension/core/invite.js:4,48,73; commit d5357f0.
+- **Touches:** interfaces.md §6.2
+
+## 2026-09-27 — Licence is Apache-2.0
+- **Kind:** constraint
+- **Fact:** constraints.md now says Apache-2.0 (D-026), with the GPL-2.0-or-later review rule as an accepted cost.
+- **Why:** The constraint predated the owner's choice; the record contradicted a closed decision.
+- **Source:** decisions.md D-026.
+- **Touches:** constraints.md (GNOME review rules)
+
+## 2026-09-27 — A private bus does not isolate the keyring
+- **Kind:** constraint
+- **Fact:** Layer 2b now also requires throwaway `HOME`/`XDG_*` and `env -i`; a headless unlocked test keyring is verified.
+- **Why:** The first Secret call D-Bus-activates gnome-keyring-daemon, which opens `$XDG_DATA_HOME/keyrings/` — the owner's real file with the real home.
+- **Source:** measured by the PG-4b planner (docs/plans/PG-4b.md facts 1, 3).
+- **Touches:** testing-and-build.md Layer 2b
+
+## 2026-09-27 — The AI helper never prompts for the keyring
+- **Kind:** decision
+- **Fact:** Key read via `Secret.Service.search(ALL | LOAD_SECRETS)` without `UNLOCK`; locked-only gives `no-key`, none gives keyless.
+- **Why:** `password_lookup` returns null for a locked item after a prompt, so it confuses locked with absent (a keyless send the ADR forbids) and shows the owner a prompt from a background process.
+- **Source:** docs/plans/PG-4b.md fact 4.
+- **Touches:** ADR-0009 amendment 2; interfaces.md §6.6
+
+## 2026-09-27 — §6.7 failure cases the mapping missed
+- **Kind:** interface
+- **Fact:** 3xx→config, status outside 200–599→server, body >1 MiB→bad-reply, libsoup errors→network, malformed stored key→config (never sent); one `timeoutMs` deadline covers lookup, request and retry.
+- **Why:** Unmapped cases invite ad-hoc codes; the cap stops memory exhaustion; the single deadline keeps the retry inside the shell watchdog.
+- **Source:** docs/plans/PG-4b.md (decided in the plan).
+- **Touches:** interfaces.md §6.7
+
+## 2026-09-27 — Keyring schema constants live in core/aiEngine.js
+- **Kind:** data
+- **Fact:** `ENGINE_KEY_SCHEMA_NAME` and `ENGINE_KEY_ATTRIBUTE` are defined once in core.
+- **Why:** Prefs writes and the helper reads; one definition means they cannot disagree on the only stored format ADR-0009 has.
+- **Source:** docs/plans/PG-4b.md (ai/keyring.js).
+- **Touches:** data.md
+
+## 2026-09-27 — ai/stdio.js duplicates helper/stdio.js
+- **Kind:** debt
+- **Fact:** PG-4b adds a near-copy of the calendar helper's stdio module in `ai/`.
+- **Why:** `ai/` may not import `helper/` (boundaries.md). Repaid by a shared stdio module both helpers may import — a boundary change, not a ticket-local one.
+- **Source:** docs/plans/PG-4b.md.
+- **Touches:** boundaries.md
+
+## 2026-09-27 — Lint did not enforce the Soup/Secret/ai boundary
+- **Kind:** boundary
+- **Fact:** boundaries.md claimed lint forbids Soup and Secret outside `ai/`/prefs; `eslint.config.js` did not. PG-4b Step 1 adds it; boundaries.md notes the gap until then.
+- **Why:** Drift: the doc stated intent, the config never caught up. Intent is the doc.
+- **Source:** docs/plans/PG-4b.md:24.
+- **Touches:** boundaries.md

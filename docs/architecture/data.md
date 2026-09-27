@@ -53,7 +53,10 @@ One endpoint and one model, as the owner described them (D-021, ADR-0010).
 There is no stored "local" or "cloud" choice. Whether the invite leaves the
 computer is worked out from the endpoint by core, so it can never disagree
 with the address. The API key is not a setting. It is in the keyring, keyed by
-the normalised endpoint (ADR-0009). An endpoint with no key is a keyless
+the normalised endpoint (ADR-0009). The libsecret schema name and attribute are
+defined once, in `core/aiEngine.js` (`ENGINE_KEY_SCHEMA_NAME`,
+`ENGINE_KEY_ATTRIBUTE`), so prefs (writer) and the AI helper (reader) cannot
+disagree on the stored format. An endpoint with no key is a keyless
 engine. Switching endpoints and back finds the old key again, and a key is
 never sent to an address it was not saved for.
 

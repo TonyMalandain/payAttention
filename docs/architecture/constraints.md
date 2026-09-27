@@ -122,5 +122,8 @@ From the GNOME extensions review guidelines (gjs.guide), current for GNOME 45+:
   in the zip.
 - `metadata.json`: only needed keys; no `session-modes` key (we use `user` only);
   `shell-version` lists only released versions.
-- Licence GPL-2.0-or-later compatible. Code is readable, not minified. Logging is
-  sparse.
+- Licence: Apache-2.0 (product decision D-026). GNOME's review rule asks for
+  GPL-2.0-or-later-compatible terms; Apache-2.0 is GPL-3.0-compatible only, so an
+  extensions.gnome.org reviewer may question it. D-026 accepts that cost; it does
+  not affect installing from the repository. Nothing third-party is bundled.
+  Code is readable, not minified. Logging is sparse.

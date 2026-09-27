@@ -1,7 +1,7 @@
 # ADR-0009 — AI engine keys live in the GNOME keyring, written by prefs and read only by the AI helper
 - **Date:** 2026-09-26
 - **Kind:** reversible (the libsecret schema name and attributes are the only stored format)
-- **Status:** amended 2026-09-27 (see the end)
+- **Status:** amended twice on 2026-09-27 (see the end)
 
 ## Context
 
@@ -64,7 +64,8 @@ secret.
   private D-Bus session, where there is no Secret Service unless the test
   provides one.
 - If the login keyring is locked (for example after an auto-login), the
-  lookup may prompt or fail. A failure gives `failed: no-key`, and the rules
+  lookup may prompt or fail (superseded by amendment 2: the helper never
+  prompts). A failure gives `failed: no-key`, and the rules
   decide (assumed; checked on the real session, Layer 4).
 
 ## Revisit when
@@ -103,3 +104,22 @@ rules above change:
   sends an unauthenticated request that the owner did not intend. **Correction
   to the text above:** "Missing Secret Service or no key: requests go without
   an `Authorization` header" now holds for "no key" only.
+
+## Amendment 2026-09-27 (2) — the helper never prompts
+
+Measured for the PG-4b plan (gjs 1.88.1, libsecret, gnome-keyring 50.0):
+`Secret.password_lookup` returns `null`, with no error, for a locked item,
+after a prompt. Headless the prompt fails; in a real session the owner would
+see an unlock prompt caused by a background process. So it reads "locked" as
+"no key" and would send the keyless request the first amendment forbids.
+
+- **The helper reads the key with `Secret.Service.search(schema, attrs,
+  ALL | LOAD_SECRETS)`, never with `UNLOCK`,** and never prompts. Three
+  answers: an unlocked item gives the key; only locked items give `no-key`;
+  no item gives a keyless request. An unreachable Secret Service is an error
+  and gives `no-key`.
+- A keyless engine therefore still works with a locked keyring, as long as no
+  key is saved for its endpoint. An endpoint that may not carry a key (`http:`
+  to a private host) does not look one up at all.
+- The schema name and attribute are defined once, in `core/aiEngine.js`
+  (`data.md`).

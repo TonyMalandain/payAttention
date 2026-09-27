@@ -99,7 +99,12 @@ Against the real calendars, by hand only: `gjs -m extension/helper/main.js --sum
 From PG-4 (ADR-0007, ADR-0010). The AI helper is run against a **fake engine**:
 a `node:http` server on `127.0.0.1`, on a port the OS picks. It speaks the
 OpenAI Chat Completions shape and records every request body. The helper runs
-inside `dbus-run-session`, so it can never reach the owner's keyring.
+inside `dbus-run-session` **and** with `HOME`, `XDG_DATA_HOME`,
+`XDG_CONFIG_HOME` and `XDG_RUNTIME_DIR` (mode 0700) in a throwaway directory,
+in an environment built with `env -i`. A private bus alone is not isolation
+(measured 2026-09-27): the first Secret call D-Bus-activates
+`gnome-keyring-daemon`, which opens `$XDG_DATA_HOME/keyrings/`, so with the real
+home it opens the owner's real keyring file.
 
 Rules the tests hold:
 
@@ -127,20 +132,21 @@ Rules the tests hold:
   `mode`, a verdict of `MUST`) give either a clean verdict with a normalised
   reason or `bad-reply`. The same corpus runs against core's reply validator in
   Layer 1.
-- **Keys.** Whether a test keyring can be run headless
-  (`gnome-keyring-daemon --unlock --components=secrets` inside the private bus)
-  is not verified. If it can, one test proves that the `Authorization` header is
-  sent over loopback `http:`, that no header is sent when no key is saved for
-  the endpoint (keyless engine), that a key saved for another endpoint is never
-  sent, and that the key never appears on the helper's stdout or stderr. If it
-  cannot, the key path is checked in Layer 4.
+- **Keys.** A headless test keyring works (measured 2026-09-27):
+  `printf '<non-empty phrase>' | gnome-keyring-daemon --unlock --components=secrets --daemonize`
+  inside the isolated environment above. An empty phrase does not work (the
+  daemon tries to prompt). Tests prove that the `Authorization` header is sent
+  over loopback `http:`, that no header is sent when no key is saved for the
+  endpoint (keyless engine), that a key saved for another endpoint is never
+  sent, that a locked item gives `no-key` without a prompt, and that the key
+  never appears on the helper's stdout or stderr.
 
 Layer 1 covers the rest in pure code:
 - the invite builder, with its caps, the 8 192-byte cap, and cleaning; the
   `calendar` field after `title` (≤ 80, `""` for an unknown source, the kept
   copy's calendar after a merge); conferencing-link queries cut in
   `videoLink`, description and place, other links left whole (D-022); text
-  passcodes replaced with `[removed]` (D-025);
+  passcodes replaced with `[removed]` to the end of the line (D-025, D-027);
 - the AI protocol validators: exactly the keys, both directions, at every
   level, and `retryAfterS` only with `rate-limited`;
 - the fingerprint (every invite field changes it, text past a cap does not);

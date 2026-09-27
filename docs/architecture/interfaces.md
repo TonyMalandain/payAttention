@@ -343,18 +343,22 @@ warning, so the settings text and the code cannot drift apart.
   occurrence comes from (the snapshot's `sources[].name`, looked up by the
   event's `sourceUid`; the first source with a given uid wins). An unknown
   source gives `""`. Renaming a calendar changes the invite, so it re-asks.
-- **Passcodes (D-022, D-025).** Before cleaning and capping:
-  - `videoLink` is cut at its first `?` or `#`.
+- **Passcodes (D-022, D-025, D-027).** On the raw text, before cleaning and
+  capping (cleaning joins lines, and the rule needs line ends):
+  - `videoLink` is cut at its first `?` or `#`, and its scheme is written
+    `https://` in lower case (the allowlist accepts any case; §6.6 requires it).
   - In `description` and `place`, every link whose host is on core's
     conferencing allowlist is cut the same way (a trailing `.,;:!?` is
     kept). Links to other hosts are left whole (D-020).
-  - In `description` and `place`, the value written after the word
-    "passcode", "password", "pwd" or "PIN" (any case, whole word, with an
-    optional separator such as `:` or `=`) is replaced with `[removed]`.
-    The word itself is kept. **This rule (D-025) is not in the PG-4a plan,
-    which predates it**; it belongs in core beside the link cutting, and it
-    must run before the description cap so a cut cannot leave half a
-    passcode.
+  - In `description` and `place`, after the word "passcode", "password",
+    "pwd" or "PIN" (any case, whole word), the separators (`:` `=` `#` `-`,
+    whitespace including line breaks) and the fillers "is" / "code" are
+    kept, and **the rest of that line** is replaced with `[removed]`
+    (D-027). A value alone on the next line is therefore removed too. A rest
+    with no letter or digit holds no code and is kept. The word itself is
+    kept. It runs before the cap, so a cut cannot leave half a passcode.
+    Order in core (`core/invite.js`): conferencing queries, then text
+    passcodes, then cleaning, then the cap.
 - **Every text field** is cleaned before capping: control characters and
   Unicode bidi controls are removed, and runs of whitespace are collapsed to
   one space. Then it is cut to its cap (one character less, plus "…"). Names
@@ -522,8 +526,9 @@ other refuses.
 
 `rate-limited` may carry `"retryAfterS": <integer>`. There are no other fields
 and no free text: an HTTP body is never forwarded. `no-key` means the Secret
-Service could not be reached or is locked. An endpoint with no saved key is a
-keyless request, not `no-key` (ADR-0009 amendment).
+Service could not be reached, or every saved item for the endpoint is locked.
+An endpoint with no saved item is a keyless request, not `no-key` (ADR-0009
+amendments). The helper never prompts to unlock.
 
 ### 6.7 Helper → engine (OpenAI Chat Completions)
 
@@ -550,9 +555,17 @@ to a private host. The body:
   must attend.
 - If the engine answers 400 and the error names `response_format`, the helper
   retries once without that field, and keeps it off for the rest of its run.
-- HTTP mapping: connection refused or DNS failure → `network`; TLS error →
-  `tls`; 401 or 403 → `auth`; 402 or 429 → `rate-limited`; other 4xx →
-  `config`; 5xx → `server`; timeout → `timeout`. Redirects are not followed.
+- HTTP mapping: connection refused, DNS failure, or any other libsoup
+  session or protocol error → `network`; TLS error → `tls`; 3xx (redirects
+  are not followed) → `config`; 401 or 403 → `auth`; 402 or 429 →
+  `rate-limited`; other 4xx → `config`; 5xx, or a status outside 200–599 →
+  `server`; timeout → `timeout`; a body over 1 MiB after decoding →
+  `bad-reply` (read with a cap, so a hostile engine cannot exhaust memory).
+- A stored key that is not 1–4 096 visible ASCII characters gives `config`
+  and is never sent (it could split a header). An empty key is keyless.
+- **One deadline**, `timeoutMs`, covers the key lookup, the request and the
+  single `response_format` retry, so an answer never comes later than
+  `timeoutMs` + about 1 s and stays inside the shell's watchdog.
 - Only `choices[0].message.content` is read. Everything else in the body is
   ignored.
 

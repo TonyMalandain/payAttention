@@ -65,6 +65,12 @@ creating a `Gio.Settings`.
 - **Network and secrets are the AI helper's only** (ADR-0010, ADR-0009). No
   other directory imports Soup, and only `ai/` (read) and `prefs.js` (write)
   import Secret. The lint rules forbid both elsewhere, so a breach fails lint.
+  (Found 2026-09-27: `eslint.config.js` did not yet enforce this or any `ai/`
+  rule; the PG-4b plan's first step adds it. Until that lands, review holds it.)
+- **Known duplicate: `ai/stdio.js` near-copies `helper/stdio.js`**, because
+  `ai/` may not import `helper/`. Accepted debt (PG-4b). Repaying it means a
+  shared "gjs subprocess stdio" module both helpers may import, which is a
+  boundary change and needs the architect.
 - **Node-tested shell modules.** A `shell/` module may be unit-tested under Node
   in `tests/unit/` only if it has no `gi://` and no `resource://` imports; its
   GNOME parts are injected (`interfaces.md` §3).
