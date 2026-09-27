@@ -274,15 +274,33 @@ section (second opinion on unsure codes, D-018 facts) was never built. It is
 in git history at commit `1871d4f`. Protocol version 1 is redefined here,
 since no version of it has shipped.
 
+**Amended 2026-09-27** for D-022 to D-025 (before any of it shipped, so still
+version 1): cancelled, declined and all-day meetings are not asked (§6.1);
+the invite carries `calendar` after `title` (§6.2); conferencing-link queries
+and text passcodes are removed (§6.2); unknown keys are refused (§6.6).
+
 ### 6.1 Which occurrences are eligible (core)
 
 An occurrence is **eligible** when `config.ai` is not null (AI mode with a
-usable engine, §6.4) and it has **no** verdict override (occurrence or
-series). Every rule reason code is eligible, including `cancelled`,
-`declined`, `all-day` and `free`: D-019 says every meeting. Only the test
-alert is never eligible. An all-day occurrence has no deadline, so no verdict
-can make it alert (`core/plan.js:87`). The AI answer only changes its menu
-line.
+usable engine, §6.4), it has **no** verdict override (occurrence or series),
+and it is **not silent by fact** (D-023, amended 2026-09-27).
+
+- **Silent by fact:** the kept copy's `status` is `cancelled`, or the owner's
+  own response is `declined`, or it is all-day, or its start is not a finite
+  number. Such an occurrence gets no invite and no `aiAsk`, and a stored
+  `ai-verdicts` entry for its key is ignored (not deleted; it is pruned as
+  usual). It keeps its rule verdict, which is `ignore` for each of these facts.
+- Eligibility is decided **from the facts, not from the rule's reason code.**
+  An all-day meeting whose rule code is `not-invited` is still not sent.
+- Every other rule reason code is eligible, including `free`. The test alert
+  is never eligible.
+- The merge of copies from several calendars runs first. So a declined copy
+  that loses the merge to an accepted copy does not make the occurrence
+  silent (§6.3).
+
+The 2026-09-27 first version of this section made cancelled, declined and
+all-day meetings eligible, reading D-019 as "every meeting". D-023 narrowed
+that to every meeting that can be attended.
 
 ### 6.2 The invite (core) — D-020, bounded
 
@@ -294,6 +312,7 @@ warning, so the settings text and the code cannot drift apart.
 ```jsonc
 {
   "title": "…",                     // summary; ≤ 200 characters
+  "calendar": "…",                  // name of the kept copy's calendar (D-024); ≤ 80 characters; "" when the source is unknown
   "start": "2026-09-28 Mon 17:30",  // local date, weekday and time; "2026-09-28 Mon" when allDay
   "minutes": 60,                    // length, rounded, 0 or more
   "allDay": false,
@@ -302,7 +321,7 @@ warning, so the settings text and the code cannot drift apart.
   "busy": "busy"|"free"|"unknown",  // from transparency
   "description": "…",               // ≤ 1 500 characters; "" when absent
   "place": "…",                     // location text ≤ 200 characters; "" when absent
-  "videoLink": "https://…"|null,    // the one link core's allowlist found (links.js); ≤ 300 characters, else null
+  "videoLink": "https://…"|null,    // the one link core's allowlist found (links.js), cut at its first "?" or "#" (D-022); ≤ 300 characters, else null
   "you": {"response":"accepted"|"declined"|"tentative"|"needs-action"|"delegated"|"other"|"unknown",
           "organiser": false},      // the owner, as core identifies them (D-009); no address
   "organiser": {"name":"…","email":"…"} | null,   // null when the owner organised it (see you.organiser)
@@ -316,17 +335,42 @@ warning, so the settings text and the code cannot drift apart.
 - **Guests** are attendees with CUTYPE individual, group or unknown, other
   than the owner, in DTO order (D-011). Rooms and resources are not guests,
   and their names are not sent: the place text already says where.
+- **Field order is fixed** and is core's field list (`INVITE_FIELDS`):
+  `title`, `calendar`, `start`, `minutes`, `allDay`, `recurring`, `status`,
+  `busy`, `description`, `place`, `videoLink`, `you`, `organiser`, `guests`,
+  `guestsTotal`. The fingerprint and the prefs list both follow it.
+- **Calendar (D-024).** The name of the calendar the *kept* copy of the
+  occurrence comes from (the snapshot's `sources[].name`, looked up by the
+  event's `sourceUid`; the first source with a given uid wins). An unknown
+  source gives `""`. Renaming a calendar changes the invite, so it re-asks.
+- **Passcodes (D-022, D-025).** Before cleaning and capping:
+  - `videoLink` is cut at its first `?` or `#`.
+  - In `description` and `place`, every link whose host is on core's
+    conferencing allowlist is cut the same way (a trailing `.,;:!?` is
+    kept). Links to other hosts are left whole (D-020).
+  - In `description` and `place`, the value written after the word
+    "passcode", "password", "pwd" or "PIN" (any case, whole word, with an
+    optional separator such as `:` or `=`) is replaced with `[removed]`.
+    The word itself is kept. **This rule (D-025) is not in the PG-4a plan,
+    which predates it**; it belongs in core beside the link cutting, and it
+    must run before the description cap so a cut cannot leave half a
+    passcode.
 - **Every text field** is cleaned before capping: control characters and
   Unicode bidi controls are removed, and runs of whitespace are collapsed to
   one space. Then it is cut to its cap (one character less, plus "…"). Names
-  ≤ 80 characters, email addresses ≤ 254.
+  ≤ 80 characters, email addresses ≤ 254, calendar ≤ 80.
 - **Hard size cap: the serialised invite is at most 8 192 UTF-8 bytes.** If
   the caps above still exceed it, drop guests from the end (`guestsTotal`
   stays true), then shorten `description`. The field caps make the rest fit.
   Typical invites are 0.5 to 2 KB.
-- **Never sent:** UIDs, occurrence or series keys, the calendar name, the
-  owner's own addresses, rooms and resources, links other than `videoLink`,
-  the rule's verdict and reason, and anything about overrides.
+- **Never sent:** UIDs (event and calendar), occurrence or series keys, the
+  owner's own addresses, rooms and resources, the query or fragment of any
+  conferencing link, a passcode written as text, the rule's verdict and
+  reason, and anything about overrides. Non-conferencing links inside the
+  description and place are sent as written (D-020). The calendar *name* is
+  sent (D-024; it was on this list until 2026-09-27).
+- **Not asked at all:** cancelled, declined and all-day occurrences (§6.1,
+  D-023).
 - **Local time:** core reads no environment. The controller passes the current
   UTC offset in `config.ai.utcOffsetMinutes`, and core formats `start` from it
   (debt: a DST change inside the range shifts later meetings by an hour and
@@ -454,6 +498,19 @@ The key is never on this channel. The helper looks it up itself, by
 `normaliseEndpoint(endpoint)`, for each request (ADR-0009). The helper rejects
 a `judge` whose `invite` has a key outside §6.2, a missing key, or more than
 8 192 bytes, with `failed: bad-request`. This is a second guard behind core.
+
+**Unknown keys are refused, in both directions, at every level** (the
+message, the invite, `you`, `organiser`, each guest). Every AI message must
+have **exactly** its keys; `retryAfterS` is allowed only on a `failed` with
+code `rate-limited`. This is deliberately **not** the calendar protocol's
+rule (§1 ignores unknown keys for forward compatibility): the two ends of the
+AI channel ship in the same zip, so there is no version skew to tolerate, and
+the exact key set is the security guard that keeps anything but the invite
+from reaching the network and anything but a verdict from coming back. A
+change to any AI message's keys is a protocol version bump. Core's
+`aiProtocol.js` validates and formats every line on both sides; its format
+functions throw on anything invalid, so neither side can write a line the
+other refuses.
 
 **Helper → shell**
 

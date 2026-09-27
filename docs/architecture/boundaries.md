@@ -40,7 +40,7 @@ by default (`metadata.json`, `extension.js`, `prefs.js`, `stylesheet.css`,
 |---|---|---|
 | `core/` | other `core/` modules only | anything `gi://`, anything `resource://`, any Node built-in. No clock reads, timers, or I/O: time is a parameter. |
 | `helper/` | `gi://` (ECal 2.0, EDataServer 1.2, ICalGLib 3.0, Gio, GioUnix, GLib), gjs's built-in `system` module, the protocol module in `core/` | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `ai/`, St/Clutter/Meta/Shell, Soup, Secret, the rest of `core/` |
-| `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, core's AI protocol and reply-validation modules | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
+| `ai/` | `gi://` (Soup 3.0, Secret 1, Gio, GioUnix, GLib), gjs's built-in `system` module, exactly `core/aiProtocol.js`, `core/aiPrompt.js` and `core/aiEngine.js` (the lint allowlist; `core/protocol.js` arrives only transitively, for its enum lists) | `resource:///org/gnome/shell/...`, `shell/`, `ui/`, `helper/`, ECal/EDataServer/ICalGLib, St/Clutter/Meta/Shell, Gtk/Gdk/Adw, the rest of `core/` |
 | `shell/` | `core/`, `gi://` Gio/GLib/Meta/Shell, `resource:///org/gnome/shell/...` | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, `ui/` internals, `ai/`, the `system` built-in |
 | `ui/` | `gi://` St/Clutter/Gio/GLib/GObject/Pango/Meta/Shell, `resource:///org/gnome/shell/...`, `core/display.js` (formatting only) | `helper/`, `ai/`, the store, GSettings, ECal/EDataServer/ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
 | `extension.js` | `shell/`, `ui/`, the Extension base class | ECal, EDataServer, ICalGLib, Soup, Secret, Gtk/Gdk/Adw, the `system` built-in |
@@ -59,6 +59,9 @@ creating a `Gio.Settings`.
 - **The `system` built-in is the helper's only.** `System.exit` inside the shell
   process would end the desktop session, so `shell/`, `ui/`, `extension.js` and
   `prefs.js` must not import it.
+- **The AI helper checks invites, it never builds them** (ADR-0010,
+  amended). Its allowlist leaves out `core/invite.js`, `judge.js` and the
+  rest of core, so the helper cannot reshape what is sent, only refuse it.
 - **Network and secrets are the AI helper's only** (ADR-0010, ADR-0009). No
   other directory imports Soup, and only `ai/` (read) and `prefs.js` (write)
   import Secret. The lint rules forbid both elsewhere, so a breach fails lint.

@@ -143,9 +143,9 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
 
 - Keyed by occurrence key (ADR-0003 format), so one answer per occurrence.
   An answer is **current** while its `fp` matches the current invite and
-  engine. Any change to the bounded invite makes it **stale**: title, time,
-  length, status, busy/free, description, place, video link, organiser, or any
-  guest, including one guest's response. So does a different endpoint or
+  engine. Any change to the bounded invite makes it **stale**: title,
+  calendar name (D-024), time, length, status, busy/free, description, place,
+  video link, organiser, or any guest, including one guest's response. So does a different endpoint or
   model, or a new prompt version. A stale answer still applies while it is
   asked again, unless the AI is unavailable or that ask failed
   (`interfaces.md` §6.3 and §6.5). The new answer overwrites the entry.

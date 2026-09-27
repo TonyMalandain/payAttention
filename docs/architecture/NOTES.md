@@ -400,3 +400,45 @@ Append only. Newest at the bottom.
 - **Why:** Each one either narrows or widens D-019/D-020, or is a behaviour the owner will see.
 - **Source:** this session.
 - **Touches:** docs/inbox.md
+
+## 2026-09-27 — AI eligibility narrowed by fact (D-023)
+- **Kind:** interface
+- **Fact:** Cancelled, owner-declined, all-day and no-start occurrences are not eligible in AI mode; their stored answers are ignored and they keep the rule's `ignore`.
+- **Why:** Product decided these are facts, not importance judgments (D-023). Deciding from facts, not the rule code, keeps an all-day `not-invited` meeting unsent too.
+- **Source:** docs/product/decisions.md D-023; docs/plans/PG-4a.md; inbox entry 2026-09-27 (taken and removed).
+- **Touches:** interfaces.md §6.1; ADR-0010 amendment; testing-and-build.md Layer 1
+
+## 2026-09-27 — Calendar name joins the invite (D-024)
+- **Kind:** interface
+- **Fact:** The invite has `calendar` after `title`, the kept copy's source name, ≤ 80 characters, `""` when unknown; it is in the fingerprint.
+- **Why:** Strongest clue between family and work (D-024). Field name, place and cap follow the PG-4a plan so docs and code match.
+- **Source:** decisions.md D-024; docs/plans/PG-4a.md (INVITE_CAPS, INVITE_FIELDS).
+- **Touches:** interfaces.md §6.2; data.md; constraints.md; ADR-0010 amendment
+
+## 2026-09-27 — Passcodes: link queries cut, text passcodes replaced (D-022, D-025)
+- **Kind:** interface
+- **Fact:** `videoLink` and allowlisted links in description/place lose query and fragment; the value after passcode/password/pwd/PIN in description/place becomes `[removed]`, before the cap.
+- **Why:** Zoom repeats the link and the passcode in the description, so cutting only `videoLink` would still send it. Redacting before the cap stops a cut leaving half a passcode.
+- **Source:** decisions.md D-022, D-025.
+- **Touches:** interfaces.md §6.2; ADR-0010 amendment
+
+## 2026-09-27 — PG-4a plan predates D-025
+- **Kind:** question
+- **Fact:** docs/plans/PG-4a.md:37 and :921 say not to redact prose passcodes ("waiting on product"); D-025 has since decided it, and interfaces.md §6.2 now requires it.
+- **Why:** Without it the passcode that D-022 removes from links is still sent as text. It is a core change beside `withoutConferenceQueries`; which ticket carries it is for the senior engineer and product manager.
+- **Source:** docs/plans/PG-4a.md; decisions.md D-025.
+- **Touches:** interfaces.md §6.2
+
+## 2026-09-27 — AI protocol refuses unknown keys; helper import allowlist
+- **Kind:** boundary
+- **Fact:** Every AI message and invite level has exactly its keys, both directions; `ai/` may import exactly core/aiProtocol.js, aiPrompt.js and aiEngine.js.
+- **Why:** Both ends ship in one zip, so no version skew to tolerate; the exact key set is the guard. Keeping `invite.js` out of the allowlist means the helper can check an invite, never build or reshape one. Opposite of the calendar protocol's rule on purpose.
+- **Source:** docs/plans/PG-4a.md (module layout, messages).
+- **Touches:** interfaces.md §6.6; boundaries.md import rules; ADR-0010 amendment
+
+## 2026-09-27 — Parsing stored ai-verdicts belongs in core (PG-4c)
+- **Kind:** boundary
+- **Fact:** Validating the stored `ai-verdicts` JSON is core's job, deferred to PG-4c.
+- **Why:** Stored text is untrusted input to `judge`; parsing it in core keeps it pure and testable like the other stored formats.
+- **Source:** inbox entry 2026-09-27.
+- **Touches:** data.md (when PG-4c is designed)

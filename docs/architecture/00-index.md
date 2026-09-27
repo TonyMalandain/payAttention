@@ -28,6 +28,6 @@ authority; none of them may add or change an ADR.
 | ADR-0007 | LLM engines are reached through the OpenAI-compatible protocol with our own small gjs client, not a bundled abstraction library (accepted as D-021; amended 2026-09-27) |
 | ADR-0008 | [SUPERSEDED by ADR-0010] The AI second opinion on unsure verdicts runs in its own helper process and reaches `judge` as stored data |
 | ADR-0009 | AI engine keys live in the GNOME keyring, per normalised endpoint, written by prefs and read only by the AI helper (amended 2026-09-27: one endpoint, keyless allowed, transport rule by endpoint) |
-| ADR-0010 | AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite; stale answers serve while re-asked; settings are mode, endpoint, model |
+| ADR-0010 | AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite; stale answers serve while re-asked; settings are mode, endpoint, model. Amended 2026-09-27: cancelled, declined and all-day meetings are not asked; calendar name sent; passcodes removed; unknown protocol keys refused |
 
 Last restructure: none.

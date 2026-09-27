@@ -1,6 +1,7 @@
 # ADR-0010 — AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite, as stored data that never sits on the alert path
 - **Date:** 2026-09-27
 - **Kind:** reversible, except the stored formats: the `verdict-source`, `ai-endpoint`, `ai-model` and `ai-verdicts` schema keys (`data.md`). None of them has shipped yet.
+- **Status:** amended 2026-09-27 (see the end: D-022 to D-025)
 - **Supersedes:** ADR-0008 (AI second opinion on "unsure" verdicts only, from the D-018 facts)
 
 ## Context
@@ -67,14 +68,14 @@ silenced.** In detail:
   "Test connection" by `prefs.js`. It is killed in `disable()`, when the mode
   leaves AI, and when an engine setting changes. It holds no state that
   matters.
-- **Eligible:** in AI mode with a usable engine, every judged occurrence that
+- **Eligible** *(amended 2026-09-27, D-023: cancelled, declined and all-day meetings are no longer eligible; see the end)*: in AI mode with a usable engine, every judged occurrence that
   has no verdict override (occurrence or series). This includes cancelled,
   declined, all-day and free meetings, because D-019 says "every meeting", and
   their status, the owner's response, the all-day flag and busy/free are in the
   invite. An all-day occurrence has no deadline, so `plan()` never alerts for
   it, whatever the verdict is (`core/plan.js:87`). Asking about one costs a
   request and changes only the menu. Only `test` is never eligible.
-- **Input:** the invite object (`interfaces.md` §6.2), built by core from the
+- **Input** *(amended 2026-09-27, D-022, D-024, D-025: the calendar name is now sent, and passcodes are removed; see the end)*: the invite object (`interfaces.md` §6.2), built by core from the
   occurrence DTO. Every text field has a cap, the guest list is capped at 25
   with the true total given, and the serialised invite is at most 8 192 bytes.
   The UIDs, the calendar name, the occurrence key and the rule's own verdict
@@ -139,6 +140,45 @@ silenced.** In detail:
   10 minutes for AI verdicts on a normal day. Then allow two requests at once
   for non-loopback engines, or a batch message. The process boundary stays.
 - `ai-verdicts` grows past about 64 KiB (the ADR-0003 trigger).
-- An invite field outside §6.2 is shown to change verdicts. The calendar name
-  is the known candidate, and it needs a product decision first.
+- An invite field outside §6.2 is shown to change verdicts. (The calendar
+  name was the known candidate; D-024 added it on 2026-09-27.)
 - The review process rejects a second spawned gjs helper.
+
+## Amendment 2026-09-27 — D-022, D-023, D-024, D-025
+
+Made the same day, before anything in this ADR shipped, after the product
+manager closed four findings. The decision above (option 2) stands; three of
+its details change. `interfaces.md` §6.1, §6.2 and §6.6 hold the contract.
+
+- **Eligibility narrowed (D-023).** A meeting that is cancelled, that the
+  owner declined, or that is all-day (or has no finite start) is *silent by
+  fact*: no invite, no ask, and any stored answer for it is ignored. It keeps
+  its rule verdict, which is `ignore`. This is decided from the kept copy's
+  facts after the merge, not from the rule's reason code. Why: these are
+  facts, not judgments of importance. Asking could only turn a declined
+  meeting into an alert, and an all-day event has no start for the ladder.
+  The original text above made them eligible because D-019 said "every
+  meeting"; D-023 narrows that to every meeting that can be attended. It also
+  removes requests that could never change an alert.
+- **The calendar name is sent (D-024).** Field `calendar`, right after
+  `title`, cleaned and capped at 80 characters, from the kept copy's source;
+  `""` when the source is unknown. It is in the fingerprint, so a rename
+  re-asks. The "never sent" list and the revisit trigger above are amended to
+  match. Why: it is the strongest clue between family logistics and work.
+- **Passcodes removed (D-022, D-025).** `videoLink`, and every conferencing
+  link inside the description and place, is cut at its first `?` or `#`.
+  In the description and place, the value after "passcode", "password",
+  "pwd" or "PIN" is replaced with `[removed]`. Why: a passcode lets anyone who
+  sees it join, and the engine needs only to know the meeting is online. The
+  cost accepted by product: a description that uses one of these words for
+  something else loses the word after it.
+- **The AI protocol refuses unknown keys in both directions.** Not a product
+  decision; recorded here because it is the opposite of the calendar
+  protocol's rule. Both ends ship in one zip, so there is no version skew to
+  tolerate, and the exact key set is the guard on what leaves and what comes
+  back.
+- **Consequence for the helper's imports.** The AI helper imports exactly
+  `core/aiProtocol.js`, `core/aiPrompt.js` and `core/aiEngine.js` (the calendar
+  protocol module comes in transitively for its enum lists). The invite
+  *builder* lives outside them, in `core/invite.js`, so the helper cannot
+  build or reshape an invite; it can only check one.

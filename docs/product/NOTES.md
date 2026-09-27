@@ -190,3 +190,9 @@ Append only. Newest at the bottom.
 - **Fact:** The AI prompt in docs/plans/PG-4a.md was accepted as written. It says "when unsure, answer must" (D-004 carried into AI mode), and it names family commitments as must-attend. Text passcodes were closed as D-025. The architecture findings were filed in the inbox.
 - **Source:** senior engineer, PG-4a plan.
 - **Touches:** decisions.md D-025
+
+## 2026-09-27 — Plan-vs-D-025 gap already closed
+- **Kind:** decision
+- **Fact:** The architect flagged that the PG-4a plan predates D-025. The engineer building PG-4a was told that D-025 overrides the plan (text passcodes are removed in core, before the description is cut). No further ticket is needed.
+- **Source:** architect report; product manager's PG-4a build brief.
+- **Touches:** decisions.md D-025

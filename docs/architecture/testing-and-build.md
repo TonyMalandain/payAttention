@@ -109,10 +109,14 @@ Rules the tests hold:
   the invite that was sent, with exactly the keys in core's invite field list,
   and within 8 192 bytes. The body carries no `tools` and no second user
   message. The fixture event has a description, a place, a video link, an
-  organiser, guests with names, emails and responses, a room, and a
-  too-long description and guest list. All of them must appear, capped as in
-  `interfaces.md` §6.2, and the room must not. The helper refuses an invite
-  with an extra key or over 8 192 bytes (`bad-request`).
+  organiser, guests with names, emails and responses, a room, a calendar
+  name, a Zoom link with `?pwd=` (as `videoLink` and repeated in the
+  description), a "Passcode: 123456" line, and a too-long description and
+  guest list. All of them must appear, capped as in `interfaces.md` §6.2, and
+  the room, the `?pwd=` query and the passcode value must not. The helper
+  refuses an invite with an extra key, a missing key, or over 8 192 bytes
+  (`bad-request`), and the shell side refuses a helper line with an extra key
+  (the AI protocol refuses unknown keys both ways, §6.6).
 - **Failure mapping.** The fake engine can be made to answer late (past
   `timeoutMs`, which must give `failed: timeout` within `timeoutMs` + 1 s), 401,
   429 with `Retry-After`, 500, a closed port, non-JSON, fenced JSON, a leading
@@ -132,13 +136,22 @@ Rules the tests hold:
   cannot, the key path is checked in Layer 4.
 
 Layer 1 covers the rest in pure code:
-- the invite builder, with its caps, the 8 192-byte cap, and cleaning;
+- the invite builder, with its caps, the 8 192-byte cap, and cleaning; the
+  `calendar` field after `title` (≤ 80, `""` for an unknown source, the kept
+  copy's calendar after a merge); conferencing-link queries cut in
+  `videoLink`, description and place, other links left whole (D-022); text
+  passcodes replaced with `[removed]` (D-025);
+- the AI protocol validators: exactly the keys, both directions, at every
+  level, and `retryAfterS` only with `rate-limited`;
 - the fingerprint (every invite field changes it, text past a cap does not);
 - `normaliseEndpoint` and `endpointClass`, including `http:` to a public host
   being refused;
 - `judge` with `aiVerdicts`:
   - overrides win and produce no `aiAsk`, so they are never sent;
-  - every rule code is eligible;
+  - cancelled, owner-declined, all-day (including all-day and not-invited)
+    and no-start occurrences are not eligible: no `aiAsk`, and a stored entry
+    is ignored (D-023). Every other rule code, including `free`, is
+    eligible;
   - a current answer applies;
   - a stale answer applies with a new `aiAsk`;
   - no answer gives the rule verdict and an `aiAsk`;
@@ -260,7 +273,7 @@ From PG-4, AI checks on the real session (ADR-0007, ADR-0010): in rules mode,
 no `ai/main.js` process exists (`pgrep -af ai/main.js`). With a keyless local
 engine (Ollama at `http://127.0.0.1:11434/v1`), and by hand with the owner's
 cloud key, "Test connection" says yes, and every meeting without an override
-shows "AI: …" once answered. With the engine
+that is not cancelled, declined or all-day shows "AI: …" once answered. With the engine
 stopped, the menu says "AI unavailable — using rules", and a Test alert still
 runs all four steps on time. The key is visible in Passwords and Keys and absent
 from `dconf dump /org/gnome/shell/extensions/payattention/`. `--purge` removes

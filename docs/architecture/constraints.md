@@ -60,7 +60,7 @@ open window go with it. So:
 | Helper first snapshot, warm EDS | registry 26 ms; all sources, 7 days, ~60 ms | measured |
 | Designed for | ≤ 50 sources, ≤ 2 000 occurrences in range | assumed |
 | One snapshot line | ≤ 4 MiB; description capped at 32 768 characters | assumed |
-| AI invite per request | one invite (D-020); title ≤ 200, description ≤ 1 500, place ≤ 200, link ≤ 300, names ≤ 80, emails ≤ 254 characters; ≤ 25 guests listed plus the true total; whole invite ≤ 8 192 bytes (`interfaces.md` §6.2) | caps assumed. Typically 0.5–2 KB (about 150–600 tokens); at most about 2 500 tokens with the system prompt |
+| AI invite per request | one invite (D-020); title ≤ 200, calendar name ≤ 80, description ≤ 1 500, place ≤ 200, link ≤ 300, names ≤ 80, emails ≤ 254 characters; ≤ 25 guests listed plus the true total; whole invite ≤ 8 192 bytes (`interfaces.md` §6.2) | caps assumed. Typically 0.5–2 KB (about 150–600 tokens); at most about 2 500 tokens with the system prompt |
 | AI reason | ≤ 80 characters after normalisation | interfaces.md §6.8 |
 | Owner's machine for local engines | Ryzen 5 7600 (6 cores), 61 GB RAM, RTX 4070 Ti SUPER 16 GB. **On 2026-09-26 the NVIDIA kernel module was not loaded** on kernel 7.2.7 (kmod built only for 7.0.12 and 7.1.10), so local inference would run on the CPU | measured |
 
@@ -70,7 +70,9 @@ open window go with it. So:
   the calendar helper nor prefs opens a socket. EDS syncs with the owner's own
   providers as it already does (R-3). **The exception is the AI helper**
   (ADR-0010): only in AI mode, only to the configured endpoint, and only one
-  bounded invite per request, never an override (`interfaces.md` §6.2). In
+  bounded invite per request, never an override, never a cancelled, declined
+  or all-day meeting, and never a conferencing-link query or a text passcode
+  (`interfaces.md` §6.1, §6.2; D-022 to D-025). In
   rules mode the AI helper is never spawned, so nothing is sent. Plain `http:`
   is refused for a public host, so an invite never crosses the internet
   unencrypted (`interfaces.md` §6.4).
