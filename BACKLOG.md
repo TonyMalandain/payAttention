@@ -122,7 +122,16 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - **PG-8b — Extract the verdict component and split the store into reader and writer (M). ACCEPTED** (review round 1, no defects). Hard prerequisite for PG-8c. Done when the controller uses the new component, the existing controller tests keep their meaning, and the reader side cannot write.
     - **PG-8c — The preview command (M). ACCEPTED** (review round 1, no defects; fix round for wording and polish). Notes from the PG-8b planner: the preview's lint block must forbid importing `StoreWriter` by name; the AI only progresses when the judged list is fetched, so the preview fetches it on its own timer. It also carries the lint guard "only `app/verdicts.js` imports `core/judge.js`", added inside each directory's existing pattern list (see boundaries.md). From the PG-8b review: add one line to the public JSDoc of `judgedList` (AI asks happen only after `judgedList` is called again following a change); make `feedFacts` and `refresh` safe after destroy, like `judgedList`. `extension/preview/`, shipped in the zip. Done when the four parity checks in §7 pass and the README shows how to run it.
 
-## Next — polish (PG-4f, size S)
+## Done — polish (PG-4f)
+
+- Done with the PG-8c fix round.
+
+## Next — small follow-ups (PG-9, size S)
+
+- The Settings Model field follows an outside change of `ai-model`.
+- Lint: a `..` in the middle of a path (`../core/../shell/store.js`) still sidesteps every pattern. The architect decides a robust rule (for example resolving paths in a custom rule).
+
+## (old) polish list
 
 - The `tests/ai/gjs/keyring.js` comment move and header refresh (the PG-4e leftover).
 - Settings page:

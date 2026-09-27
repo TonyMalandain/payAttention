@@ -437,3 +437,9 @@ Append only. Newest at the bottom.
   - PG-4f (Settings polish and the keyring.js comment).
 - **Source:** reviewer, PG-8c round 1.
 - **Touches:** solution.md R-20
+
+## 2026-09-27 — PG-8c fix round and PG-4f accepted
+- **Kind:** decision
+- **Fact:** The calendar-error phrases ("could not connect", "it did not answer in time", "could not read its meetings", "something went wrong") were accepted. The fix round landed with all checks green. Follow-ups filed as PG-9: the Model field does not follow outside changes, and a mid-path `..` still sidesteps lint (to the architect).
+- **Source:** software engineer, PG-8c fix round.
+- **Touches:** BACKLOG.md
