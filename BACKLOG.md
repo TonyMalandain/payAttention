@@ -87,8 +87,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
-  1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`.
-  2. `journalctl --user -b | grep -i payattention` shows no errors.
+  1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. **PASSED 2026-09-27** (checked by the product manager).
+  2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
   4. **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.

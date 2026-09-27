@@ -341,3 +341,9 @@ Append only. Newest at the bottom.
   After the engine returns, the first answer arrives within about 281 s (by arithmetic), which is within D-031's 5 minutes. The PG-4c plan goes back to its planner for revision.
 - **Source:** architect, interfaces.md §6.5.
 - **Touches:** decisions.md D-031
+
+## 2026-09-27 — Extension active in the owner's real session
+- **Kind:** solution
+- **Fact:** payAttention is ACTIVE in the owner's real GNOME session, and its calendar helper is running. This boot's journal shows no payAttention or shell script errors. PG-2 steps 1 and 2 passed. The installed copy is the build from before AI mode and PG-6/PG-7. A reinstall is held until the AI work lands, so the live session is not changed piecemeal.
+- **Source:** product manager, read-only checks (`gnome-extensions info`, `journalctl`).
+- **Touches:** solution.md R-1, BACKLOG.md PG-2
