@@ -55,7 +55,7 @@ test alone.**
 
 Binding rules (details in `interfaces.md` §7):
 
-- **Invocation:** `gjs -m ~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/preview/main.js [--json]`.
+- **Invocation:** `gjs -m ~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/preview/main.js [--json]`. (Path updated 2026-09-29 for the ADR-0006 amendment, D-034.)
   It needs the extension installed, not enabled.
 - **Read-only by construction:** it opens the installed schema itself, puts
   the `Gio.Settings` into delay-apply mode before any read (`delay()`, never

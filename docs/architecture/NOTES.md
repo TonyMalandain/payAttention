@@ -806,3 +806,38 @@ Append only. Newest at the bottom.
 - **Why:** The preview runs only from an installed copy (ADR-0012), so the only honest integration test is against the shipped zip.
 - **Source:** tests/helper/preview.test.js:43-49; scripts/build.sh; package.json `preview` script.
 - **Touches:** testing-and-build.md validation table and new Layer 2c — folded.
+
+## 2026-09-29 — UUID becomes payattention@tonymalandain.github.io (D-034)
+- **Kind:** decision
+- **Fact:** ADR-0006 amended: the UUID is `payattention@tonymalandain.github.io`; schema id/path and the keyring schema name are unchanged, so no data migrates; the old literal is removed from every architecture document.
+- **Why:** The owner does not want their work domain in the project (D-034); neither storage name contains the domain, so only the install identity moves.
+- **Source:** docs/product/decisions.md D-034; grep of extension/ shows no JS names its own UUID (only metadata.json).
+- **Touches:** adr/ADR-0006, 00-index, overview, boundaries, interfaces §7.3, ADR-0012, testing-and-build — done.
+
+## 2026-09-29 — Former copies are found by settings schema, not by name
+- **Kind:** interface
+- **Fact:** install.sh/uninstall.sh treat any real `payattention@*` directory (≠ new UUID) whose metadata declares `org.gnome.shell.extensions.payattention` as a former copy.
+- **Why:** The old UUID may not appear anywhere in the repository (owner, D-034), and splitting the literal to dodge grep would defeat the point; the schema is the stable identity (ADR-0006).
+- **Source:** owner requirement relayed by the product manager, 2026-09-29.
+- **Touches:** testing-and-build.md "Switching an existing install to the new UUID" — folded.
+
+## 2026-09-29 — "Loaded" is asked of the shell with GetExtensionInfo; the shell deletes what it holds
+- **Kind:** constraint
+- **Fact:** `gdbus call … org.gnome.Shell.Extensions.GetExtensionInfo U` is tri-state (error = no shell, `(@a{sv} {},)` = unknown, dict with uuid = in the shell's map); `gnome-extensions info` exits 2 for both "unknown" and "no shell"; a copy the shell holds is removed only through the shell's UninstallExtension, which awaits disable before deleting.
+- **Why:** The shell scans every extension directory at login, so a present former copy is always in its map; deleting its files from a script could break a later helper spawn or re-enable. The query only does lookup + serialise.
+- **Source:** measured on the live session 2026-09-29 (gnome-shell 50.5); gnome-shell `ui/shellDBus.js` GetExtensionInfo/UninstallExtension, `ui/extensionDownloader.js:73-96`, `ui/extensionSystem.js:444-460,562-597` (extracted from libshell-18.so).
+- **Touches:** testing-and-build.md switch-over rule — folded.
+
+## 2026-09-29 — The switch-over costs alerts until the next login
+- **Kind:** for-product
+- **Fact:** Removing the former UUID from `enabled-extensions` makes the running shell disable it at once, and on Wayland the new copy loads only at login, so payAttention is silent from install until logout/login.
+- **Why:** Two copies can never be listed as enabled at the next login, and nothing runs between shell exit and the next shell start that could swap them later; the gap is the price of the no-double-enable rule. install.sh tells the owner to log out now.
+- **Source:** gnome-shell `ui/extensionSystem.js:562-597` (`_onEnabledExtensionsChanged` disables removed UUIDs live).
+- **Touches:** ADR-0006 consequences — recorded; product manager to tell the owner.
+
+## 2026-09-29 — Current-UUID uninstall cannot tell "no shell" from "unknown"
+- **Kind:** question
+- **Fact:** uninstall.sh step b uses `gnome-extensions info`, which exits 2 in both cases, so run with no reachable shell it `rm -rf`s the current copy even if a shell (on another bus) has it loaded.
+- **Why:** The switch-over rule uses the tri-state gdbus query for former copies; the current-UUID path predates the measurement. Not changed here (scope); the same query would close it.
+- **Source:** scripts/uninstall.sh:45-68; measured 2026-09-29.
+- **Touches:** testing-and-build.md Pitfalls when decided.

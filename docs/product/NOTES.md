@@ -474,3 +474,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner requires that the old work domain appear in no file: not in docs, ADRs, plans, code, or any past commit. Done when a search of every file in every commit finds zero matches.
 - **Source:** the owner, 2026-09-29.
 - **Touches:** BACKLOG.md PG-10
+
+## 2026-09-29 — Switch-over rule accepted; alert gap until relogin
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The architect's switch-over rule (testing-and-build.md, "Switching an existing install to the new UUID") is accepted. Accepted cost: from install until the owner logs out and back in, payAttention gives no alerts. The old copy is disabled at once, and the new one loads only at login. The owner is told to log out right after installing. The existing uninstall bug (it cannot tell "unknown" from "no shell reachable") is fixed in PG-10.
+- **Source:** architect, ADR-0006 amendment.
+- **Touches:** BACKLOG.md PG-10, README.md

@@ -40,6 +40,103 @@ item of the schema remains. It clears keys before settings, so a locked
 keyring leaves both in place. An unreachable Secret Service also fails
 `--purge`: the script cannot tell "no items" from "unreachable".
 
+### Switching an existing install to the new UUID (ADR-0006 amendment, D-034)
+
+Binding on `scripts/install.sh` and `scripts/uninstall.sh`. The UUID changed to
+`payattention@tonymalandain.github.io`; the owner's machine still has the
+former copy installed, enabled and **loaded in the running shell**. The rule
+guarantees: two copies are never enabled together; the running shell never
+loses the files of a copy it has loaded; after the next logout/login no former
+copy remains; settings, overrides, stored AI answers and AI keys are kept
+(their storage names contain no domain, ADR-0006). The known cost: from the
+moment the switch runs until the owner logs out and in, payAttention does not
+alert (the running shell disables the former copy and, on Wayland, cannot load
+the new one).
+
+**Definitions.** `NEW=payattention@tonymalandain.github.io`,
+`EXT=${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions`,
+`SCHEMA=org.gnome.shell.extensions.payattention`.
+
+- **Former copy:** a directory `EXT/D` that is a real directory (not a
+  symlink), where `D` matches `payattention@*`, `D` ≠ `NEW`, and
+  `EXT/D/metadata.json` parses as JSON with `"uuid"` equal to `D` and
+  `"settings-schema"` equal to `SCHEMA`. Former copies are **found by schema,
+  never by name**: the old UUID must not appear anywhere in the repository
+  (D-034), and this also covers any later rename. A former UUID left in a list
+  with no directory is inert and is not touched (it cannot be told apart from
+  another extension's name without writing the literal).
+- **Shell state of a UUID `U`** — the only way it is detected, a read-only
+  D-Bus method (`GetExtensionInfo` does a lookup and serialises metadata;
+  it changes nothing in the shell, read in gnome-shell 50.5 `shellDBus.js`):
+
+  ```sh
+  gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell \
+    --method org.gnome.Shell.Extensions.GetExtensionInfo "$U"
+  ```
+
+  | Result | State |
+  |---|---|
+  | exit ≠ 0 | UNREACHABLE (no shell on this session bus; `org.gnome.Shell` is not D-Bus-activatable, so this never starts one) |
+  | output exactly `(@a{sv} {},)` | UNKNOWN: the running shell has no such extension; its files are not in use |
+  | output contains `'uuid': <'U'>` | LOADED: the running shell has it in its extension map, enabled or not. The shell scans every extension directory at login, so a former copy present since login is always LOADED |
+  | anything else | treat as UNREACHABLE |
+
+  Do not use `gnome-extensions info` for this: it exits 2 both for "no such
+  extension" and "no shell reachable" (measured, 50.5).
+
+**install.sh**, in this order:
+
+1. **Preflight, before the build and before any change.** Find former copies.
+   If any has state UNREACHABLE, exit 1 with "an earlier payAttention install
+   (`<dir>`) must be switched over from a terminal inside your GNOME session.
+   Nothing was changed." The former copy keeps running.
+2. Build, install `NEW`, check `schemas/gschemas.compiled` (as today). A failure
+   here leaves the former copy enabled and running.
+3. **One settings write, in one gjs process:** `enabled-extensions` becomes
+   itself minus every former UUID and minus `NEW`, plus `NEW`;
+   `disabled-extensions` becomes itself minus every former UUID and minus
+   `NEW`; then `Gio.Settings.sync()`. Then re-read both lists in a fresh
+   process and exit 1 if a former UUID is still in either or `NEW` is missing
+   from `enabled-extensions`. Swapping in one write means no stored list ever
+   holds both. The running shell reacts by running the former copy's own
+   `disable()` (its settings listener) and ignores `NEW`, which it does not
+   know until login.
+4. **Remove each former copy by its state, queried again now:**
+   - LOADED → `gnome-extensions uninstall <former UUID>`. The shell unloads it
+     (disabling it first if needed) and deletes the directory itself, so files
+     are never removed under a copy the shell still holds (measured PG-3; see
+     Pitfalls).
+   - UNKNOWN → `rm -rf --` the directory, after checking the path is
+     `/*/gnome-shell/extensions/payattention@*`, is not `EXT/NEW`, and is not a
+     symlink.
+   - UNREACHABLE (the shell went away mid-run) → leave the directory, exit 1
+     with the "from a terminal inside your GNOME session" message. The lists
+     are already correct, so the next login enables only `NEW`, and the next
+     install or uninstall removes the directory.
+5. **Verify:** no former-copy directory remains and every former UUID now
+   queries UNKNOWN; otherwise exit 1. Print that the switch happened, that
+   settings and AI keys were kept, and that payAttention is off until the owner
+   logs out and back in.
+
+A second run finds no former copy and does only steps 2–3.
+
+**uninstall.sh:** the same preflight (step 1: exit 1, nothing changed, when a
+former copy is UNREACHABLE), then each former copy is removed exactly as in
+step 4 and its UUID taken out of both lists in the same write as `NEW`, with the
+same fresh-process re-read. Output names it as an earlier payAttention install.
+**This happens on every uninstall, with or without `--purge`**: a former copy
+is program files, not user data. `--purge` itself is unchanged: both identities
+share one settings path and one keyring schema, so one purge covers both.
+
+**What must be proven** (by the uninstall/install check and, for the LOADED
+path, the headless shell): with no shell, a planted former copy (for example
+`payattention@former.example.test` declaring `SCHEMA`) makes install and
+uninstall refuse and change nothing; with a shell that has the former copy
+loaded, one install leaves only `NEW` in `enabled-extensions`, no former
+directory, the shell reporting the former UUID as UNKNOWN, and settings and
+another extension untouched; a directory declaring another schema is never
+touched.
+
 ## Layer 1 — core unit tests (Node)
 
 `extension/core/` has no GNOME imports (ADR-0002), so Node 24 imports it directly.

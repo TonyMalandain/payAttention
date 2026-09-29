@@ -24,7 +24,7 @@ authority; none of them may add or change an ADR.
 | ADR-0003 | All durable state lives in GSettings, keyed by iCalendar UID (stored format) |
 | ADR-0004 | Alerts are the extension's own shell actors and modal grab, never notifications |
 | ADR-0005 | Run in the `user` session mode only; locking disables the extension |
-| ADR-0006 | UUID `payattention@tonymalandain.github.io`, schema `org.gnome.shell.extensions.payattention`, GNOME 50 only |
+| ADR-0006 | UUID `payattention@tonymalandain.github.io` (amended 2026-09-29, D-034: replaces the former work-domain UUID; one-time switch-over in `testing-and-build.md`), schema `org.gnome.shell.extensions.payattention`, GNOME 50 only |
 | ADR-0007 | LLM engines are reached through the OpenAI-compatible protocol with our own small gjs client, not a bundled abstraction library (accepted as D-021; amended 2026-09-27) |
 | ADR-0008 | [SUPERSEDED by ADR-0010] The AI second opinion on unsure verdicts runs in its own helper process and reaches `judge` as stored data |
 | ADR-0009 | AI engine keys live in the GNOME keyring, per normalised endpoint, written by prefs and read only by the AI helper (amended 2026-09-27: one endpoint, keyless allowed, transport rule by endpoint) |
