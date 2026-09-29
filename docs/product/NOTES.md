@@ -468,3 +468,9 @@ Append only. Newest at the bottom.
 - **Fact:** The owner noticed the ID was repeated in 62 places. 16 of those were code, in 10 files (scripts, tests, package.json). PG-10 now requires `extension/metadata.json` to be the only place in code that spells out the ID, with a test to guard it. Docs may keep naming it for readers.
 - **Source:** the owner, 2026-09-29.
 - **Touches:** BACKLOG.md PG-10
+
+## 2026-09-29 — No trace of the old domain anywhere
+- **Kind:** decision
+- **Fact:** The owner requires that the old work domain appear in no file: not in docs, ADRs, plans, code, or any past commit. Done when a search of every file in every commit finds zero matches.
+- **Source:** the owner, 2026-09-29.
+- **Touches:** BACKLOG.md PG-10
