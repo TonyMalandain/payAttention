@@ -54,7 +54,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - the extension declares the repository address;
     - "See Details" opens it (checked by hand in Extension Manager after reinstalling);
     - the README links to it too.
-  - **Blocked on:** the repository's address. No GitHub repository exists yet. Assumed `https://github.com/TonyMalandain/payAttention`, to be confirmed by the owner.
+  - **Unblocked 2026-09-29:** the repository exists at `https://github.com/TonyMalandain/payAttention` (private).
 - **PG-6 — Apply the Apache License 2.0 (S)** (D-026). **DONE**, accepted in review (2173b15).
   - **What changes for the owner:**
     - GitHub shows "Apache-2.0" on the repository page;

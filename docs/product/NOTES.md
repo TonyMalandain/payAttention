@@ -449,3 +449,10 @@ Append only. Newest at the bottom.
 - **Fact:** After `npm run install:local`, with no logout, `npm run -s preview` listed the owner's next ~36 h of meetings with verdicts and reasons (rules mode), and exited 0. The verdicts matched the earlier real-week check. R-20 is `real` (demoed).
 - **Source:** product manager, read-only run.
 - **Touches:** solution.md R-20
+
+## 2026-09-29 — Repository pushed to GitHub (private)
+- **Kind:** decision
+- **Fact:** The repo was pushed to https://github.com/TonyMalandain/payAttention as a private repository. GitHub detects the licence as Apache-2.0. Git history contains one line with the owner's child's first name (a superseded PRD addendum). Making the repo public should first scrub that from history, which is a history rewrite and the owner's call. PG-5 is unblocked.
+- **Why:** The owner asked to push. Private was chosen because history holds personal calendar details.
+- **Source:** the owner's request, 2026-09-29.
+- **Touches:** BACKLOG.md PG-5
