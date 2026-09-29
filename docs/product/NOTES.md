@@ -487,3 +487,10 @@ Append only. Newest at the bottom.
 - **Fact:** The extension ID is `payattention@tonymalandain.github.io` (PG-10). The history was rewritten (107 commits). A search of history lines, every stored object and the current files finds zero matches for the old domain. Today's files are unchanged by the rewrite. The rewrite was force-pushed, and the remote matches local. Local build and test leftovers carrying the old name were deleted. Two local backup bundles still contain old content: `~/payattention-backup-before-scrub.bundle` and `~/payattention-backup-before-id-scrub.bundle`. The owner must reinstall once, from a terminal inside the session, then log out and back in.
 - **Source:** product manager.
 - **Touches:** BACKLOG.md PG-10, PG-2
+
+## 2026-09-29 — Owner hears no sound during Test alert
+- **Kind:** question
+- **Profiles:** Calendar owner
+- **Fact:** The owner hears no sound when Test alert reaches Insist and Takeover. The build running in the session was loaded at the 2026-09-26 login and is older than PG-7, so it asks for the older alarm sound. A GNOME notification that asks for the alert sound is heard, so the desktop sound path works. Next check: reinstall, log in again, run Test alert. If it is still silent, it is a defect against R-8 (the insist step has a sound), and it goes to the engineers.
+- **Source:** owner report; product manager checks in the live session.
+- **Touches:** BACKLOG.md PG-2
