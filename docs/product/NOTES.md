@@ -481,3 +481,9 @@ Append only. Newest at the bottom.
 - **Fact:** The architect's switch-over rule (testing-and-build.md, "Switching an existing install to the new UUID") is accepted. Accepted cost: from install until the owner logs out and back in, payAttention gives no alerts. The old copy is disabled at once, and the new one loads only at login. The owner is told to log out right after installing. The existing uninstall bug (it cannot tell "unknown" from "no shell reachable") is fixed in PG-10.
 - **Source:** architect, ADR-0006 amendment.
 - **Touches:** BACKLOG.md PG-10, README.md
+
+## 2026-09-29 — Old domain removed everywhere; force-pushed
+- **Kind:** solution
+- **Fact:** The extension ID is `payattention@tonymalandain.github.io` (PG-10). The history was rewritten (107 commits). A search of history lines, every stored object and the current files finds zero matches for the old domain. Today's files are unchanged by the rewrite. The rewrite was force-pushed, and the remote matches local. Local build and test leftovers carrying the old name were deleted. Two local backup bundles still contain old content: `~/payattention-backup-before-scrub.bundle` and `~/payattention-backup-before-id-scrub.bundle`. The owner must reinstall once, from a terminal inside the session, then log out and back in.
+- **Source:** product manager.
+- **Touches:** BACKLOG.md PG-10, PG-2

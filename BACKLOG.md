@@ -89,7 +89,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
-  1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. **PASSED 2026-09-27** (checked by the product manager).
+  0. Move to the new ID: run `npm run install:local` from a terminal inside the session, then log out and back in right away (alerts pause until then).
+  1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. (Passed 2026-09-27 under the old ID; check again after the move.)
   2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
   4. **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
@@ -128,7 +129,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 ## Now — new extension ID (PG-10, size S)
 
-- **PG-10 — Change the extension ID to `payattention@tonymalandain.github.io`** (D-034).
+- **PG-10 — Change the extension ID to `payattention@tonymalandain.github.io`** (D-034). **DONE 2026-09-29**: code, docs and the full history are free of the old domain (zero matches); force-pushed. The owner still has to reinstall once (see PG-2).
   - **What changes for the owner:** the work domain disappears from the project. Settings, saved choices and AI keys are kept.
   - **Who it is for:** Installer.
   - **Done when:**
