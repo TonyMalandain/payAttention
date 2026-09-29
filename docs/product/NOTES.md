@@ -456,3 +456,9 @@ Append only. Newest at the bottom.
 - **Why:** The owner asked to push. Private was chosen because history holds personal calendar details.
 - **Source:** the owner's request, 2026-09-29.
 - **Touches:** BACKLOG.md PG-5
+
+## 2026-09-29 — Child's name scrubbed from git history
+- **Kind:** decision
+- **Fact:** At the owner's request, the one line holding the owner's child's first name was rewritten in history. It was in a superseded PRD addendum, in two commits; the name was replaced with "my child". The repo was force-pushed. All 100 commits are kept, and the current files are byte-identical to before. A local backup bundle holding the old history is at `~/payattention-backup-before-scrub.bundle`, and it still contains the name. GitHub may keep the old commits reachable by their old IDs for a while, but only in this private repo. Rule going forward: no names of people from the owner's real calendar in any tracked file or commit.
+- **Source:** the owner, 2026-09-29.
+- **Touches:** none
