@@ -16,7 +16,7 @@
     "smoke": "bash scripts/smoke.sh",
     "install:local": "bash scripts/install.sh",
     "uninstall:local": "bash scripts/uninstall.sh",
-    "preview": "gjs -m \"${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/payattention@tonymalandain.github.io/preview/main.js\""
+    "preview": "gjs -m \"${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$(node -p \"require('./extension/metadata.json').uuid\")/preview/main.js\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -10,7 +10,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 : "${ROOT:?}"
-UUID=payattention@tonymalandain.github.io
+# The UUID has one source: extension/metadata.json (PG-10).
+UUID="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).uuid' "$ROOT/extension/metadata.json")"
 # On the home filesystem, never /tmp: gnome-extensions install fails across filesystems.
 T="$ROOT/.smoke-home"
 rm -rf "$T"
@@ -76,9 +77,9 @@ printf '%s\r\n' \
     > "$T/data/evolution/calendar/smoke-cal/calendar.ics"
 
 # 4. Shell settings: the extension enabled, and Do Not Disturb on (R-12).
-cat > "$T/config/glib-2.0/settings/keyfile" <<'EOF'
+cat > "$T/config/glib-2.0/settings/keyfile" <<EOF
 [org/gnome/shell]
-enabled-extensions=['payattention@tonymalandain.github.io']
+enabled-extensions=['$UUID']
 welcome-dialog-last-shown-version='999'
 
 [org/gnome/desktop/notifications]

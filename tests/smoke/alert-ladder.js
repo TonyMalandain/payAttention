@@ -13,8 +13,14 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
+import { ExtensionType } from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
-const UUID = 'payattention@tonymalandain.github.io';
+// The UUID has one source: extension/metadata.json (PG-10).
+const UUID = JSON.parse(new TextDecoder().decode(Gio.File.new_for_uri(import.meta.url).get_parent().get_parent().get_parent()
+    .get_child('extension').get_child('metadata.json').load_contents(null)[1])).uuid;
+// A placeholder former identity (PG-10): install.sh finds former copies by schema, never by name.
+const FORMER_UUID = 'payattention@former.example.test';
+const SCHEMA_ID = 'org.gnome.shell.extensions.payattention';
 const ACTIVE = 1;
 const INACTIVE = 2;
 const FIXTURE_TITLE = 'Smoke client review · ';
@@ -259,6 +265,49 @@ async function checkUninstall(name, home) {
         'the install directory still exists');
     await mustWait(() => !global.settings.get_strv('enabled-extensions').includes(UUID), 3000, name,
         'the UUID is still in enabled-extensions');
+}
+
+/**
+ * The switch-over with the running shell holding an earlier install (testing-and-build.md,
+ * "Switching an existing install to the new UUID"): a former copy declaring our schema is
+ * loaded and enabled, the new UUID is unknown to the shell, and install.sh runs once.
+ */
+async function checkSwitchOver(name, home) {
+    const extDir = `${home}/data/gnome-shell/extensions`;
+    const dir = Gio.File.new_for_path(`${extDir}/${FORMER_UUID}`);
+    dir.make_directory_with_parents(null);
+    GLib.file_set_contents(`${dir.get_path()}/metadata.json`, JSON.stringify({
+        uuid: FORMER_UUID, name: 'payAttention former copy (smoke)', description: 'smoke fixture',
+        'shell-version': ['50'], 'settings-schema': SCHEMA_ID,
+    }));
+    GLib.file_set_contents(`${dir.get_path()}/extension.js`,
+        "import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';\n" +
+        'export default class extends Extension { enable() {} disable() {} }\n');
+    // What the shell does at login for every directory it scans.
+    await Main.extensionManager.loadExtension(
+        Main.extensionManager.createExtensionObject(FORMER_UUID, dir, ExtensionType.PER_USER));
+    global.settings.set_strv('enabled-extensions', [...global.settings.get_strv('enabled-extensions'), FORMER_UUID]);
+    await mustWait(() => Main.extensionManager.lookup(FORMER_UUID)?.state === ACTIVE, 10000, name,
+        `the former copy did not start (state ${Main.extensionManager.lookup(FORMER_UUID)?.state})`);
+    check(Main.extensionManager.lookup(UUID) === undefined, name, 'the shell already knows the new UUID');
+
+    const script = Gio.File.new_for_uri(import.meta.url).get_parent().get_parent().get_parent()
+        .get_child('scripts').get_child('install.sh').get_path();
+    const { status, output } = await runProgram(['bash', script]);
+    check(status === 0 && output.includes('log out and back in'), name, `install.sh exited ${status}: ${output}`);
+    check(Main.extensionManager.lookup(FORMER_UUID) === undefined, name, 'the shell still has the former copy loaded');
+    check(!GLib.file_test(dir.get_path(), GLib.FileTest.EXISTS), name, 'the former copy\'s directory remains');
+    check(GLib.file_test(`${extDir}/${UUID}/schemas/gschemas.compiled`, GLib.FileTest.EXISTS), name,
+        'the new UUID is not installed');
+    const lists = () => ({
+        enabled: global.settings.get_strv('enabled-extensions'),
+        disabled: global.settings.get_strv('disabled-extensions'),
+    });
+    await mustWait(() => {
+        const { enabled, disabled } = lists();
+        return enabled.includes(UUID) && !enabled.includes(FORMER_UUID) && !disabled.includes(FORMER_UUID);
+    }, 3000, name, `the lists are ${JSON.stringify(lists())}`);
+    check(Main.extensionManager.lookup(UUID) === undefined, name, 'the running shell loaded the new UUID before login');
 }
 
 const verdictOverrides = settings => settings.get_value('verdict-overrides').recursiveUnpack();
@@ -538,8 +587,11 @@ async function runLadder() {
         await mustWait(() => stageFind('payattention-takeover'), 45000, '8-lock', 'no takeover after re-enable');
         await checkDisabled('8-lock', home);
 
-        // 9. Uninstall while a takeover holds the grab. Last: the extension is gone afterwards.
+        // 9. Uninstall while a takeover holds the grab: the extension is gone afterwards.
         await checkUninstall('9-uninstall', home);
+
+        // 10. Last: install.sh switches over from a former copy the shell has loaded.
+        await checkSwitchOver('10-switch-over', home);
     } finally {
         Meta.SoundPlayer.prototype.play_from_theme = realPlay;
     }

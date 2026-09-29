@@ -27,7 +27,9 @@ would run on every `npm install`/`npm ci`). `scripts/install.sh` also adds the U
 
 Remove: `npm run uninstall:local` (R-17, D-016). It stops the extension in the
 running shell, removes the install directory, and takes the UUID out of
-`enabled-extensions` and `disabled-extensions`. Settings are kept.
+`enabled-extensions` and `disabled-extensions`. Settings are kept. When no
+shell is reachable and the install directory exists, it refuses (exit 1,
+nothing changed): the files may be in use by a shell it cannot see.
 `npm run uninstall:local -- --purge` also erases
 `/org/gnome/shell/extensions/payattention/`. From PG-4, `--purge` also clears
 the keyring items of the AI key schema (ADR-0009), and a plain uninstall
@@ -343,7 +345,14 @@ what an owner's dconf would see, and never reaches the owner's bus, dconf or
 `~/.local/share`. It checks that another extension's files, list entries and
 settings survive. It checks that settings are kept by a plain uninstall and gone
 after `--purge`, that a bad option changes nothing, and that a second uninstall
-succeeds. It prints `PAYATTENTION-UNINSTALL PASS` or `FAIL <check>: <reason>`.
+succeeds. A stand-in shell on its private bus (`tests/smoke/fake-shell.js`)
+answers `GetExtensionInfo`, so the scripts' real `gdbus` query sees UNKNOWN or
+LOADED; stopping it gives UNREACHABLE. With it the check covers the switch-over
+with placeholder former copies (refusal when unreachable, the one-write swap,
+removal of UNKNOWN copies, a LOADED copy the shell refuses to uninstall, and
+copies with another schema or behind a symlink left alone). The LOADED path
+against the real shell is the ladder's last step, `10-switch-over`. It prints
+`PAYATTENTION-UNINSTALL PASS` or `FAIL <check>: <reason>`.
 
 `gnome-shell --headless` runs a complete shell with virtual monitors, in its own
 D-Bus session, with an isolated home. `--devkit` is not usable here (the

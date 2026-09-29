@@ -12,7 +12,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 : "${ROOT:?}"
-UUID=payattention@tonymalandain.github.io
+# The UUID has one source: extension/metadata.json (PG-10).
+UUID="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).uuid' "$ROOT/extension/metadata.json")"
 
 fail() {
     echo "PAYATTENTION-UNINSTALL FAIL $1: $2"
@@ -71,6 +72,29 @@ KEY3="pa-test-key-$RANDOM$RANDOM$RANDOM"
 keys() { [ "$(gjs -m "$KEYRING" count)" = "KEYRING COUNT $1 $2" ]; }
 no_keys_in_output() { ! contains "$KEY1" && ! contains "$KEY2" && ! contains "$KEY3"; }
 
+# 1. A stand-in shell on the private bus, so the scripts' gdbus query sees UNKNOWN
+#    (or LOADED for the UUIDs in $LOADED) instead of UNREACHABLE.
+LOADED="$U/loaded"
+: > "$LOADED"
+SHELL_PID=
+start_shell() {
+    gjs -m "$ROOT/tests/smoke/fake-shell.js" "$LOADED" > "$U/fake-shell.log" 2>&1 &
+    SHELL_PID=$!
+    for _ in $(seq 100); do
+        grep -q '^FAKE-SHELL READY' "$U/fake-shell.log" && return 0
+        sleep 0.1
+    done
+    fail 1-shell "the stand-in shell did not start: $(cat "$U/fake-shell.log")"
+}
+stop_shell() {
+    [ -n "$SHELL_PID" ] || return 0
+    kill "$SHELL_PID" 2>/dev/null || true
+    wait "$SHELL_PID" 2>/dev/null || true
+    SHELL_PID=
+}
+trap stop_shell EXIT
+start_shell
+
 # 2. Other extensions and settings that uninstall must leave alone.
 gsettings set org.gnome.shell enabled-extensions "['other@example.test']" || fail 2-seed "could not seed enabled-extensions"
 gsettings set org.gnome.shell disabled-extensions "['third@example.test']" || fail 2-seed "could not seed disabled-extensions"
@@ -99,7 +123,22 @@ no_keys_in_output || fail 2-bad-option "a key appeared in the output"
 [ "$status" -eq 2 ] || fail 2-bad-option "--bogus exited $status, want 2"
 [ -d "$DIR" ] || fail 2-bad-option "--bogus removed $DIR"
 
-# Uninstall with no shell on the bus: files and list entries go, settings stay.
+# No shell reachable: uninstall cannot tell whether a shell somewhere has it
+# loaded, so it refuses and changes nothing (the files may be in use).
+stop_shell
+lists_before="$(gsettings get org.gnome.shell enabled-extensions; gsettings get org.gnome.shell disabled-extensions)"
+uninstall
+no_keys_in_output || fail 2-unreachable "a key appeared in the output"
+[ "$status" -eq 1 ] || fail 2-unreachable "exited $status, want 1: $out"
+contains "from a terminal inside your GNOME session" || fail 2-unreachable "no 'from a terminal inside your GNOME session' in: $out"
+contains "Nothing was changed." || fail 2-unreachable "no 'Nothing was changed.' in: $out"
+[ -d "$DIR" ] || fail 2-unreachable "$DIR was removed with no shell reachable"
+[ "$(gsettings get org.gnome.shell enabled-extensions; gsettings get org.gnome.shell disabled-extensions)" = "$lists_before" ] \
+    || fail 2-unreachable "the extension lists changed"
+[ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 2-unreachable "snooze-minutes changed"
+start_shell
+
+# Uninstall with a shell that does not know it: files and list entries go, settings stay.
 uninstall
 no_keys_in_output || fail 2-uninstall "a key appeared in the output"
 [ "$status" -eq 0 ] || fail 2-uninstall "exited $status: $out"
@@ -198,10 +237,12 @@ lists_unchanged() {
     [ "$(gsettings get org.gnome.shell enabled-extensions; gsettings get org.gnome.shell disabled-extensions)" = "$lists_before" ]
 }
 
-# a) The running shell knows it but cannot stop it: nothing is removed.
+# a) The running shell has it loaded but cannot stop it: nothing is removed.
 reinstall 4-stop-failed
-stub stop-failed gnome-extensions 'case "$1" in info) exit 0 ;; uninstall) exit 1 ;; *) exit 2 ;; esac'
+echo "$UUID" > "$LOADED"
+stub stop-failed gnome-extensions 'case "$1" in uninstall) exit 1 ;; *) exit 2 ;; esac'
 uninstall_stubbed stop-failed
+: > "$LOADED"
 no_keys_in_output || fail 4-stop-failed "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-stop-failed "exited $status, want 1: $out"
 contains "Nothing was removed." || fail 4-stop-failed "no 'Nothing was removed.' in: $out"
@@ -211,8 +252,10 @@ lists_unchanged || fail 4-stop-failed "the extension lists changed"
 
 # b) Uninstall reports success but the shell still has it loaded.
 reinstall 4-still-loaded
-stub still-loaded gnome-extensions 'case "$1" in info|uninstall) exit 0 ;; *) exit 2 ;; esac'
+echo "$UUID" > "$LOADED"
+stub still-loaded gnome-extensions 'case "$1" in uninstall) exit 0 ;; *) exit 2 ;; esac'
 uninstall_stubbed still-loaded
+: > "$LOADED"
 no_keys_in_output || fail 4-still-loaded "a key appeared in the output"
 [ "$status" -eq 1 ] || fail 4-still-loaded "exited $status, want 1: $out"
 contains "still has payAttention loaded" || fail 4-still-loaded "no 'still has payAttention loaded' in: $out"
@@ -275,5 +318,119 @@ contains "Saved settings were not erased." || fail 4-keyring-locked "no 'Saved s
 [ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 4-keyring-locked "snooze-minutes was erased"
 ! contains "Erased:" || fail 4-keyring-locked "claimed something was erased: $out"
 keys 1 1 || fail 4-keyring-locked "the keyring changed"
+
+# 5. Former copies (PG-10, testing-and-build.md "Switching an existing install to
+#    the new UUID"). Placeholder UUIDs only: former copies are found by schema.
+EXTDIR="$XDG_DATA_HOME/gnome-shell/extensions"
+FORMER=payattention@former.example.test
+FORMER2=payattention@earlier.example.test
+DECOY=payattention@decoy.example.test
+LINK=payattention@link.example.test
+LINK_TARGET="$U/link-target"
+# plant <uuid> <settings-schema>: a minimal installed copy declaring that schema.
+plant() {
+    mkdir -p "$EXTDIR/$1" || fail 5-seed "could not create $EXTDIR/$1"
+    printf '{"uuid": "%s", "settings-schema": "%s"}\n' "$1" "$2" > "$EXTDIR/$1/metadata.json"
+    echo 'export default class {}' > "$EXTDIR/$1/extension.js"
+}
+# Runs install.sh; sets $status and $out.
+install_run() {
+    status=0
+    out="$(bash "$ROOT/scripts/install.sh" 2>&1)" || status=$?
+    printf '%s\n' "$out"
+}
+lists() { gsettings get org.gnome.shell enabled-extensions; gsettings get org.gnome.shell disabled-extensions; }
+SCHEMA=org.gnome.shell.extensions.payattention
+
+uninstall >/dev/null
+plant "$FORMER" "$SCHEMA"
+plant "$FORMER2" "$SCHEMA"
+plant "$DECOY" org.example.other
+mkdir -p "$LINK_TARGET"
+printf '{"uuid": "%s", "settings-schema": "%s"}\n' "$LINK" "$SCHEMA" > "$LINK_TARGET/metadata.json"
+ln -sfn "$LINK_TARGET" "$EXTDIR/$LINK"
+gsettings set org.gnome.shell enabled-extensions "['other@example.test', '$FORMER']" || fail 5-seed "could not seed enabled-extensions"
+gsettings set org.gnome.shell disabled-extensions "['third@example.test', '$FORMER2']" || fail 5-seed "could not seed disabled-extensions"
+decoys_untouched() {
+    [ -f "$EXTDIR/$DECOY/metadata.json" ] && [ -L "$EXTDIR/$LINK" ] && [ -f "$LINK_TARGET/metadata.json" ]
+}
+
+# a) No shell reachable: install refuses before the build and changes nothing.
+stop_shell
+lists_before="$(lists)"
+install_run
+[ "$status" -eq 1 ] || fail 5-install-unreachable "exited $status, want 1: $out"
+contains "must be switched over from a terminal inside your GNOME session" || fail 5-install-unreachable "no 'must be switched over' in: $out"
+contains "Nothing was changed." || fail 5-install-unreachable "no 'Nothing was changed.' in: $out"
+! contains "Built " || fail 5-install-unreachable "it built before refusing: $out"
+[ -d "$EXTDIR/$FORMER" ] && [ -d "$EXTDIR/$FORMER2" ] || fail 5-install-unreachable "a former copy was removed"
+[ ! -e "$DIR" ] || fail 5-install-unreachable "$DIR was installed"
+[ "$(lists)" = "$lists_before" ] || fail 5-install-unreachable "the extension lists changed"
+
+# b) No shell reachable: uninstall refuses too.
+uninstall
+[ "$status" -eq 1 ] || fail 5-uninstall-unreachable "exited $status, want 1: $out"
+contains "must be switched over from a terminal inside your GNOME session" || fail 5-uninstall-unreachable "no 'must be switched over' in: $out"
+contains "Nothing was changed." || fail 5-uninstall-unreachable "no 'Nothing was changed.' in: $out"
+[ -d "$EXTDIR/$FORMER" ] && [ -d "$EXTDIR/$FORMER2" ] || fail 5-uninstall-unreachable "a former copy was removed"
+[ "$(lists)" = "$lists_before" ] || fail 5-uninstall-unreachable "the extension lists changed"
+start_shell
+
+# c) The list edit claims success but stores nothing: the former copies stay
+#    enabled and installed, never removed while a list still names them.
+stub swap-not-stored gjs 'exit 0'
+status=0
+out="$(PATH="$STUBS/swap-not-stored:$PATH" bash "$ROOT/scripts/install.sh" 2>&1)" || status=$?
+printf '%s\n' "$out"
+[ "$status" -eq 1 ] || fail 5-swap-not-stored "exited $status, want 1: $out"
+contains "could not switch the GNOME extension lists" || fail 5-swap-not-stored "no 'could not switch' in: $out"
+[ -d "$EXTDIR/$FORMER" ] && [ -d "$EXTDIR/$FORMER2" ] || fail 5-swap-not-stored "a former copy was removed"
+! contains "earlier payAttention install (" || fail 5-swap-not-stored "claimed a removal: $out"
+
+# d) A shell that does not know the former copies: one install switches over.
+install_run
+[ "$status" -eq 0 ] || fail 5-switch "exited $status: $out"
+[ ! -e "$EXTDIR/$FORMER" ] && [ ! -e "$EXTDIR/$FORMER2" ] || fail 5-switch "a former copy remains"
+[ -f "$DIR/schemas/gschemas.compiled" ] || fail 5-switch "no compiled schemas in $DIR"
+enabled="$(gsettings get org.gnome.shell enabled-extensions)"
+[ "$enabled" = "['other@example.test', '$UUID']" ] || fail 5-switch "enabled-extensions is $enabled"
+disabled="$(gsettings get org.gnome.shell disabled-extensions)"
+[ "$disabled" = "['third@example.test']" ] || fail 5-switch "disabled-extensions is $disabled"
+decoys_untouched || fail 5-switch "a copy declaring another schema, or a symlink, was touched"
+[ -f "$OTHER/metadata.json" ] || fail 5-switch "another extension's files were removed"
+[ "$(dconf read "$KEYS/snooze-minutes")" = 5 ] || fail 5-switch "snooze-minutes was not kept"
+contains "Removed: an earlier payAttention install ($EXTDIR/$FORMER)." || fail 5-switch "no removal line for $FORMER: $out"
+contains "Removed: an earlier payAttention install ($EXTDIR/$FORMER2)." || fail 5-switch "no removal line for $FORMER2: $out"
+contains "log out and back in" || fail 5-switch "no 'log out and back in' in: $out"
+
+# e) A second install finds no former copy.
+install_run
+[ "$status" -eq 0 ] || fail 5-second-install "exited $status: $out"
+! contains "earlier payAttention install" || fail 5-second-install "found a former copy again: $out"
+[ "$(gsettings get org.gnome.shell enabled-extensions)" = "['other@example.test', '$UUID']" ] \
+    || fail 5-second-install "enabled-extensions changed"
+
+# f) The shell has a former copy loaded but refuses to uninstall it (the stand-in
+#    serves no UninstallExtension): the lists are already switched, the files stay.
+plant "$FORMER" "$SCHEMA"
+gsettings set org.gnome.shell enabled-extensions "['other@example.test', '$FORMER']" || fail 5-seed "could not seed enabled-extensions"
+echo "$FORMER" > "$LOADED"
+install_run
+: > "$LOADED"
+[ "$status" -eq 1 ] || fail 5-loaded-refused "exited $status, want 1: $out"
+contains "refused to uninstall it" || fail 5-loaded-refused "no 'refused to uninstall it' in: $out"
+[ -d "$EXTDIR/$FORMER" ] || fail 5-loaded-refused "the files of a loaded copy were removed"
+[ "$(gsettings get org.gnome.shell enabled-extensions)" = "['other@example.test', '$UUID']" ] \
+    || fail 5-loaded-refused "enabled-extensions is $(gsettings get org.gnome.shell enabled-extensions)"
+
+# g) Uninstall removes a former copy the shell does not know, with the current install.
+uninstall
+[ "$status" -eq 0 ] || fail 5-uninstall "exited $status: $out"
+[ ! -e "$EXTDIR/$FORMER" ] || fail 5-uninstall "the former copy remains"
+[ ! -e "$DIR" ] || fail 5-uninstall "$DIR remains"
+[ "$(gsettings get org.gnome.shell enabled-extensions)" = "['other@example.test']" ] \
+    || fail 5-uninstall "enabled-extensions is $(gsettings get org.gnome.shell enabled-extensions)"
+contains "Removed: an earlier payAttention install ($EXTDIR/$FORMER)." || fail 5-uninstall "no removal line: $out"
+decoys_untouched || fail 5-uninstall "a copy declaring another schema, or a symlink, was touched"
 
 echo PAYATTENTION-UNINSTALL PASS

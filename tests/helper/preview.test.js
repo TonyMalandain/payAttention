@@ -19,7 +19,8 @@ import { DEFAULT_SETTINGS } from '../../extension/core/defaults.js';
 import { occurrenceKey } from '../../extension/core/keys.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
-const UUID = 'payattention@tonymalandain.github.io';
+// The UUID has one source: extension/metadata.json (PG-10).
+const UUID = JSON.parse(fs.readFileSync(path.join(repoRoot, 'extension', 'metadata.json'), 'utf8')).uuid;
 const ZIP = path.join(repoRoot, 'dist', `${UUID}.shell-extension.zip`);
 const RUN_TIMEOUT_MS = 120_000;
 const SETTINGS_GROUP = '[org/gnome/shell/extensions/payattention]';

@@ -21,7 +21,9 @@ import { KEY_SAVE_FAILED, NOT_TESTED, TESTING, checkKey, describeKey } from '../
 
 const EXTENSION_DIR = Gio.File.new_for_uri(import.meta.url).get_parent()
     .resolve_relative_path('../../../extension').get_path();
-const UUID = 'payattention@tonymalandain.github.io';
+// The UUID has one source: extension/metadata.json (PG-10).
+const UUID = JSON.parse(new TextDecoder().decode(
+    GLib.file_get_contents(`${EXTENSION_DIR}/metadata.json`)[1])).uuid;
 const WAIT_MS = 10000;
 const ENGINE_ONE = 'https://engine-one.example.test/v1';
 const ENGINE_TWO = 'https://engine-two.example.test/v1';

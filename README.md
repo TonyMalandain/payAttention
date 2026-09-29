@@ -21,7 +21,7 @@ npm run build
 npm run install:local
 ```
 
-Then **log out and log back in**. On Wayland, GNOME loads new extension code only at login. Check that it is running:
+Then **log out and log back in, right after installing**. On Wayland, GNOME loads new extension code only at login, so payAttention does not alert until you do. If an earlier install is running, the install switches it off and removes it, and keeps your settings, saved choices and AI keys. Check that it is running:
 
 ```sh
 gnome-extensions info payattention@tonymalandain.github.io    # State: ACTIVE
@@ -36,7 +36,7 @@ npm run uninstall:local              # stop it, remove it, keep your saved choic
 npm run uninstall:local -- --purge   # also erase overrides, travel times, settings, AI answers and AI keys
 ```
 
-If payAttention is running, it stops at once, and no alert stays on screen. It no longer loads at login. The output lists what was removed and what was kept. Running it again is safe. It never touches your calendars or other extensions.
+If payAttention is running, it stops at once, and no alert stays on screen. It no longer loads at login. The output lists what was removed and what was kept. Running it again is safe. Run it from a terminal inside your GNOME session: from anywhere else it cannot tell whether payAttention is in use, so it refuses and changes nothing. It never touches your calendars or other extensions.
 
 A plain uninstall keeps your stored AI answers, and any AI engine keys in your keyring, and says so. `--purge` erases both, and only payAttention's own keys: nothing else in your keyring is touched.
 
