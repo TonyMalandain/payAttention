@@ -462,3 +462,9 @@ Append only. Newest at the bottom.
 - **Fact:** At the owner's request, the one line holding the owner's child's first name was rewritten in history. It was in a superseded PRD addendum, in two commits; the name was replaced with "my child". The repo was force-pushed. All 100 commits are kept, and the current files are byte-identical to before. A local backup bundle holding the old history is at `~/payattention-backup-before-scrub.bundle`, and it still contains the name. GitHub may keep the old commits reachable by their old IDs for a while, but only in this private repo. Rule going forward: no names of people from the owner's real calendar in any tracked file or commit.
 - **Source:** the owner, 2026-09-29.
 - **Touches:** none
+
+## 2026-09-29 — One source for the extension ID
+- **Kind:** decision
+- **Fact:** The owner noticed the ID was repeated in 62 places. 16 of those were code, in 10 files (scripts, tests, package.json). PG-10 now requires `extension/metadata.json` to be the only place in code that spells out the ID, with a test to guard it. Docs may keep naming it for readers.
+- **Source:** the owner, 2026-09-29.
+- **Touches:** BACKLOG.md PG-10

@@ -133,6 +133,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   - **Who it is for:** Installer.
   - **Done when:**
     - no file in the repository contains the old work domain;
+    - **one source for the ID:** `extension/metadata.json` is the only file of code that spells it out. Scripts, tests and the build read it from there (the extension already asks GNOME at run time). Docs may name it for readers. A test fails if the ID is written out anywhere else in code;
     - moving an existing install to the new ID never leaves two copies enabled, never breaks the running session, and leaves no old copy behind once the owner has logged out and back in;
     - all checks pass;
     - the history is rewritten so no commit contains the old work domain, and it is force-pushed.
