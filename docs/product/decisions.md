@@ -201,3 +201,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** "The preview never changes anything" (R-20) is what makes it safe to run at any time, and it is enforced by design (read-only settings access).
 **Costs accepted:** In AI mode with a cloud engine, previewed meetings are sent and paid for twice. With both running, the engine can receive up to 240 requests an hour. A "stored answers only" option can be added if the cost matters.
 **Source:** the product manager, closing an architect finding (ADR-0012).
+
+### D-034 — The extension ID is payattention@tonymalandain.github.io — 2026-09-29
+**Decision:** We changed the extension's ID from `payattention@tonymalandain.github.io` to `payattention@tonymalandain.github.io`. Commit author addresses were left as they are.
+**Why:** The owner does not want their work domain in the project. The old ID looked like a work email address.
+**Costs accepted:** The installed extension must move to the new ID once. Settings, saved choices and AI keys are kept, because their storage names do not include the domain. History is rewritten and force-pushed once more.
+**Source:** the owner, 2026-09-29.

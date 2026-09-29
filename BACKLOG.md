@@ -126,6 +126,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 - Done with the PG-8c fix round.
 
+## Now — new extension ID (PG-10, size S)
+
+- **PG-10 — Change the extension ID to `payattention@tonymalandain.github.io`** (D-034).
+  - **What changes for the owner:** the work domain disappears from the project. Settings, saved choices and AI keys are kept.
+  - **Who it is for:** Installer.
+  - **Done when:**
+    - no file in the repository contains `tonymalandain`;
+    - moving an existing install to the new ID never leaves two copies enabled, never breaks the running session, and leaves no old copy behind once the owner has logged out and back in;
+    - all checks pass;
+    - the history is rewritten so no commit contains `tonymalandain`, and it is force-pushed.
+  - **Order:** the architect amends ADR-0006 and designs the switch-over; an engineer changes code, scripts, tests and README; the product manager rewrites history and pushes.
+
 ## Next — small follow-ups (PG-9, size S)
 
 - The Settings Model field follows an outside change of `ai-model`.
