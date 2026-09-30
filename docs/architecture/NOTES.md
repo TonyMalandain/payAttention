@@ -897,3 +897,10 @@ Append only. Newest at the bottom.
 - **Why:** The owner confirms PG-11 by looking at the sample; if the sample ran different code, the look would not confirm what ships.
 - **Source:** extension/schemas/…gschema.xml:51; data.md.
 - **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — The "never delays another meeting" drop applies only to a step-1 opening
+- **Kind:** interface
+- **Fact:** The controller drops open travel choices because another occurrence is visible at step ≥ 2 only when they were opened at step 1; choices opened on a nudge card are closed only by the key/step rule.
+- **Why:** Only a held heads-up can delay another meeting; applying the drop to a nudge card turned "Change travel time" off in the back-to-back case where it matters most (PG-11 Part B review regression).
+- **Source:** product manager, docs/product/NOTES.md 2026-09-30 "Changing travel time always works on a nudge card".
+- **Touches:** interfaces.md §3, overview.md "Visible?" — folded.

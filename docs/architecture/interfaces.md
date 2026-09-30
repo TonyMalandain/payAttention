@@ -255,12 +255,17 @@ the writer's final flush.
   - drops it on the render in which the shown alert's key or step differs from
     the one it was opened on (ack, skip, snooze, the nudge, another meeting or
     the test alert taking the card, a travel pick that moves the heads-up away);
-  - also drops it on the render in which the Plan shows any other occurrence
-    visible at step ≥ 2, as primary or in `also` (PRD §4: the hold ends, it is
-    not merely suppressed). This covers the case where the held card is
-    still primary on its unspent display time: the choices close on that
-    render, and the hold does not come back if the other meeting later leaves
-    (acknowledged, snoozed, ignored).
+  - for a step-1 opening only (a held heads-up), also drops it on the render
+    in which the Plan shows any other occurrence visible at step ≥ 2, as
+    primary or in `also` (PRD §4: the hold ends, it is not merely
+    suppressed). This covers the case where the held card is still primary
+    on its unspent display time: the choices close on that render, and the
+    hold does not come back if the other meeting later leaves (acknowledged,
+    snoozed, ignored). A step-2 opening (choices opened on a nudge card) is
+    never dropped by this rule: it holds nothing back, so it cannot delay
+    another meeting, and "Change travel time" keeps working on a nudge card
+    beside another active meeting (product decision 2026-09-30). Only the
+    key/step rule above closes it.
 
     A card that returns later comes back with its choices closed.
 

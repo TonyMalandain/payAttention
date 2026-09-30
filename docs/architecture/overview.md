@@ -95,7 +95,9 @@ For one must-attend occurrence:
   As soon as one is, `plan()` decides as if nothing were held (that meeting
   takes the card on that tick, with its sound), and the controller ends the
   hold for good (`interfaces.md` §2, §3). The held meeting's own nudge also
-  ends it. Closing the choices after the display time
+  ends it. This rule ends only a held heads-up (choices opened at step 1);
+  choices opened on a nudge card hold nothing and stay open beside another
+  active meeting. Closing the choices after the display time
   has passed lets the card hide on that tick; there is no fresh display period.
   The hold is transient owner state kept by the controller in memory and passed
   to `plan()` as an input, like `userActive` (`interfaces.md` §2, §3). Steps 2–4
