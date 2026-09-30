@@ -16,7 +16,7 @@ Run in this order. Each must pass before the next is worth running.
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
 | 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=preview --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), `preview/` since PG-8c (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, `preview/main.js`, LICENSE and NOTICE (shipped since PG-6). |
 | 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js" "tests/ai/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (Layer 2), the AI helper against a fake engine (Layer 2b, from PG-4), and the preview installed from the zip (Layer 2c, from PG-8c). **Needs a fresh zip from step 4**: the preview test refuses to run when `dist/…shell-extension.zip` is missing or older than any file under `extension/`. |
-| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below), then, last, the sample shell's headless check `scripts/sample.sh --check` (Layer 3b, from PG-11 Part D), so the sample's fixture and settings cannot rot unseen. Needs no `mutter-devkit`. |
+| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then the isolation check (`tests/smoke/isolation-check.sh`: the throwaway shell's environment refuses other homes and extras, runs on a private bus that can start only its allowlist, and none of that allowlist starts a keyring; below), then a headless gnome-shell with the built zip installed and enabled (below), then, last, the sample shell's headless check `scripts/sample.sh --check` (Layer 3b, from PG-11 Part D), so the sample's fixture and settings cannot rot unseen. Needs no `mutter-devkit`. |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
 Setup once: `npm ci` (dev tools only; nothing from `node_modules` is ever packed).
@@ -365,10 +365,21 @@ not need the `mutter-devkit` package; only the sample window does (Layer 3b).
 The isolation environment (the `env -i` list, the throwaway `XDG_*`
 directories, keyfile settings, installing the built zip, writing a fixture
 calendar) is defined once, in `scripts/isolated-shell.sh`, sourced by
-`scripts/smoke.sh` and `scripts/sample.sh`. It refuses a home outside the
-repository's dot directories and refuses to pass through
-`DBUS_SESSION_BUS_ADDRESS`, `DISPLAY`, or its own `XDG_*`/`GSETTINGS_BACKEND`
-overrides. A second inline copy of that list anywhere is a defect: two copies
+`scripts/smoke.sh` and `scripts/sample.sh`. It accepts only two homes,
+`.smoke-home` and `.sample-home` in the repository (not a symlink). `isolated_run`
+always runs its command on its own private session bus: `dbus-run-session` with a
+generated config whose only service directory holds copies of a fixed allowlist
+(`ISOLATED_BUS_SERVICES`), with no standard, runtime (`~/.local/share`) or
+flatpak service directories, so any other name fails at once with
+`ServiceUnknown`. It refuses a nested bus launcher in the command. It accepts only
+the named extras in `ISOLATED_RUN_EXTRAS` (`LANG`, `WAYLAND_DISPLAY`, `GTK_A11Y`,
+`PAYATTENTION_SMOKE_HOME`, `PAYATTENTION_SAMPLE_HOME`), so a caller can override
+nothing it sets. It sets a throwaway `XDG_STATE_HOME` and a process marker,
+`PAYATTENTION_ISOLATED_HOME`, which bus-started services inherit. The smoke's
+shell therefore no longer gets portals, GNOME Online Accounts or
+`org.gnome.Identity`. `scripts/smoke.sh` step 2b runs
+`tests/smoke/isolation-check.sh`, which proves all of this without calling any
+bus service. A second inline copy of that list anywhere is a defect: two copies
 are two lists to keep safe. `tests/smoke/uninstall-check.sh` stays separate on
 purpose (it needs real dconf and its own `XDG_RUNTIME_DIR`).
 
@@ -411,7 +422,7 @@ What the smoke script checks:
    menu closed; then "Back to automatic" clears it. A second all-day event with a
    place (`Smoke all-day site visit`) is in person: the script opens its row and
    checks the seven travel lines carry one kind of round mark in one column, the
-   30 min one filled.
+   30 min one filled (check `2b-menu-travel`).
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
    Escape does nothing, and the check proves the key event reached the takeover,
@@ -454,8 +465,9 @@ same setup headless and is the smoke's last step.
 - **What it runs.** A fresh `.sample-home/` in the repository, the working tree
   built and installed there, one local calendar with one in-person must-attend
   fixture meeting timed so the heads-up is due at start, keyfile settings with
-  the extension enabled, then `dbus-run-session -- gnome-shell --devkit
-  --wayland` inside `isolated_run` with a throwaway `HOME` and `XDG_STATE_HOME`.
+  the extension enabled, then `gnome-shell --devkit --wayland` through
+  `isolated_run` (which provides the private allowlist bus) with a throwaway
+  `HOME` and `XDG_STATE_HOME`.
   The window is drawn by `/usr/libexec/mutter-devkit` (`stack.md`).
 - **Viewing aid, inside the product's range.** The sample sets
   `headsup-display-seconds=120`, the top of that setting's own range (`data.md`),
@@ -465,24 +477,39 @@ same setup headless and is the smoke's last step.
   behaviour for viewing's sake must also be expressible as an existing setting,
   or it comes back here.
 - **What it must never touch:** the owner's session bus, calendars (EDS),
-  keyring, dconf, and `~/.local/share/gnome-shell/extensions`. On the sample's
-  private bus, `org.freedesktop.secrets` and the two portal names are masked by
-  service files in its own `XDG_DATA_HOME/dbus-1/services` (`Exec=/bin/false`),
-  so no keyring starts at all; `sample-check.js` asserts it. The script compares
-  the owner's extensions folder before and after and fails if it changed.
+  keyring, dconf, and `~/.local/share/gnome-shell/extensions`. The sample's
+  private bus can start only the allowlist (Layer 3), so no keyring or portal can
+  start at all. `tests/smoke/isolation-check.sh` asserts the allowlist holds none
+  of the keyring-starting names and no service file runs a keyring program;
+  `sample-check.js` asserts the running shell's bus offers exactly the
+  allowlist. The keyring-starting names, measured on Fedora 44 in
+  `/usr/share/dbus-1/services`: `org.freedesktop.secrets`, `org.gnome.keyring`,
+  `org.freedesktop.impl.portal.Secret` (all `gnome-keyring-daemon`),
+  `org.kde.secretservicecompat`, `org.freedesktop.impl.portal.desktop.kwallet`
+  (both `ksecretd`), `org.kde.kwalletd5`, `org.kde.kwalletd6` (both
+  `kwalletd6`). An allowlist, not masks: a blocklist fails open when a new
+  keyring name ships. No check ever starts a service (no `StartServiceByName`):
+  a missing block would otherwise start the very daemon it keeps out. The script
+  compares a recursive listing of the owner's extensions folder (everything
+  under it, never its parent, which the live shell touches when it saves state),
+  taken before the build and after the run, and fails if it changed.
 - **What it shares with the live session, accepted:** (1) the owner's Wayland
   compositor, which shows the viewer window (`WAYLAND_DISPLAY` is passed only
   in window mode, as an explicit extra); (2) `XDG_RUNTIME_DIR`, so the nested
   shell's socket appears there, and the viewer's picture and any alert sound go
   through the owner's PipeWire/PulseAudio; (3) the real system bus, as in the
-  smoke. None of these is a store of the owner's data. The same rule as the
+  smoke. None of these is a store of the owner's data. Bus-started helpers of the
+  sample (for example the accessibility bus) may still create sockets in the
+  shared runtime folder; accepted under (2), they hold no data. The same rule as the
   smoke holds: never *call* a service that changes machine state. Never fall
   back to `--display-server` or anything that takes the real seat.
 - **Needs:** GNOME Shell 50 (checked first); window mode also needs
   `mutter-devkit` installed and `WAYLAND_DISPLAY` set, each with a one-line
   message and exit 1 before anything changes. `--check` needs neither.
-- **Clean-up:** on any exit, every process whose command line contains
-  `.sample-home/` is killed. `.sample-home/` is git- and lint-ignored.
+- **Clean-up:** on any exit, every process of the owner's user carrying the
+  sample's isolation marker (`PAYATTENTION_ISOLATED_HOME`) in its environment is
+  stopped; a command-line match could kill the owner's own processes, such as a
+  `tail -f` of the sample's log. `.sample-home/` is git- and lint-ignored.
 
 ## Layer 4 — the real session (manual)
 

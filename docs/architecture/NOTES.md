@@ -904,3 +904,45 @@ Append only. Newest at the bottom.
 - **Why:** Only a held heads-up can delay another meeting; applying the drop to a nudge card turned "Change travel time" off in the back-to-back case where it matters most (PG-11 Part B review regression).
 - **Source:** product manager, docs/product/NOTES.md 2026-09-30 "Changing travel time always works on a nudge card".
 - **Touches:** interfaces.md §3, overview.md "Visible?" — folded.
+
+## 2026-09-30 — Throwaway shells run on a private allowlist bus owned by isolated_run
+- **Kind:** constraint
+- **Fact:** `isolated_run` always starts its own `dbus-run-session` with a generated config whose only service directory holds copies of `ISOLATED_BUS_SERVICES`; callers cannot add a bus, nest a bus launcher, or pass any extra outside `ISOLATED_RUN_EXTRAS`.
+- **Why:** With `DBUS_SESSION_BUS_ADDRESS` unset GLib falls back to `$XDG_RUNTIME_DIR/bus`, the owner's live bus; leaving the private bus to each caller made safety depend on memory. A blocklist of masked names had already missed four keyring names, and blocklists fail open.
+- **Source:** docs/plans/PG-11.md "Part D fix round 1" (reviewer's measurement of 0b9d1a8).
+- **Touches:** testing-and-build.md Layer 3 isolation paragraph — folded.
+
+## 2026-09-30 — Seven D-Bus names start a keyring on this machine
+- **Kind:** constraint
+- **Fact:** `org.freedesktop.secrets`, `org.gnome.keyring`, `org.freedesktop.impl.portal.Secret` (gnome-keyring-daemon), `org.kde.secretservicecompat`, `org.freedesktop.impl.portal.desktop.kwallet` (ksecretd), `org.kde.kwalletd5`, `org.kde.kwalletd6` (kwalletd6); the tripwire list lives only in `tests/smoke/isolation-check.sh`.
+- **Why:** gnome-keyring-daemon started with a shared runtime folder reaches the owner's running daemon via `$XDG_RUNTIME_DIR/keyring/control`; the list is a tripwire over the allowlist, not the protection itself.
+- **Source:** senior engineer's measurement of `/usr/share/dbus-1/services`, Fedora 44, 2026-09-30 (docs/plans/PG-11.md).
+- **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — Isolation checks never activate a service
+- **Kind:** constraint
+- **Fact:** Checks prove the bus by `ListActivatableNames` only; no check calls `StartServiceByName`.
+- **Why:** If a block were missing, an activating check would start the very keyring it guards against, so the red run itself would touch the owner's data.
+- **Source:** docs/plans/PG-11.md "Part D fix round 1", Decision.
+- **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — The sample's guard lists the extensions folder, never its parent, from before the build
+- **Kind:** constraint
+- **Fact:** The guard compares a recursive `find` listing of the owner's extensions folder taken before the build and after the run; clean-up stops only processes carrying `PAYATTENTION_ISOLATED_HOME`.
+- **Why:** `ls -la` listed `..`, whose mtime the live shell changes when it saves state (a flaky red); the old snapshot missed the build and install; a command-line match could kill the owner's own `tail -f`.
+- **Source:** docs/plans/PG-11.md "Part D fix round 1", defect 2 and Seams.
+- **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — Runtime-folder sockets from bus-started helpers are accepted
+- **Kind:** constraint
+- **Fact:** Helpers started on the sample's private bus (e.g. the accessibility bus) may still create sockets in the shared `XDG_RUNTIME_DIR`.
+- **Why:** The runtime folder is shared on purpose (the window needs it); sockets hold no owner data, and nothing that uses `$XDG_RUNTIME_DIR/keyring` can be activated.
+- **Source:** docs/plans/PG-11.md "For the architect (fix round 1)" item 4.
+- **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — Smoke check 2b wording confirmed
+- **Kind:** decision
+- **Fact:** The engineer's edit to "What the smoke script checks" item 2 (commit 20e0ae8, second in-person all-day fixture, travel marks) matches `tests/smoke/alert-ladder.js` `checkMenuTravelMarks` and `scripts/smoke.sh`; kept, with the check name `2b-menu-travel` added. Inbox entry removed.
+- **Why:** Engineers may correct a fact in this file; the record stays mine by confirming it.
+- **Source:** tests/smoke/alert-ladder.js:313-337, :556; scripts/smoke.sh:62-67.
+- **Touches:** testing-and-build.md Layer 3 — folded.

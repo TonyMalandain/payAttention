@@ -28,10 +28,13 @@ tests/
   smoke/                headless gnome-shell automation script(s), install/uninstall check;
                         stage.js (stage helpers shared by the automation scripts),
                         sample-check.js (the sample shell's headless check, PG-11 Part D)
+                        isolation-check.sh (proves the isolation environment: homes, extras,
+                        private allowlist bus, no keyring; smoke step 2b)
 scripts/                build, install, uninstall (--purge), smoke and sample wrappers;
                         isolated-shell.sh (sourced, not run: the one definition of a
                         throwaway shell's environment, shared by smoke.sh and sample.sh)
 .smoke-home/, .sample-home/   throwaway homes the scripts create (git-ignored, lint-ignored)
+.isolation-probe/     short-lived probe dir of isolation-check.sh, removed on exit (git-ignored, lint-ignored)
 package.json            dev-only: test and lint tooling; never packed
 eslint.config.js        dev-only
 dist/                   build output (git-ignored)
