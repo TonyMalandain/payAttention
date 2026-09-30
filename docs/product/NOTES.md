@@ -494,3 +494,11 @@ Append only. Newest at the bottom.
 - **Fact:** The owner hears no sound when Test alert reaches Insist and Takeover. The build running in the session was loaded at the 2026-09-26 login and is older than PG-7, so it asks for the older alarm sound. A GNOME notification that asks for the alert sound is heard, so the desktop sound path works. Next check: reinstall, log in again, run Test alert. If it is still silent, it is a defect against R-8 (the insist step has a sound), and it goes to the engineers.
 - **Source:** owner report; product manager checks in the live session.
 - **Touches:** BACKLOG.md PG-2
+
+## 2026-09-30 — Travel time change on the alert card is hard to find and unreadable
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** On the owner's first real in-person alert, the "· change" link did not look clickable, and the travel choices showed as boxes with no readable text. Expected behaviour is now spelled out in the PRD §4 (a "Change travel time" button, labelled choices that wrap, a saved confirmation, and a heads-up card that stays while choosing), and it is ticketed as PG-11.
+- **Why:** a guessed travel time gives a wrong leave-by time, which is the miss the product exists to prevent.
+- **Source:** owner report; the product manager decided the expected behaviour.
+- **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11

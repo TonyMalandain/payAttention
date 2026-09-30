@@ -86,6 +86,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - checked by hand in the real session.
   - **Open for the engineer:** what plays if the selected alert sound cannot be found. A silent failure is not acceptable (fall back to a standard sound).
 
+- **PG-11 — Changing the travel time from an alert is obvious and readable (S).** Refines R-11 (in-person meetings count down to the leave-by time).
+  - **What changes for the owner:** on a heads-up or nudge card for an in-person meeting, they can see at once how to change the travel time, and they can read every choice.
+  - **Who it is for:** Calendar owner.
+  - **Why:** the owner's first real use (2026-09-30). The underlined "· change" did not look clickable. The choices showed as boxes with no readable text, so the owner had to guess which one was shorter. A guessed travel time is a wrong leave-by time, which is the miss this product exists to prevent.
+  - **Done when** the cards behave as in the spec (`docs/prd/meeting-guardian.md`, §4 Travel time):
+    - the travel line has a "Change travel time" button that looks like the card's other buttons;
+    - the choices sit under the question "How long does it take to get there?", and each one reads in full ("10 min" … "90 min"), with the current one marked, on the heads-up card (the narrowest) and the nudge card. They wrap onto a second row rather than shrink;
+    - picking one closes the choices, shows "Travel: N min (saved for this place)", and moves the alert times at once. It does not stop the escalation;
+    - the heads-up card does not go away on its own while the choices are open;
+    - a check that fails if a choice's text is cut off on the narrowest card; screenshots of both cards added to `docs/screenshots/`.
+  - **Not in this ticket:** the top-bar menu's travel chooser, which already shows readable choices.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
