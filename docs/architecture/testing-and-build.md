@@ -367,7 +367,7 @@ directories, keyfile settings, installing the built zip, writing a fixture
 calendar) is defined once, in `scripts/isolated-shell.sh`, sourced by
 `scripts/smoke.sh` and `scripts/sample.sh`. It accepts only two homes,
 `.smoke-home` and `.sample-home` in the repository (not a symlink). `isolated_run`
-always runs its command on its own private session bus: `dbus-run-session` with a
+runs its command on its own private session bus by default: `dbus-run-session` with a
 generated config whose only service directory holds copies of a fixed allowlist
 (`ISOLATED_BUS_SERVICES`), with no standard, runtime (`~/.local/share`) or
 flatpak service directories, so any other name fails at once with
@@ -377,7 +377,14 @@ the named extras in `ISOLATED_RUN_EXTRAS` (`LANG`, `WAYLAND_DISPLAY`, `GTK_A11Y`
 nothing it sets. It sets a throwaway `XDG_STATE_HOME` and a process marker,
 `PAYATTENTION_ISOLATED_HOME`, which bus-started services inherit. The smoke's
 shell therefore no longer gets portals, GNOME Online Accounts or
-`org.gnome.Identity`. `scripts/smoke.sh` step 2b runs
+`org.gnome.Identity`. "By default" is exact, not a hedge: `XDG_RUNTIME_DIR` is
+the owner's (the window and sound need it), so a command that unsets
+`DBUS_SESSION_BUS_ADDRESS` falls back to `$XDG_RUNTIME_DIR/bus` and reaches the
+owner's bus (measured, PG-11 Part D review). That is accepted: only a command
+written into the smoke or sample runs here, none does this, and a command that
+deliberately leaves the private bus is a defect in that command, not something
+`isolated_run` can prevent without also taking away the shared runtime folder.
+`scripts/smoke.sh` step 2b runs
 `tests/smoke/isolation-check.sh`, which proves all of this without calling any
 bus service. A second inline copy of that list anywhere is a defect: two copies
 are two lists to keep safe. `tests/smoke/uninstall-check.sh` stays separate on
@@ -478,8 +485,9 @@ same setup headless and is the smoke's last step.
   or it comes back here.
 - **What it must never touch:** the owner's session bus, calendars (EDS),
   keyring, dconf, and `~/.local/share/gnome-shell/extensions`. The sample's
-  private bus can start only the allowlist (Layer 3), so no keyring or portal can
-  start at all. `tests/smoke/isolation-check.sh` asserts the allowlist holds none
+  private bus, which it uses by default (Layer 3: never the owner's bus by
+  default, not "cannot"), can start only the allowlist, so no keyring or portal
+  can start through it. `tests/smoke/isolation-check.sh` asserts the allowlist holds none
   of the keyring-starting names and no service file runs a keyring program;
   `sample-check.js` asserts the running shell's bus offers exactly the
   allowlist. The keyring-starting names, measured on Fedora 44 in

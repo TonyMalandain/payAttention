@@ -176,6 +176,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - Sample shell safety (PG-11 Part D, for the senior engineer): take the extensions-folder snapshot before the build and install, not after; `isolated_install` should refuse `.git` and other dot names that are not throwaway homes.
 - Each `npm run smoke` leaves `pa-smoke-*` sockets, locks and `.mutter-Xwaylandauth.*` files in the owner's runtime folder (124 had built up). Clean them up after a run (PG-11 Part D review).
 - Isolation check 7 sometimes prints a harmless "A connection to the bus can't be made" line that reads like a failure.
+- PG-11 plan line ~679 says "a caller cannot reach the owner's bus"; the architecture now says "never by default" (senior engineer rewords if the plan is reused). The plan's F4 widened-bus probe was replaced in the build by a safer fake service.
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)

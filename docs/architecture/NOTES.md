@@ -946,3 +946,17 @@ Append only. Newest at the bottom.
 - **Why:** Engineers may correct a fact in this file; the record stays mine by confirming it.
 - **Source:** tests/smoke/alert-ladder.js:313-337, :556; scripts/smoke.sh:62-67.
 - **Touches:** testing-and-build.md Layer 3 — folded.
+
+## 2026-09-30 — The travel-choices control is the "Change time" link
+- **Kind:** interface
+- **Fact:** interfaces.md §3 now names the control that dispatches `toggleTravelChoices` the small "Change time" link, not a "Change travel time" button; the contract (a keyed toggle) is unchanged.
+- **Why:** The owner replaced the button with a link and the choices with one compact row of numbers (PG-11 Part E); the contract text should use the words the UI shows. "The boxes" in the overview glossary still matches PRD §4 and stays.
+- **Source:** docs/prd/meeting-guardian.md:78-80; docs/plans/PG-11.md Part E.
+- **Touches:** interfaces.md §3 — folded.
+
+## 2026-09-30 — The isolated shell uses a private bus by default, not exclusively
+- **Kind:** constraint
+- **Fact:** `isolated_run` puts its command on the private allowlist bus by default; a command that unsets `DBUS_SESSION_BUS_ADDRESS` reaches the owner's bus through the shared `$XDG_RUNTIME_DIR/bus`.
+- **Why:** The runtime folder is shared on purpose (window, sound); closing the fallback would mean a private runtime folder, which the sample cannot have. Accepted because only commands written into the smoke and sample run there and none leaves the bus; one that did would be a defect in that command.
+- **Source:** docs/inbox.md for-architecture entry 2026-09-30 (PG-11 Part D review, measured); scripts/isolated-shell.sh:120,208. Inbox entry removed.
+- **Touches:** testing-and-build.md Layer 3 and 3b — folded. The plan's "a caller cannot reach the owner's bus" (docs/plans/PG-11.md:679) is the senior engineer's to reword.

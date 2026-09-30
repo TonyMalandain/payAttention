@@ -241,7 +241,7 @@ the writer's final flush.
   `headsUpShown` (see §2).
 - **Travel choices on a card (PG-11).** The UI holds no open/closed state for
   them. It draws them open when `view.alert.travel.choicesOpen` is true, and
-  its "Change travel time" button dispatches `toggleTravelChoices` with the
+  its small "Change time" link dispatches `toggleTravelChoices` with the
   card's key (a toggle, so the UI never sends a stale "open"/"closed"). The
   controller:
   - holds `{key, step}` of the card whose choices are open, in memory only,
@@ -263,7 +263,7 @@ the writer's final flush.
     hold does not come back if the other meeting later leaves (acknowledged,
     snoozed, ignored). A step-2 opening (choices opened on a nudge card) is
     never dropped by this rule: it holds nothing back, so it cannot delay
-    another meeting, and "Change travel time" keeps working on a nudge card
+    another meeting, and the "Change time" link keeps working on a nudge card
     beside another active meeting (product decision 2026-09-30). Only the
     key/step rule above closes it.
 
