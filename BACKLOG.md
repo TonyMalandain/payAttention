@@ -166,6 +166,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - The PG-4a plan still says text passcodes are out of scope; D-025/D-027 superseded that.
 - AiQueue `_retry`/`_failedKeys` are never pruned of past meetings (small, slow growth over a long session). Pruning needs a §6.5 retention rule first; dropped as a preference for now.
 - Smoke check 6d guards readable travel numbers but not that the heads-up card stays within its width; only the screenshots guard that (PG-11 review preference).
+- One `npm run test:helper` run gave 199/200 during concurrent commits and did not recur; the failing test was not captured. Possibly flaky (PG-11 Part C report).
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)
