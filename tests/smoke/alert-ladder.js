@@ -16,6 +16,8 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
 import { ExtensionType } from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
+import { CheckFailed, check, waitFor, mustWait, findByName, findAll } from './stage.js';
+
 // The UUID has one source: extension/metadata.json (PG-10).
 const UUID = JSON.parse(new TextDecoder().decode(Gio.File.new_for_uri(import.meta.url).get_parent().get_parent().get_parent()
     .get_child('extension').get_child('metadata.json').load_contents(null)[1])).uuid;
@@ -25,47 +27,6 @@ const SCHEMA_ID = 'org.gnome.shell.extensions.payattention';
 const ACTIVE = 1;
 const INACTIVE = 2;
 const FIXTURE_TITLE = 'Smoke client review · ';
-
-class CheckFailed extends Error {
-    constructor(check, reason) {
-        super(`${check}: ${reason}`);
-        this.check = check;
-    }
-}
-
-function check(condition, name, reason) {
-    if (!condition)
-        throw new CheckFailed(name, reason);
-}
-
-async function waitFor(pred, timeoutMs, stepMs = 200) {
-    const until = GLib.get_monotonic_time() + timeoutMs * 1000;
-    for (;;) {
-        const value = pred();
-        if (value)
-            return value;
-        if (GLib.get_monotonic_time() >= until)
-            return null;
-        await Scripting.sleep(stepMs);
-    }
-}
-
-async function mustWait(pred, timeoutMs, name, reason) {
-    const value = await waitFor(pred, timeoutMs);
-    check(value, name, `timed out after ${timeoutMs} ms: ${reason}`);
-    return value;
-}
-
-function findByName(actor, name) {
-    if (actor.name === name)
-        return actor;
-    for (const child of actor.get_children()) {
-        const found = findByName(child, name);
-        if (found)
-            return found;
-    }
-    return null;
-}
 
 function countByPrefix(actor, prefix) {
     let n = actor.name?.startsWith(prefix) ? 1 : 0;
@@ -109,14 +70,6 @@ function pidsRunning(needle) {
 }
 
 const now = () => GLib.get_monotonic_time();
-
-function findAll(actor, pred, out = []) {
-    if (pred(actor))
-        out.push(actor);
-    for (const child of actor.get_children())
-        findAll(child, pred, out);
-    return out;
-}
 
 let virtualPointer = null;
 

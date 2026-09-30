@@ -12,6 +12,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 : "${ROOT:?}"
 # The UUID has one source: extension/metadata.json (PG-10).
 UUID="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).uuid' "$ROOT/extension/metadata.json")"
+source "$ROOT/scripts/isolated-shell.sh"
 # On the home filesystem, never /tmp: gnome-extensions install fails across filesystems.
 T="$ROOT/.smoke-home"
 rm -rf "$T"
@@ -36,27 +37,12 @@ if ! grep -q '^PAYATTENTION-UNINSTALL PASS' "$T/uninstall.log"; then
 fi
 
 # 2. Isolated home with the built extension installed.
-mkdir -p "$T/data/gnome-shell/extensions" "$T/config/glib-2.0/settings" "$T/config/evolution/sources" \
-    "$T/data/evolution/calendar/smoke-cal" "$T/cache"
-XDG_DATA_HOME="$T/data" gnome-extensions install --force "$ROOT/dist/$UUID.shell-extension.zip"
+isolated_install "$T"
 
 # 3. The fixture calendar: one must-attend online meeting 2-3 h ahead, so no
 #    real step fires during the run, and two all-day events, which are always in
 #    today's menu (whatever the hour) and never alert: one for the menu check,
 #    one in person for the travel marks check.
-cat > "$T/config/evolution/sources/smoke-cal.source" <<'EOF'
-[Data Source]
-DisplayName=Smoke
-Enabled=true
-Parent=local-stub
-
-[Calendar]
-BackendName=local
-Selected=true
-
-[Local Backend]
-EmailAddress=owner@smoke.test
-EOF
 S=$(( ( $(date +%s) / 3600 + 3 ) * 3600 ))
 DTSTART=$(date -u -d "@$S" +%Y%m%dT%H%M%SZ)
 DTEND=$(date -u -d "@$(( S + 1800 ))" +%Y%m%dT%H%M%SZ)
@@ -81,7 +67,7 @@ printf '%s\r\n' \
     'SUMMARY:Smoke all-day site visit' \
     'LOCATION:Smoke site\, 1 Example Street' \
     'END:VEVENT' 'END:VCALENDAR' \
-    > "$T/data/evolution/calendar/smoke-cal/calendar.ics"
+    | isolated_calendar "$T" smoke-cal Smoke owner@smoke.test
 
 # 4. Shell settings: the extension enabled, and Do Not Disturb on (R-12).
 cat > "$T/config/glib-2.0/settings/keyfile" <<EOF
@@ -95,10 +81,7 @@ EOF
 
 # 5. The headless shell, with a minimal environment: never the caller's, which
 #    carries the real DBUS_SESSION_BUS_ADDRESS, WAYLAND_DISPLAY and DISPLAY.
-env -i PATH="$PATH" HOME="$HOME" USER="$USER" LOGNAME="${LOGNAME:-$USER}" LANG=C.UTF-8 \
-    XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
-    XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_CACHE_HOME="$T/cache" \
-    GSETTINGS_BACKEND=keyfile GIO_USE_VFS=local PAYATTENTION_SMOKE_HOME="$T" \
+isolated_run "$T" "$HOME" LANG=C.UTF-8 PAYATTENTION_SMOKE_HOME="$T" -- \
     timeout 300 dbus-run-session -- gnome-shell --headless \
         --virtual-monitor 960x540 --virtual-monitor 1024x768 \
         --wayland-display "pa-smoke-$$" \
@@ -127,4 +110,6 @@ if [ "$fail" -ne 0 ]; then
     tail -n 80 "$T/shell.log" >&2
     exit 1
 fi
+# Last: the sample shell's headless check (Layer 3b), so its fixture and settings cannot rot unseen.
+bash "$ROOT/scripts/sample.sh" --check || { echo "smoke: sample check failed" >&2; exit 1; }
 echo "smoke: PASS"

@@ -2,3 +2,4 @@ node_modules/
 dist/
 .test-home/
 .smoke-home/
+.sample-home/
