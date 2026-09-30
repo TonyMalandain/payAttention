@@ -516,3 +516,11 @@ Append only. Newest at the bottom.
 - **Fact:** In the top-bar menu's travel list, the current value shows a check mark slightly left of the round marks on the other lines. Expected: one single-choice style, same mark, same column, the current one filled. Folded into PG-11.
 - **Source:** owner report.
 - **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11
+
+## 2026-09-30 — PG-11 product answers to the senior engineer
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** Confirmed from the PRD and the owner's words: the boxes may sit on two lines (the owner only asked for readable numbers); the boxes stay open after a pick so the owner sees the line change; closing them after the display time hides the heads-up at once; a pick that moves the heads-up into the future may hide the card, because it comes back at the right new time.
+- **Why:** seven readable boxes cannot fit on one line of the heads-up card; a hidden card that returns on time keeps the promise of R-11.
+- **Source:** product manager, from the PG-11 plan questions.
+- **Touches:** docs/prd/meeting-guardian.md §4
