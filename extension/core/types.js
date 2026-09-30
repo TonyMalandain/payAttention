@@ -56,7 +56,8 @@
 /** @typedef {{start:number,done:null|'ack'|'skip',doneAt:number|null,snoozeUntil:number|null,headsUpShownAt:number|null}} AlertItem */
 /** @typedef {{v:1,items:Record<string,AlertItem>}} AlertState      exactly data.md "Alert state" */
 
-/** @typedef {{userActive:boolean,dataHealthy:boolean}} PlanEnv */
+/** @typedef {{userActive:boolean,dataHealthy:boolean,heldHeadsUpKey:string|null}} PlanEnv
+ *  heldHeadsUpKey: the occurrence whose heads-up the owner is holding on screen (its travel choices are open), or null */
 /** @typedef {{key:string,start:number,step:1|2|3|4,visible:boolean,deadline:number,msToDeadline:number,
  *   snoozeUntil:number,recordHeadsUpShown:boolean}} Card     snoozeUntil = when a snooze taken NOW would end */
 /** @typedef {{key:string,step:1|2|3|4}} AlsoItem */

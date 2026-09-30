@@ -38,6 +38,8 @@ function checkInputs(now, judged, alertState, timing, env) {
         if (typeof env[field] !== 'boolean')
             throw new TypeError(`plan: env.${field} must be a boolean`);
     }
+    if (env.heldHeadsUpKey !== null && (typeof env.heldHeadsUpKey !== 'string' || env.heldHeadsUpKey === ''))
+        throw new TypeError('plan: env.heldHeadsUpKey must be null or a non-empty string');
 }
 
 /** Offsets clamped so the steps can never be out of order or after the deadline. */
@@ -86,6 +88,7 @@ export function plan(now, judged, alertState, timing, env) {
 
     const active = [];
     const indicatorCandidates = [];
+    let held = null;
     for (const j of judged) {
         if (j.verdict !== 'must' || !Number.isFinite(j.deadline) || !Number.isFinite(j.start))
             continue;
@@ -108,7 +111,7 @@ export function plan(now, judged, alertState, timing, env) {
         const visible = step === 1
             ? !snoozed && (headsUpShownAt === null || now < headsUpShownAt + timing.headsUpDisplayMs)
             : !snoozed;
-        active.push({
+        const card = {
             key,
             start,
             step,
@@ -117,8 +120,18 @@ export function plan(now, judged, alertState, timing, env) {
             msToDeadline: deadline - now,
             snoozeUntil: step < 4 ? Math.min(now + timing.snoozeMs, times[step]) : now + timing.takeoverSnoozeMs,
             recordHeadsUpShown: step === 1 && visible && headsUpShownAt === null && env.userActive,
-        });
+        };
+        active.push(card);
+        if (key === env.heldHeadsUpKey && step === 1 && !snoozed)
+            held = card;
     }
+
+    // The owner holds a heads-up while its travel choices are open: it stays
+    // after its display time, but a snooze still hides it and it never delays
+    // another meeting. While any other one is visible at step 2 or later,
+    // nothing is held (PRD §4, interfaces.md §2).
+    if (held && !active.some(c => c !== held && c.visible && c.step >= 2))
+        held.visible = true;
 
     const [first = null, ...rest] = active.sort(byPrimaryOrder);
     const primary = first && Object.freeze(first);

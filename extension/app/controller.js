@@ -39,6 +39,7 @@ const PRUNE_EVERY_MS = 24 * 60 * 60 * 1000;
  *   | {type: 'setVerdict', key: string, verdict: 'must'|'ignore'|null, scope: 'occ'|'series'}
  *   | {type: 'setMode', key: string, mode: 'online'|'in-person'}
  *   | {type: 'setTravel', placeKey: string, minutes: number}
+ *   | {type: 'toggleTravelChoices', key: string}
  *   | {type: 'runTestAlert'}} UiAction
  */
 
@@ -79,6 +80,9 @@ export class Controller {
         this._lastTestPlan = null;
         this._lastVisible = null;
         this._lastFailure = null;
+        // The card whose travel choices are open, and the alert last rendered. In memory only (data.md).
+        this._openTravelChoices = null;
+        this._shownAlert = null;
         try {
             this._writer = deps.createStoreWriter();
             this._environment = deps.createEnvironment(() => this._onResume());
@@ -164,6 +168,8 @@ export class Controller {
         this._test = null;
         this._lastPlan = null;
         this._lastTestPlan = null;
+        this._openTravelChoices = null;
+        this._shownAlert = null;
         this._judged = [];
         this._judgedByKey = new Map();
     }
@@ -210,9 +216,19 @@ export class Controller {
             seeds: this._seeds, enabledAt: this._enabledAt, now,
         });
         // plan() only passes dataHealthy through: alerts keep running from the cached snapshot (D-013).
-        const env = { userActive: this._environment.isUserActive(), dataHealthy: health.state === 'ok' };
+        // Only choices opened on a heads-up hold it: one opened on the nudge never revives a spent heads-up.
+        const open = this._openTravelChoices;
+        const env = {
+            userActive: this._environment.isUserActive(),
+            dataHealthy: health.state === 'ok',
+            heldHeadsUpKey: open?.step === 1 ? open.key : null,
+        };
 
         const realPlan = plan(now, this._judged, this._alertState, timing, env);
+        // The hold never delays another meeting, and ends for good once one is visible at its nudge or later.
+        const shownCards = realPlan.primary?.visible ? [realPlan.primary, ...realPlan.also] : realPlan.also;
+        if (open && shownCards.some(c => c.key !== open.key && c.step >= 2))
+            this._openTravelChoices = null;
         if (realPlan.primary?.recordHeadsUpShown) {
             this._alertState = reduce(this._alertState, actionFor(realPlan.primary, 'headsUpShown'), now);
             this._writer.writeAlertState(this._alertState);
@@ -239,7 +255,13 @@ export class Controller {
             health,
             now,
             aiStatus: this._verdicts.ai.status,
+            openTravelChoices: this._openTravelChoices,
         });
+        // A hold never outlives its card: ack, skip, snooze, the nudge, another alert taking the card.
+        const held = this._openTravelChoices;
+        if (held && (view.alert?.key !== held.key || view.alert.step !== held.step))
+            this._openTravelChoices = null;
+        this._shownAlert = view.alert;
 
         const next = view.alert ? { key: view.alert.key, step: view.alert.step } : null;
         if (shouldPlaySound(this._lastVisible, next) && settings.soundEnabled)
@@ -287,9 +309,21 @@ export class Controller {
             this._writer.setTravel(action.placeKey, action.minutes);
             this._verdicts.reloadOverridesAndTravel();
             break;
+        case 'toggleTravelChoices':
+            this._toggleTravelChoices(action.key);
+            break;
         }
         // Answer the click in the same frame.
         this._tick();
+    }
+
+    _toggleTravelChoices(key) {
+        const shown = this._shownAlert;
+        // A click on a card that has since gone, or on one with no choices, holds nothing.
+        if (shown?.key !== key || !(shown.travel?.choices.length > 0))
+            return;
+        const open = this._openTravelChoices;
+        this._openTravelChoices = open?.key === key && open.step === shown.step ? null : { key, step: shown.step };
     }
 
     _applyCardAction(card, type, isTest, now) {

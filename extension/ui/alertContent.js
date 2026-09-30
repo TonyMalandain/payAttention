@@ -39,7 +39,6 @@ export class AlertContent {
     constructor(alert, dispatch, size) {
         this._dispatch = dispatch;
         this._key = alert.key;
-        this._travelOpen = false;
         this._travelShown = null;
         this._alsoShown = null;
         this._actionsShown = null;
@@ -146,7 +145,7 @@ export class AlertContent {
             name: 'payattention-travel-choices',
             orientation: Clutter.Orientation.VERTICAL,
             style_class: 'payattention-travel-choices',
-            visible: this._travelOpen,
+            visible: travel.choicesOpen,
         });
         for (let i = 0; i < travel.choices.length; i += TRAVEL_CHOICES_PER_ROW) {
             const row = new St.BoxLayout({ style_class: 'payattention-actions', x_align: Clutter.ActorAlign.START });
@@ -159,10 +158,8 @@ export class AlertContent {
             }
             choices.add_child(row);
         }
-        change.connect('clicked', () => {
-            this._travelOpen = !this._travelOpen;
-            choices.visible = this._travelOpen;
-        });
+        // The controller holds whether the choices are open: while they are, the heads-up stays (interfaces.md §3).
+        change.connect('clicked', () => this._dispatch({ type: 'toggleTravelChoices', key: this._key }));
         this._travelBox.add_child(line);
         this._travelBox.add_child(choices);
     }

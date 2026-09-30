@@ -57,7 +57,7 @@ try {
     check(judged[0].joinUrl === 'https://meet.google.com/abc-defg-hij', 'judge: join link');
 
     const timing = timingFromSettings(DEFAULT_SETTINGS);
-    const env = { userActive: true, dataHealthy: true };
+    const env = { userActive: true, dataHealthy: true, heldHeadsUpKey: null };
     const now = start - 60000;
     const result = plan(now, judged, emptyAlertState(), timing, env);
     check(result.primary !== null && result.primary.step === 4 && result.takeover, 'plan: takeover at 1 min');

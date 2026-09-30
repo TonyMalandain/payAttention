@@ -153,7 +153,7 @@ describe('plan: heads-up display and idle', () => {
     });
 
     test('an idle owner does not consume the heads-up', () => {
-        const idle = { userActive: false, dataHealthy: true };
+        const idle = { userActive: false, dataHealthy: true, heldHeadsUpKey: null };
         for (const now of [S - 30 * MIN, S - 20 * MIN]) {
             const card = p(now, [ONLINE], E, TIMING, idle).primary;
             assert.equal(card.visible, true);
@@ -162,6 +162,73 @@ describe('plan: heads-up display and idle', () => {
         const back = p(S - 15 * MIN, [ONLINE], E, TIMING, ENV).primary;
         assert.equal(back.visible, true);
         assert.equal(back.recordHeadsUpShown, true);
+    });
+
+    test('a held heads-up stays after its display time', () => {
+        const card = p(S - 30 * MIN + 15000, [ONLINE], state1, TIMING, { ...ENV, heldHeadsUpKey: KEY }).primary;
+        assert.equal(card.visible, true);
+        assert.equal(card.recordHeadsUpShown, false);
+    });
+
+    test('a hold for another meeting does not keep this one', () => {
+        const card = p(S - 30 * MIN + 15000, [ONLINE], state1, TIMING, { ...ENV, heldHeadsUpKey: 'occ:other|1' }).primary;
+        assert.equal(card.visible, false);
+    });
+
+    test('a snooze wins over a hold', () => {
+        const { state } = snoozeAt(S - 30 * MIN + 1000, [ONLINE], state1);
+        const card = p(S - 30 * MIN + 15000, [ONLINE], state, TIMING, { ...ENV, heldHeadsUpKey: KEY }).primary;
+        assert.equal(card.step, 1);
+        assert.equal(card.visible, false);
+    });
+
+    test('a hold does nothing at step 2', () => {
+        const held = p(S - 10 * MIN, [ONLINE], state1, TIMING, { ...ENV, heldHeadsUpKey: KEY }).primary;
+        const notHeld = p(S - 10 * MIN, [ONLINE], state1).primary;
+        assert.deepEqual(held, notHeld);
+    });
+});
+
+// PRD §4, interfaces.md §2: the hold never delays another meeting. While any other
+// meeting is visible at step 2 or later, the Plan is the Plan with no hold.
+describe('plan: the heads-up hold yields to other meetings', () => {
+    const held = key => ({ ...ENV, heldHeadsUpKey: key });
+
+    test('a held heads-up with an earlier leave-by does not keep the card from another meeting\'s nudge', () => {
+        const shown = reduce(E, { type: 'headsUpShown', key: IN_PERSON.key, start: S }, L - 10 * MIN);
+        const B = judged({ key: 'occ:b|' + (L + 2 * MIN), start: L + 2 * MIN, deadline: L + 2 * MIN });
+        const withHold = p(L - 7 * MIN, [IN_PERSON, B], shown, TIMING, held(IN_PERSON.key));
+        const noHold = p(L - 7 * MIN, [IN_PERSON, B], shown);
+        assert.equal(noHold.primary.key, B.key);
+        assert.equal(noHold.primary.step, 2);
+        assert.deepEqual(withHold, noHold);
+    });
+
+    test('a held heads-up is not listed beside another meeting\'s nudge', () => {
+        const B = judged({ key: 'occ:b|' + (S - 15 * MIN), start: S - 15 * MIN, deadline: S - 15 * MIN });
+        const state = reduce(E, { type: 'headsUpShown', key: KEY, start: S }, S - 30 * MIN);
+        const withHold = p(S - 25 * MIN, [ONLINE, B], state, TIMING, held(KEY));
+        assert.deepEqual(withHold, p(S - 25 * MIN, [ONLINE, B], state));
+        assert.deepEqual(withHold.also, []);
+    });
+
+    test('a snoozed nudge does not end the hold', () => {
+        const B = judged({ key: 'occ:b|' + (S - 15 * MIN), start: S - 15 * MIN, deadline: S - 15 * MIN });
+        const shown = reduce(E, { type: 'headsUpShown', key: KEY, start: S }, S - 30 * MIN);
+        const { card, state } = snoozeAt(S - 25 * MIN, [ONLINE, B], shown);
+        assert.equal(card.key, B.key);
+        const r = p(S - 24 * MIN, [ONLINE, B], state, TIMING, held(KEY));
+        assert.equal(r.primary.key, KEY);
+        assert.equal(r.primary.visible, true);
+    });
+
+    test('another meeting at its heads-up does not end the hold', () => {
+        const B = judged({ key: 'occ:b|' + (S + 5 * MIN), start: S + 5 * MIN, deadline: S + 5 * MIN });
+        const state = reduce(E, { type: 'headsUpShown', key: KEY, start: S }, S - 30 * MIN);
+        const r = p(S - 24 * MIN, [ONLINE, B], state, TIMING, held(KEY));
+        assert.equal(r.primary.key, KEY);
+        assert.equal(r.primary.visible, true);
+        assert.deepEqual(r.also, [{ key: B.key, step: 1 }]);
     });
 });
 
@@ -374,7 +441,7 @@ describe('plan: the top-bar indicator', () => {
     });
 
     test('data health passes through', () => {
-        assert.equal(p(S, [ONLINE], E, TIMING, { userActive: true, dataHealthy: false }).dataHealthy, false);
+        assert.equal(p(S, [ONLINE], E, TIMING, { userActive: true, dataHealthy: false, heldHeadsUpKey: null }).dataHealthy, false);
         assert.equal(p(S, [ONLINE]).dataHealthy, true);
     });
 });
@@ -392,7 +459,14 @@ describe('plan: purity and inputs', () => {
     });
 
     test('a missing data-health flag is refused', () => {
-        assert.throws(() => plan(S, [], E, TIMING, { userActive: true }), { name: 'TypeError', message: /dataHealthy/ });
+        assert.throws(() => plan(S, [], E, TIMING, { userActive: true, heldHeadsUpKey: null }), { name: 'TypeError', message: /dataHealthy/ });
+    });
+
+    test('a hold that is not null or a non-empty string is refused', () => {
+        for (const heldHeadsUpKey of [undefined, '', 5]) {
+            assert.throws(() => plan(S, [], E, TIMING, { userActive: true, dataHealthy: true, heldHeadsUpKey }),
+                { name: 'TypeError', message: /heldHeadsUpKey/ }, String(heldHeadsUpKey));
+        }
     });
 
     test('a timing without a cutoff is refused', () => {

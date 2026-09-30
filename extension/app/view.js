@@ -28,7 +28,7 @@ const MAX_NAMED_CALENDARS = 3;
 /**
  * @typedef {{key: string, isTest: boolean, step: 1|2|3|4, presentation: 'card'|'takeover',
  *   headline: string, title: string, timeLine: string, countdown: string, countdownCaption: string, reason: string,
- *   travel: null|{placeKey: string|null, minutes: number, text: string, choices: number[]},
+ *   travel: null|{placeKey: string|null, minutes: number, text: string, choices: number[], choicesOpen: boolean},
  *   also: string[], canJoin: boolean, offerSeries: boolean}} AlertView
  */
 /**
@@ -43,18 +43,22 @@ const defaultMark = j => (j.travelIsDefault ? ' (default)' : '');
 // Core already writes an AI reason as "AI: <reason>" (verdict.js), so it is shown as it is.
 const reasonLine = j => (j.reasonCode === 'ai-must' || j.reasonCode === 'ai-ignore' ? j.reason : `Why: ${j.reason}`);
 
-function buildAlert(chosenPlan, j, isTest, judgedByKey, now) {
+function buildAlert(chosenPlan, j, isTest, judgedByKey, now, openTravelChoices) {
     const c = chosenPlan.primary;
     const toDeadline = c.deadline - now;
     const timeLine = j.mode === 'online'
         ? `Starts at ${formatClock(j.start)} · ${formatRelative(j.start - now)}`
         : `Leave by ${formatClock(c.deadline)} · ${formatRelative(toDeadline)}`;
+    const choices = travelChoices(j);
     const travel = j.mode === 'in-person' && c.step <= 2
         ? {
             placeKey: j.placeKey,
             minutes: j.travelMinutes,
             text: `Travel: ${j.travelMinutes} min${defaultMark(j)}`,
-            choices: travelChoices(j),
+            choices,
+            // Open only on the card they were opened on: another meeting or the nudge draws them closed.
+            choicesOpen: openTravelChoices !== null && openTravelChoices.key === c.key &&
+                openTravelChoices.step === c.step && choices.length > 0,
         }
         : null;
     const also = chosenPlan.also.map(({ key }) => {
@@ -79,11 +83,11 @@ function buildAlert(chosenPlan, j, isTest, judgedByKey, now) {
     };
 }
 
-function chooseAlert({ plan, testPlan, testJudged, judgedByKey, now }) {
+function chooseAlert({ plan, testPlan, testJudged, judgedByKey, now, openTravelChoices }) {
     if (testPlan?.primary?.visible)
-        return buildAlert(testPlan, testJudged, true, judgedByKey, now);
+        return buildAlert(testPlan, testJudged, true, judgedByKey, now, openTravelChoices);
     if (plan.primary?.visible)
-        return buildAlert(plan, judgedByKey.get(plan.primary.key), false, judgedByKey, now);
+        return buildAlert(plan, judgedByKey.get(plan.primary.key), false, judgedByKey, now, openTravelChoices);
     return null;
 }
 
@@ -159,6 +163,8 @@ function signatureOf(rows) {
  * @param {Health} p.health
  * @param {number} p.now
  * @param {'off'|'ok'|'unavailable'} p.aiStatus the AI queue's status (aiQueue.js aiStatusOf decides it)
+ * @param {{key: string, step: number}|null} p.openTravelChoices the card whose travel choices the owner
+ *   opened, or null; the controller holds it (interfaces.md §3)
  * @returns {View}
  */
 export function buildView(p) {

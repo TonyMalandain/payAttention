@@ -105,7 +105,7 @@ It lists your meetings from now to about 36 hours ahead, by day: the time, MUST 
 
 | Step | Online (before start) | In person (before leave-by time) | What you see |
 |---|---|---|---|
-| Heads-up | 30 min | 10 min | A calm card at the top right. It goes away after 15 s. |
+| Heads-up | 30 min | 10 min | A calm card at the top right. It goes away after 15 s, but stays while its travel choices are open, until another meeting reaches its nudge. |
 | Nudge | 10 min | 5 min | An amber card. It stays until you act. |
 | Insist | 3 min | 2 min | A red card at the centre of the screen, pulsing, with a sound. |
 | Takeover | 1 min, then every minute | at leave-by, then every minute | Full screen on every monitor. It goes away only when you choose an action. |

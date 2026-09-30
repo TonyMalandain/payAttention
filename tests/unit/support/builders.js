@@ -66,4 +66,4 @@ export function deepFreeze(o) {
 }
 
 export const TIMING = timingFromSettings(DEFAULT_SETTINGS);
-export const ENV = { userActive: true, dataHealthy: true };
+export const ENV = { userActive: true, dataHealthy: true, heldHeadsUpKey: null };

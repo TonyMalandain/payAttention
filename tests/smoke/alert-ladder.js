@@ -433,7 +433,7 @@ const IN_PERSON_ALERT = Object.freeze({
     key: 'occ:smoke-visit|0', isTest: false, step: 1, presentation: 'card',
     headline: 'Heads-up', title: 'Site visit', timeLine: 'Leave by 10:00 AM · in 10 min',
     countdown: '10:00', countdownCaption: 'until you leave', reason: 'Why: important: \'client\'',
-    travel: { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: [10, 15, 20, 30, 45, 60, 90] },
+    travel: { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false },
     also: [], canJoin: false, offerSeries: false,
 });
 
@@ -460,7 +460,7 @@ async function checkWorstCase(name, home) {
     }
 
     for (const step of [1, 2, 3]) {
-        const travel = step <= 2 ? { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min', choices: [10, 15, 20, 30, 45, 60, 90] } : null;
+        const travel = step <= 2 ? { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min', choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false } : null;
         const card = new Card({ ...alert, step, presentation: 'card', travel }, () => {});
         try {
             await mustWait(() => card.actor.mapped && buttonsOffMonitors(card.actor).length === 0, 2000, name,
@@ -473,18 +473,39 @@ async function checkWorstCase(name, home) {
     }
 }
 
-/** IN_PERSON_ALERT's travel boxes open from a real button and every travel text reads in full (PRD §4). */
+/**
+ * IN_PERSON_ALERT's "Change travel time" is a real button that asks the controller to
+ * toggle the choices (the UI holds no open state, interfaces.md §3); drawn open, the
+ * boxes are all there and every travel text reads in full (PRD §4).
+ */
 async function checkTravelChoices(name, home) {
     const { Card } = await import(`file://${home}/data/gnome-shell/extensions/${UUID}/ui/card.js`);
     for (const step of [1, 2]) {
-        const card = new Card({ ...IN_PERSON_ALERT, step, headline: step === 1 ? 'Heads-up' : 'Get ready' }, () => {});
+        const alert = { ...IN_PERSON_ALERT, step, headline: step === 1 ? 'Heads-up' : 'Get ready' };
+        const actions = [];
+        const closed = new Card(alert, action => actions.push(action));
         try {
-            await mustWait(() => card.actor.mapped, 2000, name, `the step-${step} card was never mapped`);
-            const change = findByName(card.actor, 'payattention-travel-change');
+            await mustWait(() => closed.actor.mapped, 2000, name, `the closed step-${step} card was never mapped`);
+            const change = findByName(closed.actor, 'payattention-travel-change');
             check(change, name, `step-${step} card: no payattention-travel-change`);
             const clicked = await clickActor(change, name);
+            await mustWait(() => actions.length > 0, 2000, name,
+                `step-${step} card: Change travel time dispatched nothing (${clicked})`);
+            const want = JSON.stringify([{ type: 'toggleTravelChoices', key: IN_PERSON_ALERT.key }]);
+            check(JSON.stringify(actions) === want, name, `step-${step} card: dispatched ${JSON.stringify(actions)}, want ${want}`);
+            check(!findByName(closed.actor, 'payattention-travel-choices')?.visible, name,
+                `step-${step} card: the travel choices opened by themselves`);
+        } finally {
+            closed.destroy();
+        }
+
+        const card = new Card({ ...alert, travel: { ...alert.travel, choicesOpen: true } }, () => {});
+        try {
+            await mustWait(() => card.actor.mapped, 2000, name, `the open step-${step} card was never mapped`);
+            const change = findByName(card.actor, 'payattention-travel-change');
+            check(change, name, `open step-${step} card: no payattention-travel-change`);
             await mustWait(() => findByName(card.actor, 'payattention-travel-choices')?.visible, 2000, name,
-                `step-${step} card: the travel choices did not open (${clicked})`);
+                `step-${step} card: the travel choices are not drawn open`);
             const boxes = findAll(card.actor, a => !!a.name?.startsWith('payattention-travel-choice-'));
             check(boxes.length === 7, name, `step-${step} card: ${boxes.length} travel choices, want 7`);
             const current = boxes.filter(b => b.has_style_class_name('payattention-choice-current')).map(b => b.name);

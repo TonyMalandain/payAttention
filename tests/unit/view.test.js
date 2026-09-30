@@ -23,7 +23,7 @@ const IN_PERSON = judged({
 });
 
 /** The view the controller would build for `list` at `now`. */
-function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off' } = {}) {
+function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off', openTravelChoices = null } = {}) {
     const realPlan = plan(now, list, state, TIMING, env);
     const testPlan = test ? plan(now, test.judged, test.state ?? E, test.timing, env) : null;
     return buildView({
@@ -35,6 +35,7 @@ function view(now, list, { state = E, health = OK, test = null, env = ENV, aiSta
         health,
         now,
         aiStatus,
+        openTravelChoices,
     });
 }
 
@@ -101,7 +102,7 @@ describe('view: the alert', () => {
         for (const now of [LEAVE - 10 * MIN, LEAVE - 5 * MIN]) {
             const a = view(now, [IN_PERSON]).alert;
             assert.deepEqual(a.travel, {
-                placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: TRAVEL_CHOICES_MIN,
+                placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: TRAVEL_CHOICES_MIN, choicesOpen: false,
             });
         }
     });
@@ -122,6 +123,28 @@ describe('view: the alert', () => {
         const a = view(LEAVE - 10 * MIN, [noPlace]).alert;
         assert.equal(a.travel.placeKey, null);
         assert.deepEqual(a.travel.choices, []);
+    });
+
+    test('the choices are open on the card they were opened on', () => {
+        const a = view(LEAVE - 10 * MIN, [IN_PERSON], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
+        assert.equal(a.travel.choicesOpen, true);
+    });
+
+    test('choices opened at the heads-up are closed on the nudge', () => {
+        const a = view(LEAVE - 5 * MIN, [IN_PERSON], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
+        assert.equal(a.step, 2);
+        assert.equal(a.travel.choicesOpen, false);
+    });
+
+    test('choices opened on another meeting are closed on this one', () => {
+        const a = view(LEAVE - 10 * MIN, [IN_PERSON], { openTravelChoices: { key: 'occ:other|1', step: 1 } }).alert;
+        assert.equal(a.travel.choicesOpen, false);
+    });
+
+    test('an in-person meeting with no place never has its choices open', () => {
+        const noPlace = { ...IN_PERSON, placeText: '', placeKey: null };
+        const a = view(LEAVE - 10 * MIN, [noPlace], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
+        assert.equal(a.travel.choicesOpen, false);
     });
 
     test('the travel choices', () => {

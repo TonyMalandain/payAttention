@@ -211,6 +211,138 @@ describe('controller: overrides', () => {
     });
 });
 
+// PG-11 Part B, interfaces.md §3: while the travel choices are open on a heads-up,
+// it does not go away on its own; the hold is controller memory, never stored.
+describe('controller: travel choices', () => {
+    // In person at 'HQ' with the default 30 min travel: leave by T0 - 30 min,
+    // heads-up at T0 - 40 min, nudge at T0 - 35 min, shown for 15 s.
+    const HEADS_UP = T0 - 40 * MIN;
+    const PAST_DISPLAY = HEADS_UP + 20_000;
+    const toggle = { type: 'toggleTravelChoices', key: KEY };
+
+    function inPerson(options) {
+        const h = setup(options);
+        h.deliverAt(T0 - 2 * HOUR);
+        h.dispatch({ type: 'setMode', key: KEY, mode: 'in-person' });
+        return h;
+    }
+
+    test('1. the change button opens the choices on the heads-up', () => {
+        const h = inPerson();
+        assert.equal(h.at(HEADS_UP).alert.step, 1);
+        assert.equal(h.dispatch(toggle).alert.travel.choicesOpen, true);
+    });
+
+    test('2. the heads-up stays past its display time while the choices are open', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.dispatch(toggle);
+        const v = h.at(PAST_DISPLAY);
+        assert.equal(v.alert?.key, KEY);
+        assert.equal(v.alert.step, 1);
+        assert.equal(v.alert.travel.choicesOpen, true);
+    });
+
+    test('3. closing the choices after the display time lets the heads-up go', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.dispatch(toggle);
+        h.at(PAST_DISPLAY);
+        assert.equal(h.dispatch(toggle).alert, null);
+        assert.equal(h.at(PAST_DISPLAY + 1000).alert, null);
+    });
+
+    test('3. a second toggle within the display time closes the choices on the card', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.dispatch(toggle);
+        assert.equal(h.dispatch(toggle).alert.travel.choicesOpen, false);
+    });
+
+    test('4. a pick that keeps the meeting at its heads-up keeps the card and the choices open', () => {
+        const h = inPerson({ settings: { inpersonHeadsupMinutes: 60 } });
+        h.at(T0 - 80 * MIN);   // 50 min before leave-by
+        h.dispatch(toggle);
+        let v = h.dispatch({ type: 'setTravel', placeKey: 'hq', minutes: 45 });
+        assert.equal(v.alert.step, 1);   // 35 min before the new leave-by
+        assert.equal(v.alert.travel.choicesOpen, true);
+        assert.equal(v.alert.travel.text, 'Travel: 45 min');
+        v = h.at(T0 - 80 * MIN + 20_000);
+        assert.equal(v.alert?.key, KEY);
+        assert.equal(v.alert.travel.choicesOpen, true);
+    });
+
+    test('5. a snooze hides a held heads-up, and it does not come back after the snooze', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.dispatch(toggle);
+        assert.equal(h.dispatch({ type: 'snooze', key: KEY }).alert, null);
+        assert.equal(h.at(T0 - 37.5 * MIN).alert, null);   // snooze over, nudge not yet
+    });
+
+    test('6. the nudge draws the choices closed', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.dispatch(toggle);
+        const v = h.at(T0 - 35 * MIN);
+        assert.equal(v.alert.step, 2);
+        assert.equal(v.alert.travel.choicesOpen, false);
+    });
+
+    test('7. a toggle for a card that is not shown does nothing', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        assert.equal(h.dispatch({ type: 'toggleTravelChoices', key: 'occ:other|1' }).alert.travel.choicesOpen, false);
+        assert.equal(h.at(PAST_DISPLAY).alert, null);
+    });
+
+    test('8. a toggle on an online meeting, which has no travel, does nothing', () => {
+        const h = setup();
+        h.deliverAt(T0 - 30 * MIN);
+        assert.equal(h.dispatch(toggle).alert.travel, null);
+        assert.equal(h.at(T0 - 30 * MIN + 20_000).alert, null);
+    });
+
+    test('9. the hold is never stored', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        const writes = h.store.alertWrites.length;
+        h.dispatch(toggle);
+        h.dispatch(toggle);
+        assert.equal(h.store.alertWrites.length, writes);
+    });
+
+    describe('the hold never delays another meeting (PRD §4)', () => {
+        const other = start => meeting({ uid: 'board-1', summary: 'Board call', start, end: start + 30 * MIN });
+
+        test('another meeting reaching its nudge takes the card, and the hold does not come back', () => {
+            const B = other(T0 - 28 * MIN);   // online: nudge at T0 - 38 min
+            const h = inPerson();
+            h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+            h.dispatch(toggle);
+            const v = h.at(T0 - 38 * MIN);
+            assert.equal(v.alert.key, occurrenceKey(B));
+            assert.equal(v.alert.step, 2);
+            h.dispatch({ type: 'ack', key: occurrenceKey(B) });
+            assert.equal(h.at(T0 - 37.9 * MIN).alert, null);
+        });
+
+        test('while the held card is still on its display time, the choices close when another meeting is at its nudge', () => {
+            const B = other(T0 - 30 * MIN + 5000);   // online: nudge 5 s after the heads-up
+            const h = inPerson();
+            h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+            h.dispatch(toggle);
+            let v = h.at(HEADS_UP + 5000);
+            assert.equal(v.alert.key, KEY);   // earlier leave-by, display time unspent
+            assert.equal(v.alert.travel.choicesOpen, false);
+            v = h.at(PAST_DISPLAY);
+            assert.equal(v.alert.key, occurrenceKey(B));
+            h.dispatch({ type: 'ack', key: occurrenceKey(B) });
+            assert.equal(h.at(PAST_DISPLAY + 1000).alert, null);
+        });
+    });
+});
+
 describe('controller: sound', () => {
     test('9. plays once when step 3 first shows, and once more at step 4', () => {
         const h = setup();
