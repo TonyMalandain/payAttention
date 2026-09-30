@@ -509,3 +509,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner keeps today's row of travel time boxes. The only visual demand is that the numbers are readable. The extra question text and the "(saved for this place)" wording are dropped. The clickable "Change travel time" button and the heads-up staying while the boxes are shown stay in scope, because they answer the owner's first complaint and prevent losing the card mid-choice.
 - **Source:** owner, 2026-09-30.
 - **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11
+
+## 2026-09-30 — Menu travel choices: current mark misaligned
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** In the top-bar menu's travel list, the current value shows a check mark slightly left of the round marks on the other lines. Expected: one single-choice style, same mark, same column, the current one filled. Folded into PG-11.
+- **Source:** owner report.
+- **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11

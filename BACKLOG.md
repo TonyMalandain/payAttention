@@ -96,7 +96,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - picking one saves it and moves the alert times at once; it does not stop the escalation;
     - the heads-up card does not go away on its own while the boxes are shown;
     - a check fails if a box's text is cut off on the narrowest card; screenshots of both cards are added to `docs/screenshots/`.
-  - **Not in this ticket:** the top-bar menu's travel chooser, which already reads fine; the list of values.
+    - **top-bar menu:** in a meeting's expanded travel list, the mark on the current value sits in the same column, and is the same kind of mark, as the marks on the other values. Today the current one shows a check mark slightly left of the round marks on the other lines (owner report, 2026-09-30). One value can be chosen, so every line uses the same single-choice style;
+  - **Not in this ticket:** the list of values.
 
 ## Now — needs the owner (cannot be done unattended)
 
