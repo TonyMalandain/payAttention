@@ -532,3 +532,10 @@ Append only. Newest at the bottom.
 - **Why:** the architect showed that, under the proposed hold, an overlapping meeting could sit in the "also" line past its own nudge, and with earlier custom timings past insist, without its sound. The product promise is that must-attend meetings are impossible to miss; a convenience for one card cannot cost another meeting its escalation.
 - **Source:** product manager, from the architect's PG-11 Part B review.
 - **Touches:** docs/prd/meeting-guardian.md §4, architecture interfaces.md §2
+
+## 2026-09-30 — PG-11 sample: product answers
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The owner confirms PG-11 in the sample once Parts A, B and C are all built, so the sample shows the real behaviour. The sample may keep its heads-up on screen longer than the real 15 s, so the owner has time to look; this is a viewing aid in the sample only, never in the product.
+- **Source:** product manager, answering the senior engineer's PG-11 Part D questions.
+- **Touches:** BACKLOG.md PG-11
