@@ -10,9 +10,18 @@ import St from 'gi://St';
 
 // A click already under way when the alert appears must not choose an action.
 const ARM_DELAY_MS = 800;
+// Four 13pt "90 min" boxes (83 px each) fit the heads-up card's 380 px; seven do not.
+const TRAVEL_CHOICES_PER_ROW = 4;
 
 function label(styleClass, text) {
     return new St.Label({ style_class: styleClass, text });
+}
+
+/** A card button whose text is never ellipsized: a box too narrow grows the card instead. */
+function unclippedButton(name, text, styleClass) {
+    const child = new St.Label({ text, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER });
+    child.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+    return new St.Button({ name, style_class: styleClass, child, can_focus: true });
 }
 
 function setText(actor, text) {
@@ -65,7 +74,7 @@ export class AlertContent {
         this._actor.add_child(this._time);
         this._actor.add_child(this._reason);
 
-        this._travelBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
+        this._travelBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'payattention-travel' });
         this._alsoBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         this._actionsBox = new St.BoxLayout({
             orientation: Clutter.Orientation.VERTICAL,
@@ -120,24 +129,41 @@ export class AlertContent {
         this._travelBox.destroy_all_children();
         if (!travel)
             return;
+        const text = label('payattention-time', travel.text);
+        text.name = 'payattention-travel-text';
+        text.y_align = Clutter.ActorAlign.CENTER;
+        text.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         if (travel.choices.length === 0) {
-            this._travelBox.add_child(label('payattention-time', travel.text));
+            this._travelBox.add_child(text);
             return;
         }
-        const toggle = new St.Button({ style_class: 'payattention-travel-toggle', label: `${travel.text} · change`, can_focus: true, x_align: Clutter.ActorAlign.START });
-        const choices = new St.BoxLayout({ style_class: 'payattention-actions', visible: this._travelOpen });
-        toggle.connect('clicked', () => {
+        const line = new St.BoxLayout({ style_class: 'payattention-actions' });
+        const change = unclippedButton('payattention-travel-change', 'Change travel time', 'payattention-button');
+        line.add_child(text);
+        line.add_child(change);
+
+        const choices = new St.BoxLayout({
+            name: 'payattention-travel-choices',
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'payattention-travel-choices',
+            visible: this._travelOpen,
+        });
+        for (let i = 0; i < travel.choices.length; i += TRAVEL_CHOICES_PER_ROW) {
+            const row = new St.BoxLayout({ style_class: 'payattention-actions', x_align: Clutter.ActorAlign.START });
+            for (const minutes of travel.choices.slice(i, i + TRAVEL_CHOICES_PER_ROW)) {
+                const button = unclippedButton(`payattention-travel-choice-${minutes}`, `${minutes} min`, 'payattention-button payattention-travel-choice');
+                if (minutes === travel.minutes)
+                    button.add_style_class_name('payattention-choice-current');
+                button.connect('clicked', () => this._dispatch({ type: 'setTravel', placeKey: travel.placeKey, minutes }));
+                row.add_child(button);
+            }
+            choices.add_child(row);
+        }
+        change.connect('clicked', () => {
             this._travelOpen = !this._travelOpen;
             choices.visible = this._travelOpen;
         });
-        for (const minutes of travel.choices) {
-            const button = new St.Button({ style_class: 'payattention-button', label: `${minutes} min`, can_focus: true });
-            if (minutes === travel.minutes)
-                button.add_style_class_name('payattention-choice-current');
-            button.connect('clicked', () => this._dispatch({ type: 'setTravel', placeKey: travel.placeKey, minutes }));
-            choices.add_child(button);
-        }
-        this._travelBox.add_child(toggle);
+        this._travelBox.add_child(line);
         this._travelBox.add_child(choices);
     }
 

@@ -9,6 +9,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
+import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -384,6 +385,27 @@ function titleProblems(root) {
     });
 }
 
+/** Travel texts under root that are ellipsized, narrower than their natural width, or off every monitor. */
+function travelTextProblems(root) {
+    const isTravelText = a => a.name === 'payattention-travel-text' || a.name === 'payattention-travel-change' ||
+        !!a.name?.startsWith('payattention-travel-choice-');
+    return findAll(root, isTravelText).flatMap(a => {
+        // A button's text is wherever St put it in the button (a `label:` button's child is not an St.Label).
+        const text = findAll(a, t => t instanceof Clutter.Text)[0];
+        if (!text)
+            return [`${a.name}: no text actor under ${a.get_child?.()?.constructor.name ?? a.constructor.name}`];
+        const ellipsized = text.get_layout().is_ellipsized();
+        const width = text.get_width();
+        const natural = text.get_preferred_width(-1)[1];
+        const [x, y] = a.get_transformed_position();
+        const [w, h] = a.get_transformed_size();
+        const inside = Main.layoutManager.monitors.some(m =>
+            x >= m.x && y >= m.y && x + w <= m.x + m.width && y + h <= m.y + m.height);
+        return !ellipsized && width >= natural - 0.5 && a.mapped && inside ? []
+            : [`${a.name}: ellipsized=${ellipsized} width=${width}/${natural}`];
+    });
+}
+
 /** Buttons of root that are not wholly inside one monitor. */
 function buttonsOffMonitors(root) {
     return findAll(root, a => a.name?.startsWith('payattention-action-')).flatMap(b => {
@@ -404,6 +426,15 @@ const WORST_ALERT = Object.freeze({
     reason: "Why: important: 'client'", travel: null,
     also: ['also: Design sync at 10:00 AM', 'also: Hiring panel at 10:00 AM', 'also: Vendor call at 10:00 AM'],
     canJoin: true, offerSeries: true,
+});
+
+/** An in-person heads-up with the default travel time: the travel line and the boxes (PRD §4). */
+const IN_PERSON_ALERT = Object.freeze({
+    key: 'occ:smoke-visit|0', isTest: false, step: 1, presentation: 'card',
+    headline: 'Heads-up', title: 'Site visit', timeLine: 'Leave by 10:00 AM · in 10 min',
+    countdown: '10:00', countdownCaption: 'until you leave', reason: 'Why: important: \'client\'',
+    travel: { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: [10, 15, 20, 30, 45, 60, 90] },
+    also: [], canJoin: false, offerSeries: false,
 });
 
 /** WORST_ALERT, drawn by the installed UI modules as a takeover and as each card. */
@@ -436,6 +467,33 @@ async function checkWorstCase(name, home) {
                 `a step-${step} card button is off screen (${buttonsOffMonitors(card.actor).join('; ')})`);
             await mustWait(() => titleProblems(card.actor).length === 0, 2000, name,
                 `step-${step} card title: ${titleProblems(card.actor).join('; ')}`);
+        } finally {
+            card.destroy();
+        }
+    }
+}
+
+/** IN_PERSON_ALERT's travel boxes open from a real button and every travel text reads in full (PRD §4). */
+async function checkTravelChoices(name, home) {
+    const { Card } = await import(`file://${home}/data/gnome-shell/extensions/${UUID}/ui/card.js`);
+    for (const step of [1, 2]) {
+        const card = new Card({ ...IN_PERSON_ALERT, step, headline: step === 1 ? 'Heads-up' : 'Get ready' }, () => {});
+        try {
+            await mustWait(() => card.actor.mapped, 2000, name, `the step-${step} card was never mapped`);
+            const change = findByName(card.actor, 'payattention-travel-change');
+            check(change, name, `step-${step} card: no payattention-travel-change`);
+            const clicked = await clickActor(change, name);
+            await mustWait(() => findByName(card.actor, 'payattention-travel-choices')?.visible, 2000, name,
+                `step-${step} card: the travel choices did not open (${clicked})`);
+            const boxes = findAll(card.actor, a => !!a.name?.startsWith('payattention-travel-choice-'));
+            check(boxes.length === 7, name, `step-${step} card: ${boxes.length} travel choices, want 7`);
+            const current = boxes.filter(b => b.has_style_class_name('payattention-choice-current')).map(b => b.name);
+            check(current.length === 1 && current[0] === 'payattention-travel-choice-30', name,
+                `step-${step} card: marked as current: ${current.join(', ') || 'none'}`);
+            await mustWait(() => travelTextProblems(card.actor).length === 0, 2000, name,
+                `step-${step} card: ${travelTextProblems(card.actor).join('; ')}`);
+            check(change instanceof St.Button && change.get_style_class_name() === 'payattention-button', name,
+                `step-${step} card: the change control is not a secondary button (${change.constructor.name} "${change.get_style_class_name?.()}")`);
         } finally {
             card.destroy();
         }
@@ -575,6 +633,9 @@ async function runLadder() {
 
         // 6c. A UI constructor that fails cleans up after itself.
         await checkFailedConstruction('6c-failed-construction', home);
+
+        // 6d. The travel boxes of an in-person card open from a button and read in full.
+        await checkTravelChoices('6d-travel-choices', home);
 
         // 7. Disable: nothing of ours remains.
         await checkDisabled('7-disable', home);

@@ -22,7 +22,10 @@
 .payattention-button:hover, .payattention-button:focus { background-color: rgba(255,255,255,0.30); }
 .payattention-button-primary { background-color: #ffffff; color: #111111; }
 .payattention-button-primary:hover, .payattention-button-primary:focus { background-color: #e6e6e6; }
-.payattention-travel-toggle { font-size: 11pt; text-decoration: underline; color: #ffd98a; }
+.payattention-travel { spacing: 10px; padding-top: 8px; }
+.payattention-travel-choices { spacing: 10px; }
+/* Four boxes fit the 380 px heads-up card (ui/alertContent.js TRAVEL_CHOICES_PER_ROW). */
+.payattention-travel-choice { padding: 10px 12px; }
 .payattention-choice-current { background-color: #ffb020; color: #111111; }
 .payattention-takeover { background-color: rgba(0,0,0,0.0); }
 .payattention-takeover-panel { background-color: rgba(80,0,0,0.96); spacing: 18px; padding: 48px; color: #ffffff; }
