@@ -56,11 +56,34 @@ async function runChecks() {
         indicator.menu.close(false);
     }
 
-    // 4. No keyring: the Secret Service is masked on the sample's private bus.
-    const [owned] = Gio.DBus.session.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
-        'NameHasOwner', new GLib.Variant('(s)', ['org.freedesktop.secrets']), null, Gio.DBusCallFlags.NONE, -1, null)
-        .deepUnpack();
-    check(owned === false, '4-no-keyring', 'org.freedesktop.secrets has an owner on the sample bus');
+    // 4. Private bus: the shell's bus is the one isolated_run wrote, and can start only its allowlist
+    //    (tests/smoke/isolation-check.sh proves the allowlist has no keyring).
+    check(GLib.getenv('PAYATTENTION_ISOLATED_HOME') === home, '4-private-bus', 'the shell was not started by isolated_run');
+    const address = GLib.getenv('DBUS_SESSION_BUS_ADDRESS') ?? '';
+    check(address !== '' && address !== `unix:path=${GLib.get_user_runtime_dir()}/bus`, '4-private-bus',
+        'the shell is not on a private session bus');
+    const expected = new Set();
+    try {
+        const children = Gio.File.new_for_path(`${home}/bus/services`)
+            .enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
+        for (let info = children.next_file(null); info; info = children.next_file(null)) {
+            const name = info.get_name();
+            if (name.endsWith('.service'))
+                expected.add(name.slice(0, -'.service'.length));
+        }
+        children.close(null);
+    } catch (e) {
+        check(false, '4-private-bus', `${home}/bus/services is missing (${e.message})`);
+    }
+    check(expected.size > 0, '4-private-bus', `${home}/bus/services is empty`);
+    // Listing activatable names starts nothing.
+    const [listed] = Gio.DBus.session.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
+        'ListActivatableNames', null, new GLib.VariantType('(as)'), Gio.DBusCallFlags.NONE, -1, null).deepUnpack();
+    const actual = new Set(listed.filter(n => n !== 'org.freedesktop.DBus'));
+    const extra = [...actual].filter(n => !expected.has(n));
+    const missing = [...expected].filter(n => !actual.has(n));
+    check(extra.length === 0 && missing.length === 0, '4-private-bus',
+        `the bus can start other names than ${home}/bus/services: extra [${extra.join(', ')}], missing [${missing.join(', ')}]`);
 }
 
 export async function run() {

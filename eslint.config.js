@@ -59,7 +59,7 @@ const APP_PATTERNS = [
 ];
 
 export default [
-    { ignores: ['node_modules/**', 'dist/**', '.test-home/**', '.smoke-home/**', '.sample-home/**'] },
+    { ignores: ['node_modules/**', 'dist/**', '.test-home/**', '.smoke-home/**', '.sample-home/**', '.isolation-probe/**'] },
     js.configs.recommended,
     {
         files: ['**/*.js'],

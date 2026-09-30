@@ -3,3 +3,4 @@ dist/
 .test-home/
 .smoke-home/
 .sample-home/
+.isolation-probe/

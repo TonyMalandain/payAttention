@@ -39,6 +39,14 @@ fi
 # 2. Isolated home with the built extension installed.
 isolated_install "$T"
 
+# 2b. The isolation environment itself: throwaway homes only, allowlisted extras,
+#     a private bus that can start no keyring, a guard and a clean-up that work.
+bash "$ROOT/tests/smoke/isolation-check.sh" "$T" 2>&1 | tee "$T/isolation.log" || true
+if ! grep -q '^PAYATTENTION-ISOLATION PASS' "$T/isolation.log"; then
+    echo "smoke: isolation check failed" >&2
+    exit 1
+fi
+
 # 3. The fixture calendar: one must-attend online meeting 2-3 h ahead, so no
 #    real step fires during the run, and two all-day events, which are always in
 #    today's menu (whatever the hour) and never alert: one for the menu check,
@@ -81,8 +89,9 @@ EOF
 
 # 5. The headless shell, with a minimal environment: never the caller's, which
 #    carries the real DBUS_SESSION_BUS_ADDRESS, WAYLAND_DISPLAY and DISPLAY.
+#    isolated_run provides the private session bus.
 isolated_run "$T" "$HOME" LANG=C.UTF-8 PAYATTENTION_SMOKE_HOME="$T" -- \
-    timeout 300 dbus-run-session -- gnome-shell --headless \
+    timeout 300 gnome-shell --headless \
         --virtual-monitor 960x540 --virtual-monitor 1024x768 \
         --wayland-display "pa-smoke-$$" \
         --automation-script "$ROOT/tests/smoke/alert-ladder.js" > "$T/shell.log" 2>&1 || true
