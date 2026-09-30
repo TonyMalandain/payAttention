@@ -539,3 +539,11 @@ Append only. Newest at the bottom.
 - **Fact:** The owner confirms PG-11 in the sample once Parts A, B and C are all built, so the sample shows the real behaviour. The sample may keep its heads-up on screen longer than the real 15 s, so the owner has time to look; this is a viewing aid in the sample only, never in the product.
 - **Source:** product manager, answering the senior engineer's PG-11 Part D questions.
 - **Touches:** BACKLOG.md PG-11
+
+## 2026-09-30 — Changing travel time always works on a nudge card
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** "Change travel time" must work on a nudge card even when another meeting is also at its nudge or later. The "never delays another meeting" rule ends only a heads-up being held open; it never closes the boxes on a nudge card.
+- **Why:** the reviewer found Part B turned the button off on a nudge card beside another active meeting, which is the back-to-back case where a correct leave-by time matters most. Holding a heads-up is the only thing that can delay another meeting, so only that is ended.
+- **Source:** product manager, from the PG-11 Part B review.
+- **Touches:** architecture interfaces.md §3; BACKLOG.md PG-11
