@@ -547,3 +547,11 @@ Append only. Newest at the bottom.
 - **Why:** the reviewer found Part B turned the button off on a nudge card beside another active meeting, which is the back-to-back case where a correct leave-by time matters most. Holding a heads-up is the only thing that can delay another meeting, so only that is ended.
 - **Source:** product manager, from the PG-11 Part B review.
 - **Touches:** architecture interfaces.md §3; BACKLOG.md PG-11
+
+## 2026-09-30 — Owner rejects the travel button and two-line boxes
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** After seeing the sample, the owner found the "Change travel time" button too invasive and the two lines of big boxes worse than before. The card keeps a small "Change time" link and one compact row of small boxes with numbers only, "min" said once. The only real fault was unreadable numbers. My earlier call to make it a full button is superseded.
+- **Why:** the owner's words: "a Change Time hyperlink is probably enough … A single row with the values was nice and compact. The only problem is that we couldn't read the values". Numbers without the unit fit one row of the narrowest card; "N min" seven times does not.
+- **Source:** owner, 2026-09-30, after `npm run sample`.
+- **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11 Part E
