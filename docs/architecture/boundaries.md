@@ -25,8 +25,13 @@ tests/
   helper/               node --test suites that run the helper against an isolated EDS
   fixtures/             synthetic snapshots (never real calendar data)
   ai/                   node --test suites that run the AI helper against a fake engine on 127.0.0.1
-  smoke/                headless gnome-shell automation script(s), install/uninstall check
-scripts/                build, install, uninstall (--purge), smoke wrappers
+  smoke/                headless gnome-shell automation script(s), install/uninstall check;
+                        stage.js (stage helpers shared by the automation scripts),
+                        sample-check.js (the sample shell's headless check, PG-11 Part D)
+scripts/                build, install, uninstall (--purge), smoke and sample wrappers;
+                        isolated-shell.sh (sourced, not run: the one definition of a
+                        throwaway shell's environment, shared by smoke.sh and sample.sh)
+.smoke-home/, .sample-home/   throwaway homes the scripts create (git-ignored, lint-ignored)
 package.json            dev-only: test and lint tooling; never packed
 eslint.config.js        dev-only
 dist/                   build output (git-ignored)

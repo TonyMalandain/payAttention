@@ -16,7 +16,7 @@ Run in this order. Each must pass before the next is worth running.
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
 | 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=preview --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), `preview/` since PG-8c (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, `preview/main.js`, LICENSE and NOTICE (shipped since PG-6). |
 | 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js" "tests/ai/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (Layer 2), the AI helper against a fake engine (Layer 2b, from PG-4), and the preview installed from the zip (Layer 2c, from PG-8c). **Needs a fresh zip from step 4**: the preview test refuses to run when `dist/…shell-extension.zip` is missing or older than any file under `extension/`. |
-| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below). |
+| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then a headless gnome-shell with the built zip installed and enabled (below), then, last, the sample shell's headless check `scripts/sample.sh --check` (Layer 3b, from PG-11 Part D), so the sample's fixture and settings cannot rot unseen. Needs no `mutter-devkit`. |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
 Setup once: `npm ci` (dev tools only; nothing from `node_modules` is ever packed).
@@ -41,6 +41,10 @@ settings, or other keyring items. It is safe to run twice. On a **locked** keyri
 item of the schema remains. It clears keys before settings, so a locked
 keyring leaves both in place. An unreachable Secret Service also fails
 `--purge`: the script cannot tell "no items" from "unreachable".
+
+See the built extension without logging out: `npm run sample` (Layer 3b) opens
+a separate GNOME Shell in a window, on a throwaway home and one test calendar.
+Needs the `mutter-devkit` package once (`sudo dnf install mutter-devkit`).
 
 ### Switching an existing install to the new UUID (ADR-0006 amendment, D-034)
 
@@ -355,8 +359,18 @@ against the real shell is the ladder's last step, `10-switch-over`. It prints
 `PAYATTENTION-UNINSTALL PASS` or `FAIL <check>: <reason>`.
 
 `gnome-shell --headless` runs a complete shell with virtual monitors, in its own
-D-Bus session, with an isolated home. `--devkit` is not usable here (the
-`mutter-devkit` package is not installed), and is not needed.
+D-Bus session, with an isolated home. The smoke never uses `--devkit` and must
+not need the `mutter-devkit` package; only the sample window does (Layer 3b).
+
+The isolation environment (the `env -i` list, the throwaway `XDG_*`
+directories, keyfile settings, installing the built zip, writing a fixture
+calendar) is defined once, in `scripts/isolated-shell.sh`, sourced by
+`scripts/smoke.sh` and `scripts/sample.sh`. It refuses a home outside the
+repository's dot directories and refuses to pass through
+`DBUS_SESSION_BUS_ADDRESS`, `DISPLAY`, or its own `XDG_*`/`GSETTINGS_BACKEND`
+overrides. A second inline copy of that list anywhere is a defect: two copies
+are two lists to keep safe. `tests/smoke/uninstall-check.sh` stays separate on
+purpose (it needs real dconf and its own `XDG_RUNTIME_DIR`).
 
 ```sh
 T=<fresh directory on the home filesystem>   # NOT /tmp — see pitfalls
@@ -426,6 +440,46 @@ Checks are "no modal entry of ours", never an absolute `Main.modalCount`: in
 headless 50.4 the overview is open at startup and holds one modal entry (verified).
 
 Verified: a probe extension reached state 1 with two monitors reported.
+
+## Layer 3b — the sample shell (`npm run sample`, from PG-11 Part D)
+
+A developer command, not a validation step: the owner looks at the built
+extension in a window without logging out, and without it touching their
+session's data. `npm run sample` → `bash scripts/sample.sh`; `--check` runs the
+same setup headless and is the smoke's last step.
+
+- **What it runs.** A fresh `.sample-home/` in the repository, the working tree
+  built and installed there, one local calendar with one in-person must-attend
+  fixture meeting timed so the heads-up is due at start, keyfile settings with
+  the extension enabled, then `dbus-run-session -- gnome-shell --devkit
+  --wayland` inside `isolated_run` with a throwaway `HOME` and `XDG_STATE_HOME`.
+  The window is drawn by `/usr/libexec/mutter-devkit` (`stack.md`).
+- **Viewing aid, inside the product's range.** The sample sets
+  `headsup-display-seconds=120`, the top of that setting's own range (`data.md`),
+  so the heads-up stays long enough to look at. It is an ordinary setting value
+  in the throwaway keyfile, not a sample-only code path: nothing under
+  `extension/` knows about the sample. Any other departure from product
+  behaviour for viewing's sake must also be expressible as an existing setting,
+  or it comes back here.
+- **What it must never touch:** the owner's session bus, calendars (EDS),
+  keyring, dconf, and `~/.local/share/gnome-shell/extensions`. On the sample's
+  private bus, `org.freedesktop.secrets` and the two portal names are masked by
+  service files in its own `XDG_DATA_HOME/dbus-1/services` (`Exec=/bin/false`),
+  so no keyring starts at all; `sample-check.js` asserts it. The script compares
+  the owner's extensions folder before and after and fails if it changed.
+- **What it shares with the live session, accepted:** (1) the owner's Wayland
+  compositor, which shows the viewer window (`WAYLAND_DISPLAY` is passed only
+  in window mode, as an explicit extra); (2) `XDG_RUNTIME_DIR`, so the nested
+  shell's socket appears there, and the viewer's picture and any alert sound go
+  through the owner's PipeWire/PulseAudio; (3) the real system bus, as in the
+  smoke. None of these is a store of the owner's data. The same rule as the
+  smoke holds: never *call* a service that changes machine state. Never fall
+  back to `--display-server` or anything that takes the real seat.
+- **Needs:** GNOME Shell 50 (checked first); window mode also needs
+  `mutter-devkit` installed and `WAYLAND_DISPLAY` set, each with a one-line
+  message and exit 1 before anything changes. `--check` needs neither.
+- **Clean-up:** on any exit, every process whose command line contains
+  `.sample-home/` is killed. `.sample-home/` is git- and lint-ignored.
 
 ## Layer 4 — the real session (manual)
 

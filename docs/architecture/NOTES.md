@@ -869,3 +869,31 @@ Append only. Newest at the bottom.
 - **Why:** Drift in the doc; the code and §2 agreed.
 - **Source:** extension/app/controller.js:215-218.
 - **Touches:** overview.md — fixed.
+
+## 2026-09-30 — The sample shell is accepted as a developer command (PG-11 Part D)
+- **Kind:** stack
+- **Fact:** `mutter-devkit` becomes a development-only tool on the owner's machine, used only by `npm run sample` window mode; the smoke and the validation sequence must keep running without it.
+- **Why:** gnome-shell 50.5 has no `--nested` mode; `--devkit` is the only way to see a nested shell in a window, and `--display-server` would take the real seat. Keeping `--check` devkit-free keeps the validation sequence runnable on any machine with GNOME Shell 50.
+- **Source:** `gnome-shell --help` (measured 2026-09-30); docs/plans/PG-11.md Part D.
+- **Touches:** stack.md, testing-and-build.md Layer 3/3b — folded.
+
+## 2026-09-30 — One isolation environment for throwaway shells
+- **Kind:** boundary
+- **Fact:** `scripts/isolated-shell.sh` is the single definition of a throwaway shell's environment; a second inline copy is a defect. `uninstall-check.sh` stays separate on purpose.
+- **Why:** The `env -i` list is what keeps a test shell off the owner's bus, dconf and data; two copies drift and one of them stops being safe.
+- **Source:** scripts/smoke.sh step 5 (today's only copy); PG-11 Part D Seams 1.
+- **Touches:** boundaries.md layout, testing-and-build.md Layer 3 — folded.
+
+## 2026-09-30 — The sample shares Wayland, XDG_RUNTIME_DIR (PipeWire/Pulse) and the system bus with the live session
+- **Kind:** constraint
+- **Fact:** Accepted shared channels: the viewer window on the owner's compositor, the runtime dir (so the picture and any alert sound go through the owner's PipeWire), and the real system bus; none stores the owner's data.
+- **Why:** The window is the point of the sample; a private PipeWire would be a second media stack to run for one look. The viewer using PipeWire is `assumed` from mutter's devkit design, to be confirmed by the first run.
+- **Source:** assumed; libmutter-18.so strings (`org.gnome.Mutter.Devkit`, `/usr/libexec/mutter-devkit`).
+- **Touches:** testing-and-build.md Layer 3b — folded.
+
+## 2026-09-30 — Sample viewing aids must be existing settings
+- **Kind:** constraint
+- **Fact:** The sample's longer heads-up is `headsup-display-seconds=120` in its throwaway keyfile, within the setting's own 5–120 range; any other viewing aid must likewise be an existing setting, never sample-only code under `extension/`.
+- **Why:** The owner confirms PG-11 by looking at the sample; if the sample ran different code, the look would not confirm what ships.
+- **Source:** extension/schemas/…gschema.xml:51; data.md.
+- **Touches:** testing-and-build.md Layer 3b — folded.
