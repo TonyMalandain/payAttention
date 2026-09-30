@@ -226,8 +226,9 @@ export class Controller {
 
         const realPlan = plan(now, this._judged, this._alertState, timing, env);
         // The hold never delays another meeting, and ends for good once one is visible at its nudge or later.
+        // Choices opened on the nudge hold nothing back, so this never closes them.
         const shownCards = realPlan.primary?.visible ? [realPlan.primary, ...realPlan.also] : realPlan.also;
-        if (open && shownCards.some(c => c.key !== open.key && c.step >= 2))
+        if (open?.step === 1 && shownCards.some(c => c.key !== open.key && c.step >= 2))
             this._openTravelChoices = null;
         if (realPlan.primary?.recordHeadsUpShown) {
             this._alertState = reduce(this._alertState, actionFor(realPlan.primary, 'headsUpShown'), now);

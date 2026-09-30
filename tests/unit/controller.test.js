@@ -340,6 +340,44 @@ describe('controller: travel choices', () => {
             h.dispatch({ type: 'ack', key: occurrenceKey(B) });
             assert.equal(h.at(PAST_DISPLAY + 1000).alert, null);
         });
+
+        test('choices opened on a nudge card beside another meeting at its nudge open and stay open', () => {
+            const B = other(T0 - 25 * MIN);   // online: nudge at T0 - 35 min, same as the card's
+            const h = inPerson();
+            h.deliverAt(T0 - 34 * MIN, snapshot([MEETING, B], [WORK]));
+            assert.equal(h.ui.last.alert.key, KEY);
+            assert.equal(h.ui.last.alert.step, 2);
+            let v = h.dispatch(toggle);
+            assert.equal(v.alert.travel.choicesOpen, true);
+            v = h.at(T0 - 33 * MIN);
+            assert.equal(v.alert.key, KEY);
+            assert.equal(v.alert.travel.choicesOpen, true);
+        });
+    });
+
+    test('10. choices opened on the nudge never revive a spent heads-up', () => {
+        const h = inPerson();
+        h.at(HEADS_UP);
+        h.at(PAST_DISPLAY);
+        assert.equal(h.at(T0 - 35 * MIN).alert.step, 2);
+        h.dispatch(toggle);
+        // 25 min travel: leave by T0 - 25 min, so T0 - 35 min is the heads-up again, already shown.
+        const v = h.dispatch({ type: 'setTravel', placeKey: 'hq', minutes: 25 });
+        assert.equal(v.alert, null);
+    });
+
+    test('11. a toggle with the key of a meeting whose heads-up is spent and hidden does nothing', () => {
+        const B = meeting({ uid: 'site-1', summary: 'Site visit', start: T0 + 30_000, end: T0 + 30 * MIN });
+        const h = inPerson();
+        h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+        h.dispatch({ type: 'setMode', key: occurrenceKey(B), mode: 'in-person' });
+        h.at(PAST_DISPLAY);
+        // B's heads-up (30 s after the card's) is shown; the card's is spent.
+        let v = h.at(HEADS_UP + 30_000);
+        assert.equal(v.alert.key, occurrenceKey(B));
+        v = h.dispatch(toggle);
+        assert.equal(v.alert.key, occurrenceKey(B));
+        assert.equal(v.alert.travel.choicesOpen, false);
     });
 });
 
