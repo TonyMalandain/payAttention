@@ -524,3 +524,11 @@ Append only. Newest at the bottom.
 - **Why:** seven readable boxes cannot fit on one line of the heads-up card; a hidden card that returns on time keeps the promise of R-11.
 - **Source:** product manager, from the PG-11 plan questions.
 - **Touches:** docs/prd/meeting-guardian.md §4
+
+## 2026-09-30 — The travel-box hold never delays another meeting
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** Holding a heads-up open while its travel boxes are shown must never delay another must-attend meeting. As soon as another meeting reaches its nudge or a later step, that meeting takes the card and the hold ends.
+- **Why:** the architect showed that, under the proposed hold, an overlapping meeting could sit in the "also" line past its own nudge, and with earlier custom timings past insist, without its sound. The product promise is that must-attend meetings are impossible to miss; a convenience for one card cannot cost another meeting its escalation.
+- **Source:** product manager, from the architect's PG-11 Part B review.
+- **Touches:** docs/prd/meeting-guardian.md §4, architecture interfaces.md §2

@@ -841,3 +841,31 @@ Append only. Newest at the bottom.
 - **Why:** The switch-over rule uses the tri-state gdbus query for former copies; the current-UUID path predates the measurement. Not changed here (scope); the same query would close it.
 - **Source:** scripts/uninstall.sh:45-68; measured 2026-09-29.
 - **Touches:** testing-and-build.md Pitfalls when decided.
+
+## 2026-09-30 — The heads-up hold is a plan input, not UI state (PG-11 Part B)
+- **Kind:** decision
+- **Fact:** "While the travel boxes are shown the heads-up stays" is a required `plan()` env field `heldHeadsUpKey`, fed from controller memory; the UI only draws `travel.choicesOpen` and dispatches `toggleTravelChoices {key}`.
+- **Why:** Visibility is decided only in `plan()` (ADR-0002); holding the card from `ui/` would draw a card the Plan says is gone. Rejected alternative: re-stamping `headsUpShownAt` through the reducer, which writes durable alert state every tick for a transient fact and breaks "shown once".
+- **Source:** docs/plans/PG-11.md "For the architect"; PRD docs/prd/meeting-guardian.md §4; extension/core/plan.js:108-110.
+- **Touches:** overview.md "Visible?" and glossary, interfaces.md §2 and §3, data.md "What is not stored" — folded.
+
+## 2026-09-30 — A hold only lengthens the earlier-deadline rule; it cannot suppress a takeover
+- **Kind:** constraint
+- **Fact:** While held, a step-1 card with an earlier deadline stays primary over another meeting's visible nudge (and, with non-default step times, its insist, which then plays no sound because sound follows `view.alert`); a takeover still wins (`byPrimaryOrder`, extension/core/plan.js:60-69) and drops the hold.
+- **Why:** Pre-existing PRD overlap rule ("earlier deadline takes the card"), today bounded by the 15 s display; the hold extends it up to the nudge. With default offsets (in-person nudge 5 min, online insist 3 min) a later-deadline insist cannot coincide with a held step 1.
+- **Source:** extension/core/plan.js:60-69, 108-110; extension/app/controller.js:243-247; PRD §3 table.
+- **Touches:** reported to product; no doc change.
+
+## 2026-09-30 — Closed: the hold yields to any other meeting at step 2 or later
+- **Kind:** decision
+- **Fact:** The overlap consequence above is closed. `plan()` ignores `heldHeadsUpKey` while any other active occurrence is visible at step ≥ 2, so the Plan equals the no-hold Plan. The controller drops the hold on the render where the Plan shows such an occurrence (primary or `also`), so the hold ends rather than resuming later.
+- **Why:** Product decision "The travel-box hold never delays another meeting" (docs/product/NOTES.md 2026-09-30, PRD §4). Keeping it in `plan()` makes the yield happen on the same tick, sound included, with no one-render lag. Keeping the drop in the controller makes it final. What is left is only the pre-existing earlier-deadline rule during an unspent heads-up display time (15 s by default), which is the same with or without a hold. Snoozed meetings do not count until their snooze ends, because a snooze, not the hold, is what hides them.
+- **Source:** product manager decision; extension/core/plan.js:60-69, 108-110.
+- **Touches:** interfaces.md §2 (effect of `heldHeadsUpKey`) and §3 (drop rule), overview.md "Visible?", all folded.
+
+## 2026-09-30 — overview.md said the UI reports "heads-up shown"
+- **Kind:** interface
+- **Fact:** The controller dispatches `headsUpShown` from `recordHeadsUpShown`; the UI never reports it. overview.md "Visible?" wording corrected to match interfaces.md §2 and extension/app/controller.js:215-218.
+- **Why:** Drift in the doc; the code and §2 agreed.
+- **Source:** extension/app/controller.js:215-218.
+- **Touches:** overview.md — fixed.

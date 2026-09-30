@@ -15,6 +15,11 @@ keyring (ADR-0009), never in GSettings.
   source of truth (and a second copy of sensitive data).
 - **Judged occurrences and Plans.** Recomputed from inputs; never persisted.
 - **Test-alert state.** In memory only.
+- **Which card has its travel choices open** (the heads-up hold, PG-11). Held by
+  the controller in memory only. After a shell restart, lock/unlock or re-enable
+  the card comes back with its choices closed, and a heads-up whose display time
+  is spent does not come back. Not alert state: nothing about it is worth
+  restoring, and storing it would let a hold outlive its card.
 
 ## Schema
 

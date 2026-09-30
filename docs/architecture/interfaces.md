@@ -134,7 +134,24 @@ Three pure functions. The names are indicative; the shapes are the contract.
   whether it is the default, `deadline`. Duplicates of the same occurrence from
   two calendars are merged here, by occurrence key.
 - **`plan(now, judged, alertState, timing, env)` → Plan.**
-  `env` carries `userActive`. The Plan holds: the primary card (occurrence key,
+  `env` carries `userActive`, `dataHealthy` and **`heldHeadsUpKey`**
+  (`string|null`, required; PG-11): the occurrence whose heads-up the owner is
+  holding on screen because its travel choices are open, or null. `plan`
+  throws `TypeError` when it is missing, empty or not a string, so a caller
+  cannot silently drop the hold. It changes one term only: a step-1 card whose
+  key equals it stays visible after its display time. Snooze still hides it;
+  it has no effect at steps 2–4, on which occurrences are active, on the step,
+  on ordering beyond visibility, or on `recordHeadsUpShown`.
+  **The hold never delays another meeting (PRD §4).** `plan` ignores
+  `heldHeadsUpKey` whenever any other active occurrence is visible at step 2 or
+  later (nudge, insist or takeover; a snoozed one is not visible, so it does
+  not count until its snooze ends). Invariant, testable as such: when another
+  occurrence is visible at step ≥ 2, the Plan is identical to the Plan for
+  `heldHeadsUpKey = null`. So the held card falls back to its display-time
+  term, and the other meeting takes the card on the same tick it reaches
+  its step, with its sound. The only case where the held card can still be
+  primary is the pre-existing earlier-deadline rule while its display time
+  is unspent, exactly as with no hold. The Plan holds: the primary card (occurrence key,
   step 1–4, whether visible, time to deadline) or none; the "also" list; whether a
   takeover is required; the indicator target (next must-attend deadline within 12 h)
   and a data-health flag passed through from the feed.
@@ -151,7 +168,7 @@ Three pure functions. The names are indicative; the shapes are the contract.
 
 ## 3. Controller ↔ verdict component ↔ UI (internal)
 
-*Revised 2026-09-27 after PG-8b (ADR-0011).*
+*Revised 2026-09-27 after PG-8b (ADR-0011); travel choices and the heads-up hold added 2026-09-30 for PG-11.*
 
 **Who holds what.** Two `app/` classes, one inside the other:
 
@@ -220,7 +237,35 @@ the writer's final flush.
   changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
   `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`, `setTravel`,
-  `runTestAlert`. The UI never reports `headsUpShown` (see §2).
+  `toggleTravelChoices {key}`, `runTestAlert`. The UI never reports
+  `headsUpShown` (see §2).
+- **Travel choices on a card (PG-11).** The UI holds no open/closed state for
+  them. It draws them open when `view.alert.travel.choicesOpen` is true, and
+  its "Change travel time" button dispatches `toggleTravelChoices` with the
+  card's key (a toggle, so the UI never sends a stale "open"/"closed"). The
+  controller:
+  - holds `{key, step}` of the card whose choices are open, in memory only,
+    never stored (`data.md`, "What is not stored");
+  - ignores a toggle whose key is not the alert it last rendered, or whose
+    alert has no travel choices;
+  - passes `heldHeadsUpKey` = that key to `plan` only when it was opened at
+    step 1 (a step-2 opening never revives a spent heads-up), and passes the
+    `{key, step}` to `buildView`, which sets `choicesOpen` only when key and
+    step match the alert and it has choices;
+  - drops it on the render in which the shown alert's key or step differs from
+    the one it was opened on (ack, skip, snooze, the nudge, another meeting or
+    the test alert taking the card, a travel pick that moves the heads-up away);
+  - also drops it on the render in which the Plan shows any other occurrence
+    visible at step ≥ 2, as primary or in `also` (PRD §4: the hold ends, it is
+    not merely suppressed). This covers the case where the held card is
+    still primary on its unspent display time: the choices close on that
+    render, and the hold does not come back if the other meeting later leaves
+    (acknowledged, snoozed, ignored).
+
+    A card that returns later comes back with its choices closed.
+
+  A `setTravel` pick does not close the choices. Visibility is still decided
+  only in `plan`: the UI never keeps a card up that the View says is gone.
 - `join` is handled by the controller: it opens the core-approved `joinUrl` and
   then dispatches `ack`.
 - Text formatting shared by `app/view.js` and `prefs.js` is pure code in

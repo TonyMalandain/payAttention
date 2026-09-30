@@ -86,8 +86,20 @@ For one must-attend occurrence:
 - **Current step** = the highest i with Ti ≤ now, while now < cutoff and the
   occurrence is not acknowledged or skipped. Passed steps are never replayed.
 - **Visible?** Step 1 is visible until it has been displayed to an active user for
-  the heads-up display time (the UI reports "heads-up shown at", the reducer
-  records it). Steps 2–4 are visible unless snoozed. A snooze hides the card until
+  the heads-up display time (the controller records "heads-up shown at" through the
+  reducer), **or while the owner holds it**: its travel choices are open on
+  screen (PRD §4, PG-11). The hold replaces only the display-time term. A snooze
+  still hides a held card, and the hold never makes a card active, changes its
+  step, or counts as an acknowledgement. The hold never delays another meeting:
+  it counts only while no other active meeting is visible at step 2 or later.
+  As soon as one is, `plan()` decides as if nothing were held (that meeting
+  takes the card on that tick, with its sound), and the controller ends the
+  hold for good (`interfaces.md` §2, §3). The held meeting's own nudge also
+  ends it. Closing the choices after the display time
+  has passed lets the card hide on that tick; there is no fresh display period.
+  The hold is transient owner state kept by the controller in memory and passed
+  to `plan()` as an input, like `userActive` (`interfaces.md` §2, §3). Steps 2–4
+  are visible unless snoozed. A snooze hides the card until
   min(snooze end, next step time); at step 4 only the snooze end counts.
 - **Several at once:** the earliest deadline is the primary card; the rest are
   listed as "also".
@@ -154,6 +166,7 @@ that sees consecutive Plans.
 | Escalation step | step 1–4: heads-up, nudge, insist, takeover |
 | Acknowledge / skip / snooze | alert-state actions `ack`, `skip`, `snooze` |
 | Travel time for a place | travel entry, keyed by place key |
+| "The boxes" / travel choices shown on a card | `AlertView.travel.choicesOpen`; for a step-1 card, the plan input `env.heldHeadsUpKey` (the hold) |
 | Mode: Rules / AI | `verdict-source`: `rules` / `ai` (not `mode`, which is online / in-person) |
 | AI verdict ("AI: <reason>") | AI helper; `reasonCode` `ai-must` / `ai-ignore`; stored in `ai-verdicts` |
 | A meeting the AI judges | eligible occurrence: AI mode with a usable engine, and no override (`interfaces.md` §6.1) |
