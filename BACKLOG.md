@@ -86,7 +86,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - checked by hand in the real session.
   - **Open for the engineer:** what plays if the selected alert sound cannot be found. A silent failure is not acceptable (fall back to a standard sound).
 
-- **PG-11 — Changing the travel time from an alert is obvious and readable (S).** Part A (readable boxes, Change travel time button) **ACCEPTED** in review round 1 (9350ce5). Part B (hold) **ACCEPTED** in review round 2 (091132a, c1aa1c2); Part C (menu marks) **ACCEPTED** in review round 1 (20e0ae8); Part D (visible sample) **ACCEPTED** in review round 2 (0b9d1a8, 95eda8e); the owner's look at the window closes PG-11. Refines R-11 (in-person meetings count down to the leave-by time).
+- **PG-11 — Changing the travel time from an alert is obvious and readable (S). DONE 2026-09-30** (Parts A–E accepted; the owner accepted the look in `npm run sample`). Reaches the owner's real session with the PG-2 reinstall. Part A (readable boxes, Change travel time button) **ACCEPTED** in review round 1 (9350ce5). Part B (hold) **ACCEPTED** in review round 2 (091132a, c1aa1c2); Part C (menu marks) **ACCEPTED** in review round 1 (20e0ae8); Part D (visible sample) **ACCEPTED** in review round 2 (0b9d1a8, 95eda8e); the owner's look at the window closes PG-11. Refines R-11 (in-person meetings count down to the leave-by time).
   - **What changes for the owner:** on a heads-up or nudge card for an in-person meeting, they can see how to change the travel time, and they can read the number in every box.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner's first real use (2026-09-30). The underlined "· change" did not look clickable. The boxes showed no readable numbers, so the owner had to guess which was shorter. A guessed travel time gives a wrong leave-by time. The owner is fine with today's row of boxes once the numbers can be read.
@@ -98,7 +98,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - a check fails if a box's text is cut off on the narrowest card; screenshots of both cards are added to `docs/screenshots/`.
     - **top-bar menu:** in a meeting's expanded travel list, the mark on the current value sits in the same column, and is the same kind of mark, as the marks on the other values. Today the current one shows a check mark slightly left of the round marks on the other lines (owner report, 2026-09-30). One value can be chosen, so every line uses the same single-choice style;
   - **Not in this ticket:** the list of values.
-  - **Part E — owner's look at the sample (2026-09-30): the Part A layout is rejected.** Built (63c2bec); **the owner accepted it in the sample** (2026-09-30); review pending. Owner, word for word: "new UI is worse. The change time button is too invasive. a Change Time hyperlink is probably enough. The time buttons are too big. A single row with the values was nice and compact. The only problem is that we couldn't read the values". Done when (PRD §4):
+  - **Part E — owner's look at the sample (2026-09-30): the Part A layout is rejected.** Built (63c2bec); **the owner accepted it in the sample** (2026-09-30); **ACCEPTED** in review round 1. Owner, word for word: "new UI is worse. The change time button is too invasive. a Change Time hyperlink is probably enough. The time buttons are too big. A single row with the values was nice and compact. The only problem is that we couldn't read the values". Done when (PRD §4):
     - the button becomes a small "Change time" link that reads as a link;
     - the boxes are one compact row of numbers only (10 … 90), "min" said once, every number readable, on one line of the heads-up card (the narrowest);
     - Part B (the card stays while the boxes are shown) and the menu marks (Part C) are unchanged;
@@ -177,6 +177,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - Each `npm run smoke` leaves `pa-smoke-*` sockets, locks and `.mutter-Xwaylandauth.*` files in the owner's runtime folder (124 had built up). Clean them up after a run (PG-11 Part D review).
 - Isolation check 7 sometimes prints a harmless "A connection to the bus can't be made" line that reads like a failure.
 - PG-11 plan line ~679 says "a caller cannot reach the owner's bus"; the architecture now says "never by default" (senior engineer rewords if the plan is reused). The plan's F4 widened-bus probe was replaced in the build by a safer fake service.
+- Smoke 6d does not guard the travel boxes' height; removing `min-height: 0px` would bring back the big boxes the owner rejected and still pass (PG-11 Part E review).
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)
