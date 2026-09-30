@@ -40,7 +40,7 @@ async function runChecks() {
         const text = findByName(global.stage, 'payattention-travel-text');
         const change = findByName(global.stage, 'payattention-travel-change');
         return text?.mapped && text.text === 'Travel: 30 min (default)' && change?.mapped;
-    }, 60000, '2-heads-up', 'no heads-up with "Travel: 30 min (default)" and a mapped Change travel time button');
+    }, 60000, '2-heads-up', 'no heads-up with "Travel: 30 min (default)" and a mapped Change time link');
 
     // 3. The menu row of the fixture expands to the seven travel choices.
     const indicator = Main.panel.statusArea.payattention;

@@ -22,10 +22,17 @@
 .payattention-button:hover, .payattention-button:focus { background-color: rgba(255,255,255,0.30); }
 .payattention-button-primary { background-color: #ffffff; color: #111111; }
 .payattention-button-primary:hover, .payattention-button-primary:focus { background-color: #e6e6e6; }
-.payattention-travel { spacing: 10px; padding-top: 8px; }
-.payattention-travel-choices { spacing: 10px; }
-/* Four boxes fit the 380 px heads-up card (ui/alertContent.js TRAVEL_CHOICES_PER_ROW). */
-.payattention-travel-choice { padding: 10px 12px; }
+.payattention-travel { spacing: 8px; padding-top: 8px; }
+/* A link, never a card button (PRD §4): small, link blue, underlined. */
+.payattention-travel-change { font-size: 10pt; color: #99c1f1; padding: 2px 0; }
+.payattention-travel-change:hover, .payattention-travel-change:focus { color: #ffffff; }
+/* St does not inherit text-decoration: the label inside the link draws the text, so it carries the underline. */
+.payattention-travel-change StLabel { text-decoration: underline; }
+/* One row: "min:" + 7 x 36 px boxes + 6 x 6 px = 321 px, inside the 380 px heads-up card (smoke 6d). */
+.payattention-travel-choices { spacing: 6px; }
+.payattention-travel-unit { font-size: 10pt; color: rgba(255,255,255,0.8); }
+.payattention-travel-choice { min-height: 0px; padding: 4px 8px; border-radius: 8px; font-size: 12pt;
+  font-feature-settings: "tnum"; }
 .payattention-choice-current { background-color: #ffb020; color: #111111; }
 .payattention-takeover { background-color: rgba(0,0,0,0.0); }
 .payattention-takeover-panel { background-color: rgba(80,0,0,0.96); spacing: 18px; padding: 48px; color: #ffffff; }

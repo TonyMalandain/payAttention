@@ -368,7 +368,7 @@ function titleProblems(root) {
 /** Travel texts under root that are ellipsized, narrower than their natural width, or off every monitor. */
 function travelTextProblems(root) {
     const isTravelText = a => a.name === 'payattention-travel-text' || a.name === 'payattention-travel-change' ||
-        !!a.name?.startsWith('payattention-travel-choice-');
+        a.name === 'payattention-travel-unit' || !!a.name?.startsWith('payattention-travel-choice-');
     return findAll(root, isTravelText).flatMap(a => {
         // A button's text is wherever St put it in the button (a `label:` button's child is not an St.Label).
         const text = findAll(a, t => t instanceof Clutter.Text)[0];
@@ -384,6 +384,42 @@ function travelTextProblems(root) {
         return !ellipsized && width >= natural - 0.5 && a.mapped && inside ? []
             : [`${a.name}: ellipsized=${ellipsized} width=${width}/${natural}`];
     });
+}
+
+/** How the open travel row of card breaks PRD §4: on more than one line, or wider than the card's content. */
+function travelRowProblems(card) {
+    const content = card.actor.get_first_child();
+    const max = card.actor.get_theme_node().get_max_width();
+    const row = findByName(card.actor, 'payattention-travel-choices');
+    if (!row)
+        return ['no payattention-travel-choices'];
+    // The unit is optional here, so that a row without it fails on its lines, not on a missing label.
+    const items = [findByName(row, 'payattention-travel-unit'),
+        ...findAll(row, a => !!a.name?.startsWith('payattention-travel-choice-'))].filter(a => a);
+    const centres = items.map(a => {
+        const [, y] = a.get_transformed_position();
+        const [, h] = a.get_transformed_size();
+        return Math.round(y + h / 2);
+    });
+    const [cx] = content.get_transformed_position();
+    const [cw] = content.get_transformed_size();
+    const [rx] = row.get_transformed_position();
+    const [rw] = row.get_transformed_size();
+    // Before its first layout St reports NaN, and NaN compares false with everything: never pass on it.
+    if (![...centres, cx, cw, rx, rw].every(Number.isFinite))
+        return [`the travel row is not laid out (y-centres ${centres.join(', ')}, row ${rx}+${rw}, content ${cx}+${cw})`];
+    const problems = [];
+    if (Math.max(...centres) - Math.min(...centres) > 1) {
+        const distinct = [...new Set(centres)];
+        problems.push(`the travel row is on ${distinct.length} lines (y-centres ${distinct.join(', ')})`);
+    }
+    if (!(max > 0))
+        problems.push(`no max-width on the card (${max})`);
+    else if (cw > max + 0.5)
+        problems.push(`the card's content is ${cw} px, more than its ${max} px`);
+    if (rx < cx - 0.5 || rx + rw > cx + cw + 0.5)
+        problems.push(`the travel row (${rx}..${rx + rw}) runs outside the card's content (${cx}..${cx + cw})`);
+    return problems;
 }
 
 /** Buttons of root that are not wholly inside one monitor. */
@@ -454,7 +490,7 @@ async function checkWorstCase(name, home) {
 }
 
 /**
- * IN_PERSON_ALERT's "Change travel time" is a real button that asks the controller to
+ * IN_PERSON_ALERT's "Change time" is a link that asks the controller to
  * toggle the choices (the UI holds no open state, interfaces.md §3); drawn open, the
  * boxes are all there and every travel text reads in full (PRD §4).
  */
@@ -470,11 +506,14 @@ async function checkTravelChoices(name, home) {
             check(change, name, `step-${step} card: no payattention-travel-change`);
             const clicked = await clickActor(change, name);
             await mustWait(() => actions.length > 0, 2000, name,
-                `step-${step} card: Change travel time dispatched nothing (${clicked})`);
+                `step-${step} card: Change time dispatched nothing (${clicked})`);
             const want = JSON.stringify([{ type: 'toggleTravelChoices', key: IN_PERSON_ALERT.key }]);
             check(JSON.stringify(actions) === want, name, `step-${step} card: dispatched ${JSON.stringify(actions)}, want ${want}`);
-            check(!findByName(closed.actor, 'payattention-travel-choices')?.visible, name,
+            check(!findByName(closed.actor, 'payattention-travel-choices')?.mapped, name,
                 `step-${step} card: the travel choices opened by themselves`);
+            // mapped, not visible: the label inside a hidden row keeps visible === true.
+            check(!findByName(closed.actor, 'payattention-travel-unit')?.mapped, name,
+                `step-${step} card: the "min:" label shows while the choices are closed`);
         } finally {
             closed.destroy();
         }
@@ -491,10 +530,46 @@ async function checkTravelChoices(name, home) {
             const current = boxes.filter(b => b.has_style_class_name('payattention-choice-current')).map(b => b.name);
             check(current.length === 1 && current[0] === 'payattention-travel-choice-30', name,
                 `step-${step} card: marked as current: ${current.join(', ') || 'none'}`);
-            await mustWait(() => travelTextProblems(card.actor).length === 0, 2000, name,
-                `step-${step} card: ${travelTextProblems(card.actor).join('; ')}`);
-            check(change instanceof St.Button && change.get_style_class_name() === 'payattention-button', name,
-                `step-${step} card: the change control is not a secondary button (${change.constructor.name} "${change.get_style_class_name?.()}")`);
+            // The message is taken after the wait: before layout it would only say "not laid out".
+            await waitFor(() => travelRowProblems(card).length === 0, 2000);
+            check(travelRowProblems(card).length === 0, name, `step-${step} card: ${travelRowProblems(card).join('; ')}`);
+            await waitFor(() => travelTextProblems(card.actor).length === 0, 2000);
+            check(travelTextProblems(card.actor).length === 0, name, `step-${step} card: ${travelTextProblems(card.actor).join('; ')}`);
+            for (const box of boxes) {
+                const text = findAll(box, t => t instanceof Clutter.Text)[0]?.text;
+                check(text === box.name.slice('payattention-travel-choice-'.length), name,
+                    `step-${step} card: ${box.name} reads "${text}", want the number only`);
+            }
+            const row = findByName(card.actor, 'payattention-travel-choices');
+            const unit = findByName(card.actor, 'payattention-travel-unit');
+            check(unit, name, `step-${step} card: no payattention-travel-unit`);
+            check(unit.text === 'min:', name, `step-${step} card: the unit reads "${unit.text}", want "min:"`);
+            check(unit.get_parent() === row, name, `step-${step} card: the "min:" label is not in the travel row`);
+            check(row.get_first_child() === unit, name, `step-${step} card: the "min:" label is not first in the travel row`);
+            // clickActor left the pointer where the closed card's link was, and this card draws its link there: check it at rest.
+            change.hover = false;
+            check(!change.has_key_focus(), name, `step-${step} card: the Change time link has key focus, so its at-rest look cannot be checked`);
+            const text = change.get_child();
+            const node = change.get_theme_node();
+            const ack = findByName(card.actor, 'payattention-action-ack');
+            check(change instanceof St.Button, name, `step-${step} card: the Change time link is a ${change.constructor.name}, not an St.Button`);
+            check(text.text === 'Change time', name, `step-${step} card: the link reads "${text.text}", want "Change time"`);
+            check(change.has_style_class_name('payattention-travel-change') && !change.has_style_class_name('payattention-button'), name,
+                `step-${step} card: the Change time link is styled as a card button ("${change.get_style_class_name()}")`);
+            check((text.get_theme_node().get_text_decoration() & St.TextDecoration.UNDERLINE) !== 0, name,
+                `step-${step} card: the Change time link is not underlined`);
+            check(node.get_font().get_size() < ack.get_theme_node().get_font().get_size(), name,
+                `step-${step} card: the Change time link is not smaller than the card's buttons`);
+            check(node.get_background_color().alpha === 0, name, `step-${step} card: the Change time link has a background`);
+            const colour = text.get_theme_node().get_foreground_color().to_string();
+            check(colour === '#99c1f1ff', name, `step-${step} card: the Change time link is ${colour}, want #99c1f1ff`);
+            change.hover = true;
+            const hovered = text.get_theme_node();
+            check(hovered.get_foreground_color().to_string() === '#ffffffff', name,
+                `step-${step} card: the hovered Change time link is ${hovered.get_foreground_color().to_string()}, want #ffffffff`);
+            check((hovered.get_text_decoration() & St.TextDecoration.UNDERLINE) !== 0, name,
+                `step-${step} card: the hovered Change time link is not underlined`);
+            change.hover = false;
         } finally {
             card.destroy();
         }

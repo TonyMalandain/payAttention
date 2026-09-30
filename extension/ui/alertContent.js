@@ -10,8 +10,6 @@ import St from 'gi://St';
 
 // A click already under way when the alert appears must not choose an action.
 const ARM_DELAY_MS = 800;
-// Four 13pt "90 min" boxes (83 px each) fit the heads-up card's 380 px; seven do not.
-const TRAVEL_CHOICES_PER_ROW = 4;
 
 function label(styleClass, text) {
     return new St.Label({ style_class: styleClass, text });
@@ -137,26 +135,28 @@ export class AlertContent {
             return;
         }
         const line = new St.BoxLayout({ style_class: 'payattention-actions' });
-        const change = unclippedButton('payattention-travel-change', 'Change travel time', 'payattention-button');
+        const change = unclippedButton('payattention-travel-change', 'Change time', 'payattention-travel-change');
+        change.y_align = Clutter.ActorAlign.CENTER;
         line.add_child(text);
         line.add_child(change);
 
         const choices = new St.BoxLayout({
             name: 'payattention-travel-choices',
-            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'payattention-travel-choices',
+            x_align: Clutter.ActorAlign.START,
             visible: travel.choicesOpen,
         });
-        for (let i = 0; i < travel.choices.length; i += TRAVEL_CHOICES_PER_ROW) {
-            const row = new St.BoxLayout({ style_class: 'payattention-actions', x_align: Clutter.ActorAlign.START });
-            for (const minutes of travel.choices.slice(i, i + TRAVEL_CHOICES_PER_ROW)) {
-                const button = unclippedButton(`payattention-travel-choice-${minutes}`, `${minutes} min`, 'payattention-button payattention-travel-choice');
-                if (minutes === travel.minutes)
-                    button.add_style_class_name('payattention-choice-current');
-                button.connect('clicked', () => this._dispatch({ type: 'setTravel', placeKey: travel.placeKey, minutes }));
-                row.add_child(button);
-            }
-            choices.add_child(row);
+        const unit = label('payattention-travel-unit', 'min:');
+        unit.name = 'payattention-travel-unit';
+        unit.y_align = Clutter.ActorAlign.CENTER;
+        unit.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        choices.add_child(unit);
+        for (const minutes of travel.choices) {
+            const button = unclippedButton(`payattention-travel-choice-${minutes}`, String(minutes), 'payattention-button payattention-travel-choice');
+            if (minutes === travel.minutes)
+                button.add_style_class_name('payattention-choice-current');
+            button.connect('clicked', () => this._dispatch({ type: 'setTravel', placeKey: travel.placeKey, minutes }));
+            choices.add_child(button);
         }
         // The controller holds whether the choices are open: while they are, the heads-up stays (interfaces.md §3).
         change.connect('clicked', () => this._dispatch({ type: 'toggleTravelChoices', key: this._key }));

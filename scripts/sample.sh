@@ -130,7 +130,7 @@ fi
 cat <<'EOF'
 sample: a separate GNOME Shell opens in a window, with one test calendar; your own session is not used.
   - Within about a minute, the heads-up for "Client site visit" shows "Travel: 30 min (default)".
-  - Its "Change travel time" button shows the travel choices.
+  - Its "Change time" link shows the travel choices as one row of minutes.
   - The alarm icon in the window's top bar opens the menu; the "Client site visit" row expands to the travel choices.
   - The heads-up stays 120 s here instead of 15 s, so there is time to look.
   - To stop: close the window, or press Ctrl+C here.

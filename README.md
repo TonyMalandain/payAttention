@@ -51,7 +51,7 @@ To reinstall after uninstalling, run `npm run install:local`, then log out and b
 3. If a verdict is wrong, flip the **Must attend** switch. Use **Apply to whole series** so that every repeat of the meeting follows.
    - Personal tasks that matter but have no guests, such as picking up a child, are silent by default. Mark them once, for the whole series.
 4. Click **Test alert**. It runs the whole ladder in about 30 seconds, so you can see each step without a real meeting.
-5. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with **Change travel time** on its heads-up or nudge card. It is remembered for that place.
+5. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. It is remembered for that place.
 
 ## How it decides
 
