@@ -158,7 +158,7 @@ class Indicator extends PanelMenu.Button {
             for (const minutes of row.travel.choices) {
                 const choice = item.menu.addAction(`${minutes} min`, () =>
                     dispatch({ type: 'setTravel', placeKey: row.travel.placeKey, minutes }));
-                choice.setOrnament(minutes === row.travel.minutes ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NO_DOT);
+                choice.setOrnament(minutes === row.travel.minutes ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NO_DOT);
             }
         }
         return item;

@@ -41,8 +41,9 @@ mkdir -p "$T/data/gnome-shell/extensions" "$T/config/glib-2.0/settings" "$T/conf
 XDG_DATA_HOME="$T/data" gnome-extensions install --force "$ROOT/dist/$UUID.shell-extension.zip"
 
 # 3. The fixture calendar: one must-attend online meeting 2-3 h ahead, so no
-#    real step fires during the run, and one all-day event, which is always in
-#    today's menu (whatever the hour) and never alerts, for the menu check.
+#    real step fires during the run, and two all-day events, which are always in
+#    today's menu (whatever the hour) and never alert: one for the menu check,
+#    one in person for the travel marks check.
 cat > "$T/config/evolution/sources/smoke-cal.source" <<'EOF'
 [Data Source]
 DisplayName=Smoke
@@ -73,6 +74,12 @@ printf '%s\r\n' \
     'UID:smoke-allday@smoke.test' 'DTSTAMP:20260101T000000Z' \
     "DTSTART;VALUE=DATE:$(date +%Y%m%d)" "DTEND;VALUE=DATE:$(date -d tomorrow +%Y%m%d)" \
     'SUMMARY:Smoke all-day check' \
+    'END:VEVENT' \
+    'BEGIN:VEVENT' \
+    'UID:smoke-site@smoke.test' 'DTSTAMP:20260101T000000Z' \
+    "DTSTART;VALUE=DATE:$(date +%Y%m%d)" "DTEND;VALUE=DATE:$(date -d tomorrow +%Y%m%d)" \
+    'SUMMARY:Smoke all-day site visit' \
+    'LOCATION:Smoke site\, 1 Example Street' \
     'END:VEVENT' 'END:VCALENDAR' \
     > "$T/data/evolution/calendar/smoke-cal/calendar.ics"
 

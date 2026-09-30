@@ -313,11 +313,11 @@ async function checkSwitchOver(name, home) {
 
 const verdictOverrides = settings => settings.get_value('verdict-overrides').recursiveUnpack();
 
-/** Opens the menu and the all-day fixture's submenu; returns the submenu item. */
-async function openFixtureRow(name, indicator) {
+/** Opens the menu and the submenu of the all-day fixture titled `title`; returns the submenu item. */
+async function openFixtureRow(name, indicator, title) {
     indicator.menu.open(false);
     const row = await mustWait(() => findAll(indicator.menu.actor, a => a instanceof PopupMenu.PopupSubMenuMenuItem &&
-        a.label.text.endsWith('Smoke all-day check'))[0], 3000, name, 'no menu row for the all-day fixture');
+        a.label.text.endsWith(title))[0], 3000, name, `no menu row for "${title}"`);
     row.setSubmenuShown(true);
     await mustWait(() => row.menu.actor.mapped, 3000, name, 'the meeting submenu did not open');
     await Scripting.sleep(300);
@@ -331,7 +331,7 @@ async function checkMenuVerdict(name, ext) {
     await pointerDevice(name);
     check(Object.keys(verdictOverrides(settings)).length === 0, name, 'overrides stored before the check');
 
-    let row = await openFixtureRow(name, indicator);
+    let row = await openFixtureRow(name, indicator, 'Smoke all-day check');
     const must = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupSwitchMenuItem)[0];
     check(must?.state === false, name, `the must-attend switch is not off (${must?.state})`);
     let clicked;
@@ -346,7 +346,7 @@ async function checkMenuVerdict(name, ext) {
         `the switch stored no must override (${clicked})`);
     await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the switch was activated');
 
-    row = await openFixtureRow(name, indicator);
+    row = await openFixtureRow(name, indicator, 'Smoke all-day check');
     const back = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
         a.label?.text === 'Back to automatic')[0];
     check(back, name, 'no "Back to automatic" after the override');
@@ -355,6 +355,33 @@ async function checkMenuVerdict(name, ext) {
     await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after Back to automatic');
     await mustWait(() => stageFind('payattention-indicator-label')?.text.startsWith(FIXTURE_TITLE), 3000, name,
         'the indicator did not return to the fixture meeting');
+}
+
+/** The travel choices of an in-person row: one kind of single-choice mark, in one column, the current one filled (PRD §4). */
+async function checkMenuTravelMarks(name) {
+    const indicator = Main.panel.statusArea.payattention;
+    try {
+        const row = await openFixtureRow(name, indicator, 'Smoke all-day site visit');
+        const lines = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem && /^\d+ min$/.test(a.label?.text ?? ''));
+        const texts = lines.map(l => l.label.text);
+        check(JSON.stringify(texts) === JSON.stringify(['10 min', '15 min', '20 min', '30 min', '45 min', '60 min', '90 min']),
+            name, `travel lines are ${JSON.stringify(texts)}`);
+        const marks = lines.map(l => findAll(l, a => a instanceof St.Icon && a.has_style_class_name('popup-menu-ornament'))[0]);
+        marks.forEach((mark, i) => check(mark?.mapped, name, `${texts[i]} has no mapped mark`));
+
+        const xs = marks.map(m => m.get_transformed_position()[0]);
+        check(Math.max(...xs) - Math.min(...xs) <= 0.5, name,
+            `marks not in one column: ${lines.map((l, i) => `${l.label.text} x=${xs[i]}`).join('; ')}`);
+
+        const kinds = marks.map((m, i) => `${texts[i]}=${m.icon_name}`).join('; ');
+        check(marks.every(m => m.icon_name === 'ornament-dot-checked-symbolic' || m.icon_name === 'ornament-dot-unchecked-symbolic'),
+            name, `not one kind of single-choice mark: ${kinds}`);
+        const checked = texts.filter((t, i) => marks[i].icon_name === 'ornament-dot-checked-symbolic');
+        check(checked.length === 1 && checked[0] === '30 min', name, `the filled mark is not on 30 min alone: ${kinds}`);
+    } finally {
+        indicator.menu.close(false);
+        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open');
+    }
 }
 
 /** Every action button of the takeover lies inside its own monitor. */
@@ -573,6 +600,7 @@ async function runLadder() {
     // 2. Feed → judge → indicator, from the fixture only.
     await checkIndicator('2-indicator', home);
     await checkMenuVerdict('2-menu-verdict', ext);
+    await checkMenuTravelMarks('2b-menu-travel');
 
     // 3. The test ladder, step by step.
     // Records which sound the ladder asks for. It does not call through: the headless

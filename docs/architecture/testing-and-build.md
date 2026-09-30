@@ -408,7 +408,10 @@ What the smoke script checks:
    The fixture also has an all-day event (`Smoke all-day check`): it is in
    today's menu at any hour and never alerts. The script opens the menu, clicks
    that event's Must attend switch, and checks the override was stored and the
-   menu closed; then "Back to automatic" clears it.
+   menu closed; then "Back to automatic" clears it. A second all-day event with a
+   place (`Smoke all-day site visit`) is in person: the script opens its row and
+   checks the seven travel lines carry one kind of round mark in one column, the
+   30 min one filled.
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
    Escape does nothing, and the check proves the key event reached the takeover,
