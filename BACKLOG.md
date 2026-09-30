@@ -86,7 +86,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - checked by hand in the real session.
   - **Open for the engineer:** what plays if the selected alert sound cannot be found. A silent failure is not acceptable (fall back to a standard sound).
 
-- **PG-11 — Changing the travel time from an alert is obvious and readable (S).** Part A (readable boxes, Change travel time button) **ACCEPTED** in review round 1 (9350ce5). Part B (hold) **ACCEPTED** in review round 2 (091132a, c1aa1c2); Part C (menu marks) **ACCEPTED** in review round 1 (20e0ae8); Part D (visible sample) waits for the architect and for `mutter-devkit` on the owner's machine. Refines R-11 (in-person meetings count down to the leave-by time).
+- **PG-11 — Changing the travel time from an alert is obvious and readable (S).** Part A (readable boxes, Change travel time button) **ACCEPTED** in review round 1 (9350ce5). Part B (hold) **ACCEPTED** in review round 2 (091132a, c1aa1c2); Part C (menu marks) **ACCEPTED** in review round 1 (20e0ae8); Part D (visible sample) built and in review; the window itself waits for `mutter-devkit` on the owner's machine. Refines R-11 (in-person meetings count down to the leave-by time).
   - **What changes for the owner:** on a heads-up or nudge card for an in-person meeting, they can see how to change the travel time, and they can read the number in every box.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner's first real use (2026-09-30). The underlined "· change" did not look clickable. The boxes showed no readable numbers, so the owner had to guess which was shorter. A guessed travel time gives a wrong leave-by time. The owner is fine with today's row of boxes once the numbers can be read.
@@ -167,6 +167,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - AiQueue `_retry`/`_failedKeys` are never pruned of past meetings (small, slow growth over a long session). Pruning needs a §6.5 retention rule first; dropped as a preference for now.
 - Smoke check 6d guards readable travel numbers but not that the heads-up card stays within its width; only the screenshots guard that (PG-11 review preference).
 - One `npm run test:helper` run gave 199/200 during concurrent commits and did not recur; the failing test was not captured. Possibly flaky (PG-11 Part C report).
+- Sample shell safety (PG-11 Part D, for the senior engineer): take the extensions-folder snapshot before the build and install, not after; `isolated_install` should refuse `.git` and other dot names that are not throwaway homes.
 - Smoke covers only the compact takeover size. Add a 1200x900 monitor to guard the regular size.
 
 ## Later candidates (not decided)
