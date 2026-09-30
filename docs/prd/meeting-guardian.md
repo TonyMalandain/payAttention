@@ -76,9 +76,8 @@ Behaviour:
 
 - The default travel time is 30 min (D-006).
 - The heads-up and nudge cards for an in-person meeting show the line "Travel: 30 min (default)", and next to it a button "Change travel time". The button looks like the other buttons on the card, not like a link.
-- "Change travel time" opens the question "How long does it take to get there?" with the choices 10, 15, 20, 30, 45, 60, and 90 min. Every choice shows its value in full, readable on every card size. The choices wrap onto a second row rather than shrink. The current value is marked.
-- Picking a value closes the choices. The line then reads "Travel: 45 min (saved for this place)", and the alert times move to the new leave-by time at once. Picking a travel time is not an acknowledgement: the escalation goes on, counted to the new leave-by time.
-- While the choices are open, the heads-up card does not go away on its own.
+- "Change travel time" shows a row of boxes: 10, 15, 20, 30, 45, 60, and 90 min. The number in every box is readable on every card size. The current value is marked. Picking one saves it, the line shows the new value, and the alert times move to the new leave-by time at once. Picking a travel time is not an acknowledgement: the escalation goes on.
+- While the boxes are shown, the heads-up card does not go away on its own.
 - The value is remembered for that place. The same place text, compared without letter case and extra spaces, uses the stored value from then on.
 - The top-bar menu shows the travel time for each in-person meeting.
 

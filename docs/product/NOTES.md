@@ -502,3 +502,10 @@ Append only. Newest at the bottom.
 - **Why:** a guessed travel time gives a wrong leave-by time, which is the miss the product exists to prevent.
 - **Source:** owner report; the product manager decided the expected behaviour.
 - **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11
+
+## 2026-09-30 — PG-11 scope narrowed by the owner
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The owner keeps today's row of travel time boxes. The only visual demand is that the numbers are readable. The extra question text and the "(saved for this place)" wording are dropped. The clickable "Change travel time" button and the heads-up staying while the boxes are shown stay in scope, because they answer the owner's first complaint and prevent losing the card mid-choice.
+- **Source:** owner, 2026-09-30.
+- **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11
