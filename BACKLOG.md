@@ -98,7 +98,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - a check fails if a box's text is cut off on the narrowest card; screenshots of both cards are added to `docs/screenshots/`.
     - **top-bar menu:** in a meeting's expanded travel list, the mark on the current value sits in the same column, and is the same kind of mark, as the marks on the other values. Today the current one shows a check mark slightly left of the round marks on the other lines (owner report, 2026-09-30). One value can be chosen, so every line uses the same single-choice style;
   - **Not in this ticket:** the list of values.
-  - **Part E — owner's look at the sample (2026-09-30): the Part A layout is rejected.** Owner, word for word: "new UI is worse. The change time button is too invasive. a Change Time hyperlink is probably enough. The time buttons are too big. A single row with the values was nice and compact. The only problem is that we couldn't read the values". Done when (PRD §4):
+  - **Part E — owner's look at the sample (2026-09-30): the Part A layout is rejected.** Built (63c2bec); **the owner accepted it in the sample** (2026-09-30); review pending. Owner, word for word: "new UI is worse. The change time button is too invasive. a Change Time hyperlink is probably enough. The time buttons are too big. A single row with the values was nice and compact. The only problem is that we couldn't read the values". Done when (PRD §4):
     - the button becomes a small "Change time" link that reads as a link;
     - the boxes are one compact row of numbers only (10 … 90), "min" said once, every number readable, on one line of the heads-up card (the narrowest);
     - Part B (the card stays while the boxes are shown) and the menu marks (Part C) are unchanged;

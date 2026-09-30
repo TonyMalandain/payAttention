@@ -555,3 +555,10 @@ Append only. Newest at the bottom.
 - **Why:** the owner's words: "a Change Time hyperlink is probably enough … A single row with the values was nice and compact. The only problem is that we couldn't read the values". Numbers without the unit fit one row of the narrowest card; "N min" seven times does not.
 - **Source:** owner, 2026-09-30, after `npm run sample`.
 - **Touches:** docs/prd/meeting-guardian.md §4, BACKLOG.md PG-11 Part E
+
+## 2026-09-30 — Owner accepts the compact travel row
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** After `npm run sample`, the owner accepted PG-11 Part E: a small "Change time" link and one compact row of numbers. "perfect. UI looks much better now."
+- **Source:** owner, 2026-09-30.
+- **Touches:** BACKLOG.md PG-11
