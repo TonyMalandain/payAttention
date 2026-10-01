@@ -562,3 +562,11 @@ Append only. Newest at the bottom.
 - **Fact:** After `npm run sample`, the owner accepted PG-11 Part E: a small "Change time" link and one compact row of numbers. "perfect. UI looks much better now."
 - **Source:** owner, 2026-09-30.
 - **Touches:** BACKLOG.md PG-11
+
+## 2026-10-01 — Jev (TypeSafe AI) considered as the AI engine
+- **Kind:** question
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner asked whether Jev could replace an LLM and be embedded. Jev answers typed yes/no, pick-one or score questions with a confidence, which fits the must-attend question well. It is proprietary, hosted only, waitlisted, not open weights, cannot run on the machine, uses its own API rather than the standard connection AI mode uses, and writes no text, so it cannot give the one-line reason every verdict must carry. Not adopted; it would be one more cloud engine needing its own connection.
+- **Why:** R-5 (every verdict explains itself) and the owner's choice of one standard connection for AI mode; "embeddable" is impossible today.
+- **Source:** web research 2026-10-01 (TypeSafe blog, Wikipedia, press); product manager.
+- **Touches:** docs/product/alternatives.md if adopted later
