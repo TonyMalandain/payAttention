@@ -960,3 +960,31 @@ Append only. Newest at the bottom.
 - **Why:** The runtime folder is shared on purpose (window, sound); closing the fallback would mean a private runtime folder, which the sample cannot have. Accepted because only commands written into the smoke and sample run there and none leaves the bus; one that did would be a defect in that command.
 - **Source:** docs/inbox.md for-architecture entry 2026-09-30 (PG-11 Part D review, measured); scripts/isolated-shell.sh:120,208. Inbox entry removed.
 - **Touches:** testing-and-build.md Layer 3 and 3b — folded. The plan's "a caller cannot reach the owner's bus" (docs/plans/PG-11.md:679) is the senior engineer's to reword.
+
+## 2026-10-01 — New owner setting `show-test-alert` (PG-12, D-036)
+- **Kind:** data
+- **Fact:** `show-test-alert` (`b`, default `false`) is added to "Settings the owner edits"; it decides only whether the top-bar menu offers Test alert.
+- **Why:** D-036 removes Test alert from the everyday menu behind a Settings switch. An addition needs no ADR (`interfaces.md` §5); defaulting to `false` means an existing install hides the item too, because an unset key reads its default. The default lives once in `DEFAULT_SETTINGS`, and the schema test pins the schema to it.
+- **Source:** docs/product/decisions.md D-036; docs/plans/PG-12.md "For the architect" item 1 and Seams 1, 6.
+- **Touches:** data.md — folded.
+
+## 2026-10-01 — The View, not the UI, decides whether the menu shows Test alert
+- **Kind:** interface
+- **Fact:** `View.menu` carries `showTestAlert`, which is `true` only when the setting is strictly `true`; `ui/indicator.js` only applies it as `visible`.
+- **Why:** `boundaries.md` keeps every "whether to show" decision out of `ui/`, and `ui/` may not read GSettings. If the field is missing, the item stays hidden, which is the product default, so the item can never appear by accident.
+- **Source:** docs/plans/PG-12.md Seams 3–5.
+- **Touches:** interfaces.md §3, overview.md "UI layer" — folded.
+
+## 2026-10-01 — `runTestAlert()` stays ungated by the switch
+- **Kind:** decision
+- **Fact:** `show-test-alert` gates the menu item only, not `Controller.runTestAlert()`, the `runTestAlert` dispatch, or the Extension's `runTestAlert()`.
+- **Why:** The smoke drives the ladder through the Extension's `runTestAlert()` with the setting at its default, and §4 forbids a test-only branch. A test alert already running when the switch is turned off runs to its end. Gating the entry point would break the smoke or force it to set a product setting just to run.
+- **Source:** interfaces.md §4; docs/plans/PG-12.md "Rejected placements".
+- **Touches:** interfaces.md §4 — folded.
+
+## 2026-10-01 — The sample has a second viewing aid, and the smoke has check 2c
+- **Kind:** constraint
+- **Fact:** The sample keyfile sets `show-test-alert=true` beside `headsup-display-seconds=120`. The smoke adds `2c-menu-test-alert` (hidden by default, appears on a flip without restart). The real-session checklist now says to turn the switch on before running Test alert.
+- **Why:** Layer 3b's rule is that a viewing aid must be an ordinary setting value, never a sample-only path; this one is a real product setting (D-036), so the rule holds.
+- **Source:** docs/plans/PG-12.md "For the architect" item 4.
+- **Touches:** testing-and-build.md Layers 3, 3b, 4 — folded.

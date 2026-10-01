@@ -429,7 +429,11 @@ What the smoke script checks:
    menu closed; then "Back to automatic" clears it. A second all-day event with a
    place (`Smoke all-day site visit`) is in person: the script opens its row and
    checks the seven travel lines carry one kind of round mark in one column, the
-   30 min one filled (check `2b-menu-travel`).
+   30 min one filled (check `2b-menu-travel`). From PG-12 (D-036): the menu's
+   Test alert item is hidden while `show-test-alert` is at its default (off), and
+   appears without a restart when the key is turned on (check
+   `2c-menu-test-alert`). Step 3 below does not depend on it: `runTestAlert()` is
+   not gated (`interfaces.md` §4).
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
    Escape does nothing, and the check proves the key event reached the takeover,
@@ -476,9 +480,10 @@ same setup headless and is the smoke's last step.
   `isolated_run` (which provides the private allowlist bus) with a throwaway
   `HOME` and `XDG_STATE_HOME`.
   The window is drawn by `/usr/libexec/mutter-devkit` (`stack.md`).
-- **Viewing aid, inside the product's range.** The sample sets
+- **Viewing aids, inside the product's range.** The sample sets two settings:
   `headsup-display-seconds=120`, the top of that setting's own range (`data.md`),
-  so the heads-up stays long enough to look at. It is an ordinary setting value
+  so the heads-up stays long enough to look at; and `show-test-alert=true`, so
+  the menu offers Test alert (D-036). Each is an ordinary setting value
   in the throwaway keyfile, not a sample-only code path: nothing under
   `extension/` knows about the sample. Any other departure from product
   behaviour for viewing's sake must also be expressible as an existing setting,
@@ -533,7 +538,8 @@ journalctl --user -b -o cat /usr/bin/gnome-shell | grep -iE 'payattention|JS ERR
 ```
 
 Checklist (PRD "Done when" plus what headless cannot show): the top bar shows the
-next must-attend meeting from the real calendars; Test alert runs all four steps;
+next must-attend meeting from the real calendars; with Settings → Show Test alert
+in the menu turned on, Test alert runs all four steps;
 the takeover cannot be dismissed without an action, with PaperWM enabled, over a
 full-screen window, on every monitor, and in Do Not Disturb; lock during an
 alert and unlock (alert returns at the right step); suspend across a step time;
@@ -545,8 +551,8 @@ no `ai/main.js` process exists (`pgrep -af ai/main.js`). With a keyless local
 engine (Ollama at `http://127.0.0.1:11434/v1`), and by hand with the owner's
 cloud key, "Test connection" says yes, and every meeting without an override
 that is not cancelled, declined or all-day shows "AI: …" once answered. With the engine
-stopped, the menu says "AI unavailable — using rules", and a Test alert still
-runs all four steps on time. The key is visible in Passwords and Keys and absent
+stopped, the menu says "AI unavailable — using rules", and (with Show Test alert
+in the menu on) a Test alert still runs all four steps on time. The key is visible in Passwords and Keys and absent
 from `dconf dump /org/gnome/shell/extensions/payattention/`. `--purge` removes
 it. The journal holds no title, invite field, reason or key.
 

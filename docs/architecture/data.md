@@ -50,6 +50,7 @@ keyring (ADR-0009), never in GSettings.
 | `owner-domains` | `as` | `[]` | — | The owner's email domains. Empty means "detect from the calendars' own addresses" |
 | `extra-owner-addresses` | `as` | `[]` | — | Owner addresses beyond each calendar's own address, e.g. aliases (§6, D-009). Lowercased by core |
 | `sound-enabled` | `b` | `true` | — | Play a sound at insist and takeover |
+| `show-test-alert` | `b` | `false` | — | Show "Test alert" in the top-bar menu (§5, D-036). Off by default, also for an existing install (an unset key reads its default) |
 | `verdict-source` | `s` | `'rules'` | choices `rules`, `ai` | The mode: who decides verdicts (R-18, D-019). Rules by default |
 | `ai-endpoint` | `s` | `'http://127.0.0.1:11434/v1'` | — | The AI engine's address (R-19, D-021). The default is Ollama on this computer. It must be usable (`interfaces.md` §6.4), or AI stays not set up |
 | `ai-model` | `s` | `''` | — | The model name. Empty means AI is not set up, even in AI mode |

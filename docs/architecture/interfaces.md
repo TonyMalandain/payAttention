@@ -233,7 +233,7 @@ the writer's final flush.
   from the Plan, the judged list, data health and `Verdicts.ai.status`, and
   calls `ui.render(view)`. Everything about *what* to show is resolved there
   (travel only at steps 1–2, Join only with a link, never "no meetings" while
-  stale), so `ui/` only draws. `render` is idempotent: the same View twice
+  stale, Test alert in the menu only while `show-test-alert` is on, D-036), so `ui/` only draws. `render` is idempotent: the same View twice
   changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
   `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`, `setTravel`,
@@ -282,6 +282,10 @@ The `Extension` subclass exposes one public method, `runTestAlert()`, which the
 menu item also calls. The headless smoke script reaches it through
 `Main.extensionManager.lookup(uuid)` and drives the ladder with it. There is one
 entry point with two real callers; no test-only branch exists in the product code.
+`runTestAlert()` is not gated by `show-test-alert` (D-036): that setting decides
+only whether the menu offers the item, so the smoke can run the ladder with the
+item hidden, and a test alert already running when the switch is turned off
+runs to its end.
 
 ## 5. Settings (stable)
 
