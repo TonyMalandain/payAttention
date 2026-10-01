@@ -256,6 +256,7 @@ export class Controller {
             health,
             now,
             aiStatus: this._verdicts.ai.status,
+            showTestAlert: settings.showTestAlert,
             openTravelChoices: this._openTravelChoices,
         });
         // A hold never outlives its card: ack, skip, snooze, the nudge, another alert taking the card.

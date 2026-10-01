@@ -52,6 +52,10 @@ async function runChecks() {
         row.setSubmenuShown(true);
         await mustWait(() => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
             /^\d+ min$/.test(a.label?.text ?? '')).length === 7, 3000, '3-menu', 'the row does not hold seven travel choices');
+
+        // 3b. The sample turns show-test-alert on (a viewing aid, Layer 3b), so the menu offers Test alert.
+        const testAlert = findByName(indicator.menu.actor, 'payattention-menu-test-alert');
+        check(testAlert?.visible && testAlert.label.text === 'Test alert', '3b-test-alert', 'the sample menu does not offer Test alert');
     } finally {
         indicator.menu.close(false);
     }

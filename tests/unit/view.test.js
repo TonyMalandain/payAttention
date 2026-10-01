@@ -23,7 +23,7 @@ const IN_PERSON = judged({
 });
 
 /** The view the controller would build for `list` at `now`. */
-function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off', openTravelChoices = null } = {}) {
+function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off', showTestAlert = false, openTravelChoices = null } = {}) {
     const realPlan = plan(now, list, state, TIMING, env);
     const testPlan = test ? plan(now, test.judged, test.state ?? E, test.timing, env) : null;
     return buildView({
@@ -35,6 +35,7 @@ function view(now, list, { state = E, health = OK, test = null, env = ENV, aiSta
         health,
         now,
         aiStatus,
+        showTestAlert,
         openTravelChoices,
     });
 }
@@ -349,6 +350,38 @@ describe('view: menu status (D-010, D-013, D-014)', () => {
 
     test('while stale with no rows, never "no meetings"', () => {
         assert.match(status(stale([]), []), /not updating/);
+    });
+});
+
+describe('view: the Test alert item (D-036)', () => {
+    test('offered when the setting is on', () => {
+        assert.equal(view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: true }).menu.showTestAlert, true);
+    });
+
+    test('not offered when the setting is off', () => {
+        assert.equal(view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: false }).menu.showTestAlert, false);
+    });
+
+    test('not offered when the caller leaves it out', () => {
+        const now = T0 - 2 * HOUR;
+        const v = buildView({
+            plan: plan(now, [ONLINE], E, TIMING, ENV),
+            testPlan: null,
+            testJudged: null,
+            judged: [ONLINE],
+            judgedByKey: new Map([[ONLINE.key, ONLINE]]),
+            health: OK,
+            now,
+            aiStatus: 'off',
+            openTravelChoices: null,
+        });
+        assert.equal(v.menu.showTestAlert, false);
+    });
+
+    test('the switch does not rebuild the menu rows', () => {
+        const on = view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: true }).menu.signature;
+        const off = view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: false }).menu.signature;
+        assert.equal(on, off);
     });
 });
 

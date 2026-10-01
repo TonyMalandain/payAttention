@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     ownerDomains: Object.freeze([]),
     extraOwnerAddresses: Object.freeze([]),
     soundEnabled: true,
+    showTestAlert: false,
     verdictSource: 'rules',
     aiEndpoint: 'http://127.0.0.1:11434/v1',
     aiModel: '',

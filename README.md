@@ -50,7 +50,7 @@ To reinstall after uninstalling, run `npm run install:local`, then log out and b
 2. Open a meeting's row to see **why** it got that verdict, for example "external guests" or "no other guests: personal block".
 3. If a verdict is wrong, flip the **Must attend** switch. Use **Apply to whole series** so that every repeat of the meeting follows.
    - Personal tasks that matter but have no guests, such as picking up a child, are silent by default. Mark them once, for the whole series.
-4. Click **Test alert**. It runs the whole ladder in about 30 seconds, so you can see each step without a real meeting.
+4. To see the alerts without a real meeting, turn on **Show Test alert in the menu** in **Settings** (Alerts → Behaviour), then click **Test alert** in the menu. It runs the whole ladder in about 30 seconds. Turn the switch off again to keep the menu short.
 5. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. It is remembered for that place.
 
 ## How it decides

@@ -494,6 +494,9 @@ export default class PayAttentionPreferences extends ExtensionPreferences {
         const sound = new Adw.SwitchRow({ title: 'Sound at insist and takeover' });
         settings.bind('sound-enabled', sound, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviour.add(sound);
+        const testAlert = new Adw.SwitchRow({ title: 'Show Test alert in the menu' });
+        settings.bind('show-test-alert', testAlert, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviour.add(testAlert);
         alerts.add(behaviour);
 
         const judgment = new Adw.PreferencesPage({ title: 'Judgment', icon_name: 'emblem-important-symbolic' });

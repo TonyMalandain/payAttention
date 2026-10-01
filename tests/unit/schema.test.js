@@ -140,6 +140,7 @@ describe('settings keys', () => {
         assert.equal(byField.onlineHeadsupMinutes.key, 'online-headsup-minutes');
         assert.deepEqual(byField.extraOwnerAddresses, { field: 'extraOwnerAddresses', key: 'extra-owner-addresses', kind: 'strv' });
         assert.equal(byField.soundEnabled.kind, 'bool');
+        assert.deepEqual(byField.showTestAlert, { field: 'showTestAlert', key: 'show-test-alert', kind: 'bool' });
         assert.equal(byField.cutoffMinutes.kind, 'int');
         assert.deepEqual(byField.verdictSource, { field: 'verdictSource', key: 'verdict-source', kind: 'str' });
         assert.equal(byField.aiModel.kind, 'str');

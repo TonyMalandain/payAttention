@@ -29,13 +29,14 @@ describe('default settings', () => {
         assert.equal(s.largeMeetingSize, 15);
     });
 
-    test('the word, domain and address lists are empty and sound is on', () => {
+    test('the word, domain and address lists are empty, sound is on, and Test alert is not in the menu', () => {
         const s = DEFAULT_SETTINGS;
         assert.deepEqual(s.extraImportantWords, []);
         assert.deepEqual(s.extraIgnoreWords, []);
         assert.deepEqual(s.ownerDomains, []);
         assert.deepEqual(s.extraOwnerAddresses, []);
         assert.equal(s.soundEnabled, true);
+        assert.equal(s.showTestAlert, false);
     });
 
     test('the defaults are frozen, arrays included', () => {

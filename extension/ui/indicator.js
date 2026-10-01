@@ -58,7 +58,9 @@ class Indicator extends PanelMenu.Button {
         this._meetings = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._meetings);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction('Test alert', () => dispatch({ type: 'runTestAlert' }));
+        this._testAlert = this.menu.addAction('Test alert', () => dispatch({ type: 'runTestAlert' }));
+        this._testAlert.name = 'payattention-menu-test-alert';
+        this._testAlert.visible = false;
         this.menu.addAction('Settings', () => openPreferences());
     }
 
@@ -87,6 +89,7 @@ class Indicator extends PanelMenu.Button {
         this._aiStatus.visible = menu.aiStatus !== null;
         if (menu.aiStatus !== null)
             setText(this._aiStatus.label, menu.aiStatus);
+        this._testAlert.visible = menu.showTestAlert;
 
         if (menu.signature === this._signature)
             return;

@@ -447,6 +447,34 @@ describe('controller: test alert', () => {
         assert.equal(h.dispatch({ type: 'runTestAlert' }).alert.isTest, true);
     });
 
+    test('the menu does not offer Test alert by default (D-036)', () => {
+        const h = setup();
+        assert.equal(h.ui.last.menu.showTestAlert, false);
+    });
+
+    test('the menu offers Test alert when the setting is on', () => {
+        const h = setup({ settings: { showTestAlert: true } });
+        assert.equal(h.ui.last.menu.showTestAlert, true);
+    });
+
+    test('turning the setting on or off updates the menu at the next tick, with no restart', () => {
+        const h = setup();
+        h.store.settings.showTestAlert = true;
+        h.store.onChange();
+        assert.equal(h.at(h.now + 1000).menu.showTestAlert, true);
+        h.store.settings.showTestAlert = false;
+        h.store.onChange();
+        assert.equal(h.at(h.now + 1000).menu.showTestAlert, false);
+        assert.equal(h.tickers, 1);
+    });
+
+    test('the switch never stops a test alert from starting', () => {
+        const h = setup();
+        h.controller.runTestAlert();
+        assert.equal(h.ui.last.alert.isTest, true);
+        assert.equal(h.dispatch({ type: 'runTestAlert' }).alert.isTest, true);
+    });
+
     test('11. "Not important" on the test ends it and writes nothing', () => {
         const h = setup();
         const N = h.now;

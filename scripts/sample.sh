@@ -101,7 +101,7 @@ printf '%s\r\n' \
 
 # 6. Shell settings: the extension enabled; the heads-up stays 120 s, the top of
 #    its own range, so there is time to look. No Do Not Disturb: the owner sees
-#    what they would see.
+#    what they would see; Test alert is offered in the menu (show-test-alert=true), as a viewing aid.
 cat > "$T/config/glib-2.0/settings/keyfile" <<EOF
 [org/gnome/shell]
 enabled-extensions=['$UUID']
@@ -109,6 +109,7 @@ welcome-dialog-last-shown-version='999'
 
 [org/gnome/shell/extensions/payattention]
 headsup-display-seconds=120
+show-test-alert=true
 EOF
 
 # 7. Run.
@@ -132,6 +133,7 @@ sample: a separate GNOME Shell opens in a window, with one test calendar; your o
   - Within about a minute, the heads-up for "Client site visit" shows "Travel: 30 min (default)".
   - Its "Change time" link shows the travel choices as one row of minutes.
   - The alarm icon in the window's top bar opens the menu; the "Client site visit" row expands to the travel choices.
+  - The menu also offers "Test alert" (turned on here): it runs all four steps in about 30 seconds.
   - The heads-up stays 120 s here instead of 15 s, so there is time to look.
   - To stop: close the window, or press Ctrl+C here.
 EOF

@@ -53,6 +53,11 @@ describe('the pages that existed before PG-4d', { skip: SKIP }, () => {
         assert.equal(seen.snooze, 7);
     });
 
+    test('the Show Test alert switch is off by default and writes show-test-alert', () => {
+        assert.equal(seen.testAlertBefore, false);
+        assert.equal(seen.testAlertStored, true);
+    });
+
     test('the email domains row stores the normalised list when applied', () => {
         assert.deepEqual(seen.domains, normalizeDomains(parseList(' Acme.TEST , b.test')));
     });

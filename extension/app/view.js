@@ -33,7 +33,7 @@ const MAX_NAMED_CALENDARS = 3;
  */
 /**
  * @typedef {{indicator: {text: string|null, highlighted: boolean, flashing: boolean, warning: boolean},
- *   menu: {status: string|null, aiStatus: string|null, meetings: MeetingRow[], signature: string},
+ *   menu: {status: string|null, aiStatus: string|null, showTestAlert: boolean, meetings: MeetingRow[], signature: string},
  *   alert: AlertView|null}} View
  */
 
@@ -163,6 +163,7 @@ function signatureOf(rows) {
  * @param {Health} p.health
  * @param {number} p.now
  * @param {'off'|'ok'|'unavailable'} p.aiStatus the AI queue's status (aiQueue.js aiStatusOf decides it)
+ * @param {boolean} p.showTestAlert whether the menu offers Test alert (the show-test-alert setting, D-036)
  * @param {{key: string, step: number}|null} p.openTravelChoices the card whose travel choices the owner
  *   opened, or null; the controller holds it (interfaces.md §3)
  * @returns {View}
@@ -187,6 +188,7 @@ export function buildView(p) {
         menu: {
             status: statusLine(health, meetings.length, now),
             aiStatus: p.aiStatus === 'unavailable' ? AI_UNAVAILABLE_TEXT : null,
+            showTestAlert: p.showTestAlert === true,
             meetings,
             signature: signatureOf(meetings),
         },

@@ -93,6 +93,10 @@
       <default>true</default>
       <summary>Play a sound at insist and takeover</summary>
     </key>
+    <key name="show-test-alert" type="b">
+      <default>false</default>
+      <summary>Show Test alert in the top-bar menu</summary>
+    </key>
     <key name="verdict-source" type="s">
       <choices><choice value="rules"/><choice value="ai"/></choices>
       <default>'rules'</default>
