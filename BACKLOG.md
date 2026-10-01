@@ -105,7 +105,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - the smoke checks that no number is cut off and that the row stays on one line within the card; screenshots replaced;
     - the owner looks at it again in `npm run sample`.
 
-- **PG-12 — "Test alert" is hidden from the menu unless turned on (S).** D-036.
+- **PG-12 — "Test alert" is hidden from the menu unless turned on (M: one new setting reaching about ten places).** D-036. A test alert already running keeps going if the switch is turned off.
   - **What changes for the owner:** the everyday menu no longer shows "Test alert". Settings gets a switch, "Show Test alert in the menu", off by default; turning it on shows the item at once, without a re-login, and turning it off hides it.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner: "Useless in prod."
