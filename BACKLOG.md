@@ -136,10 +136,11 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. (Passed 2026-09-27 under the old ID; check again after the move.)
   2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
-  4. Install the developer copy that has Test alert (PG-13 says how). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
+  4. Run `npm run install:developer`, then log out and back in (once PG-13 is in). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
   7. Sound (PG-7): with the developer copy, run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
+  7b. Go back to the normal copy: `npm run install:local`, then log out and back in. The menu has no Test alert.
   8. AI mode (PG-4):
      - Settings → Verdicts: pick "AI".
      - Enter an endpoint and model. For example, install Ollama, then `ollama pull llama3.1:8b`, endpoint `http://127.0.0.1:11434/v1`, model `llama3.1:8b`, no key.

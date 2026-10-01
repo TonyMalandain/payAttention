@@ -31,5 +31,6 @@ authority; none of them may add or change an ADR.
 | ADR-0010 | AI mode: the AI helper judges every meeting without an override, from a bounded copy of the whole invite; stale answers serve while re-asked; settings are mode, endpoint, model. Amended 2026-09-27: cancelled, declined and all-day meetings are not asked; calendar name sent; passcodes removed; unknown protocol keys refused; D-031: engine-down vs per-meeting failure, unreachable engines paused ≤ 90 s with refunded spends, truthful "unavailable" line |
 | ADR-0011 | Ports and adapters: rules (`core/`) and orchestration (`app/`) are GNOME-free; every GNOME part is an adapter behind a named port; only the verdict component calls `judge` (owner's principle, 2026-09-27) |
 | ADR-0012 | The verdict preview (R-20, PG-8) is a gjs front end shipped in the pack, run from the installed copy, read-only by construction |
+| ADR-0013 | Developer aids (Test alert in the menu, D-037) are a build variant: a developer bundle marked in its `metadata.json`, read only by `extension.js`; never a setting, an environment variable or a file of ours |
 
 Last restructure: none.

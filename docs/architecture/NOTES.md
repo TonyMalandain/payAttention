@@ -988,3 +988,45 @@ Append only. Newest at the bottom.
 - **Why:** Layer 3b's rule is that a viewing aid must be an ordinary setting value, never a sample-only path; this one is a real product setting (D-036), so the rule holds.
 - **Source:** docs/plans/PG-12.md "For the architect" item 4.
 - **Touches:** testing-and-build.md Layers 3, 3b, 4 — folded.
+
+## 2026-10-01 — Test alert is gated by the build, not a setting (PG-13, D-037)
+- **Kind:** decision
+- **Fact:** The menu offers Test alert only in a developer bundle, marked by `"payattention-developer": true` in the bundled `metadata.json` and read only by `extension.js` from `this.metadata` (ADR-0013). Supersedes the 2026-10-01 entries on `show-test-alert` above.
+- **Why:** The owner rejected a setting for a developer tool. The marker is the only carrier the normal install removes by construction (install --force replaces the directory), costs no I/O of ours, and works the same in the nested sample and the real Wayland session, where gnome-shell's environment cannot be set per run.
+- **Source:** the owner via D-037; measured 2026-10-01: pack keeps an unknown metadata key verbatim, install --force drops files absent from the new zip, install accepts a renamed zip; shell 50 `misc/extensionUtils.js` parses all of metadata.json.
+- **Touches:** ADR-0013; interfaces.md §3, §4, §4.1 — folded.
+
+## 2026-10-01 — `show-test-alert` removed; stored values left inert
+- **Kind:** data
+- **Fact:** The key leaves the schema; a stored `true` from PG-12 stays in dconf unread until `--purge`, and the name is never reused.
+- **Why:** GSettings exposes no key outside the compiled schema, so the value cannot act; code to delete it would have to know the key forever. Reusing the name would resurrect the old value.
+- **Source:** data.md "Removed keys"; interfaces.md §5.
+- **Touches:** data.md, interfaces.md §5 — folded.
+
+## 2026-10-01 — Two bundles, fixed names
+- **Kind:** constraint
+- **Fact:** `dist/<uuid>.shell-extension.zip` is always the normal bundle; the developer one is `dist/<uuid>.developer.shell-extension.zip`; the build never writes the marker into `extension/metadata.json`.
+- **Why:** Anything that installs the normal path by hand (Layer 4, `isolated_install`) must never pick up a developer copy left by the last `npm run sample`; and a crashed build must not leave a flagged source tree for the next normal build to ship.
+- **Source:** assumed design rule; measured that `gnome-extensions install` reads the UUID from inside the zip, not its name.
+- **Touches:** boundaries.md layout, testing-and-build.md step 4 — folded.
+
+## 2026-10-01 — `runTestAlert()` stays ungated in every build
+- **Kind:** interface
+- **Fact:** The marker gates only the menu item; the Extension's and controller's `runTestAlert()` work in the normal bundle.
+- **Why:** The smoke must drive the ladder on the bundle that ships; gating would force the main smoke onto the developer bundle and leave the shipped one's alerts untested. A normal user cannot reach the method without Looking Glass.
+- **Source:** interfaces.md §4.
+- **Touches:** interfaces.md §4 — folded.
+
+## 2026-10-01 — Inert test alert code ships; reviewer risk accepted
+- **Kind:** constraint
+- **Fact:** The normal bundle carries `core/testAlert.js`, `runTestAlert()` and the menu item code, inert without the marker.
+- **Why:** Stripping at build time means two code bases and an untested shipped ladder. No review guideline found forbids inert code; `assumed` a reviewer accepts it. Fallback if not: the build leaves that code out of the normal bundle.
+- **Source:** constraints.md GNOME review rules; ADR-0013 option 6.
+- **Touches:** constraints.md — folded.
+
+## 2026-10-01 — The sample has one viewing-aid setting again
+- **Kind:** constraint
+- **Fact:** The sample installs the developer bundle and drops `show-test-alert=true`; its only setting aid is `headsup-display-seconds=120`. Smoke check 2c now proves the normal bundle has no item and no key; sample check 3b proves the developer bundle has it; the install/uninstall check proves `install:local` removes a developer copy and `--purge` erases the orphan key.
+- **Why:** D-037 "the smoke must check both"; the PG-12 flip check tests a setting that no longer exists.
+- **Source:** docs/product/decisions.md D-037; BACKLOG PG-13 done-when.
+- **Touches:** testing-and-build.md steps 4 and 6, Layers 3, 3b, 4 — folded.

@@ -14,14 +14,27 @@ Run in this order. Each must pass before the next is worth running.
 | 1. Lint | `npm run lint` | `eslint .` with a flat config: gjs globals (`global`, `log`, `logError`, `print`, `console`), and the per-directory `no-restricted-imports` rules from `boundaries.md`. `preview/main.js` gets the gjs globals; the other `preview/` files are linted like `app/`. |
 | 2. Unit | `npm test` | `node --test "tests/unit/**/*.test.js"` over `extension/core/`, `extension/app/`, the gi-free shell modules (`shell/settingsKeys.js`) and the preview's gi-free logic (`preview/cli.js`, `session.js`, `report.js`, and the parity test against the alert controller, `tests/unit/preview.parity.test.js`), plus a gjs run of core that fails on Node-only APIs. The directory form `node --test tests/unit/` fails on Node 24.11 (it treats the directory as a file). |
 | 3. Schema | part of `npm run build` | `glib-compile-schemas --strict --dry-run extension/schemas` |
-| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=preview --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), `preview/` since PG-8c (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, `preview/main.js`, LICENSE and NOTICE (shipped since PG-6). |
+| 4. Build | `npm run build` | `mkdir -p dist && gnome-extensions pack extension --extra-source=core --extra-source=helper --extra-source=shell --extra-source=app --extra-source=ui --extra-source=ai --extra-source=preview --extra-source=../LICENSE --extra-source=../NOTICE --force --out-dir=dist` (`scripts/build.sh`). Every directory listed must be there, or the installed extension fails to import: `ai/` since PG-4 (ADR-0010), `app/` since PG-8a (ADR-0011), `preview/` since PG-8c (ADR-0012). The script checks the zip holds `ai/main.js`, `app/controller.js`, `preview/main.js`, LICENSE and NOTICE (shipped since PG-6), and that its `metadata.json` has no developer marker. From PG-13 (ADR-0013) the build can also make the developer bundle, `dist/<uuid>.developer.shell-extension.zip`: the same files, with `"payattention-developer": true` added to the bundled `metadata.json` (checked present), never to `extension/metadata.json`. `dist/<uuid>.shell-extension.zip` is always the normal bundle. |
 | 5. Helper integration | `npm run test:helper` | `node --test "tests/helper/**/*.test.js" "tests/ai/**/*.test.js"`: the helper against an isolated EDS with a fixture calendar (Layer 2), the AI helper against a fake engine (Layer 2b, from PG-4), and the preview installed from the zip (Layer 2c, from PG-8c). **Needs a fresh zip from step 4**: the preview test refuses to run when `dist/…shell-extension.zip` is missing or older than any file under `extension/`. |
-| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then the isolation check (`tests/smoke/isolation-check.sh`: the throwaway shell's environment refuses other homes and extras, runs on a private bus that can start only its allowlist, and none of that allowlist starts a keyring; below), then a headless gnome-shell with the built zip installed and enabled (below), then, last, the sample shell's headless check `scripts/sample.sh --check` (Layer 3b, from PG-11 Part D), so the sample's fixture and settings cannot rot unseen. Needs no `mutter-devkit`. |
+| 6. Smoke | `npm run smoke` | A GJS store check (`GSETTINGS_BACKEND=memory`), then the install/uninstall check in a throwaway home (below), then the isolation check (`tests/smoke/isolation-check.sh`: the throwaway shell's environment refuses other homes and extras, runs on a private bus that can start only its allowlist, and none of that allowlist starts a keyring; below), then a headless gnome-shell with the normal zip installed and enabled (below), then, last, the sample shell's headless check `scripts/sample.sh --check` on the developer bundle (Layer 3b, from PG-11 Part D), so the sample's fixture and settings cannot rot unseen. So the smoke sees both bundles: no Test alert item in the normal one, the item in the developer one (ADR-0013). Needs no `mutter-devkit`. |
 | 7. Real session | manual | Install, log out and in, check the journal and the checklist below. |
 
 Setup once: `npm ci` (dev tools only; nothing from `node_modules` is ever packed).
 Install into the real session: `npm run install:local` (not `install`, which npm
-would run on every `npm install`/`npm ci`). `scripts/install.sh` also adds the UUID to
+would run on every `npm install`/`npm ci`). It always installs the normal
+bundle, so it also replaces a developer copy (ADR-0013).
+
+**The developer copy in the real session** (D-037, ADR-0013), for the checks a
+nested window cannot do (alert sound, both monitors, takeover over a
+full-screen window, PaperWM): `npm run install:developer`
+(`bash scripts/install.sh --developer`) installs the developer bundle by the
+same path as `install:local`, so the UUID switch-over below and the enabled list
+behave the same; it says it installed the developer copy. Log out and back in
+to load it. To go back: `npm run install:local`, then log out and back in. To
+see which copy is installed:
+`grep -c payattention-developer ~/.local/share/gnome-shell/extensions/payattention@tonymalandain.github.io/metadata.json`
+(1 = developer, 0 = normal). The running shell keeps the copy it loaded until
+the next login, whichever was installed since. `scripts/install.sh` also adds the UUID to
 `org.gnome.shell enabled-extensions`, so it loads at the next login. It honours
 `XDG_DATA_HOME` in its post-install check.
 
@@ -349,7 +362,11 @@ what an owner's dconf would see, and never reaches the owner's bus, dconf or
 `~/.local/share`. It checks that another extension's files, list entries and
 settings survive. It checks that settings are kept by a plain uninstall and gone
 after `--purge`, that a bad option changes nothing, and that a second uninstall
-succeeds. A stand-in shell on its private bus (`tests/smoke/fake-shell.js`)
+succeeds. From PG-13 (ADR-0013): a developer install leaves the marker in the
+installed `metadata.json`, and the normal install that follows leaves no marker
+and no file the normal bundle lacks; and a value stored under a removed key
+(`show-test-alert`, `data.md` "Removed keys") is kept by a plain uninstall and
+erased by `--purge`, as an owner's machine that had the PG-12 switch on will have. A stand-in shell on its private bus (`tests/smoke/fake-shell.js`)
 answers `GetExtensionInfo`, so the scripts' real `gdbus` query sees UNKNOWN or
 LOADED; stopping it gives UNREACHABLE. With it the check covers the switch-over
 with placeholder former copies (refusal when unreachable, the one-write swap,
@@ -429,11 +446,12 @@ What the smoke script checks:
    menu closed; then "Back to automatic" clears it. A second all-day event with a
    place (`Smoke all-day site visit`) is in person: the script opens its row and
    checks the seven travel lines carry one kind of round mark in one column, the
-   30 min one filled (check `2b-menu-travel`). From PG-12 (D-036): the menu's
-   Test alert item is hidden while `show-test-alert` is at its default (off), and
-   appears without a restart when the key is turned on (check
-   `2c-menu-test-alert`). Step 3 below does not depend on it: `runTestAlert()` is
-   not gated (`interfaces.md` §4).
+   30 min one filled (check `2b-menu-travel`). From PG-13 (D-037, ADR-0013):
+   the normal bundle's menu offers no Test alert item, and the installed schema
+   has no `show-test-alert` key (check `2c-menu-test-alert`; replaces the PG-12
+   flip check). The developer bundle's item is checked by the sample's check
+   (Layer 3b). Step 3 below does not depend on the item: `runTestAlert()` is
+   not gated in any build (`interfaces.md` §4).
 3. `runTestAlert()` on the extension object. Waits, then checks each step's actor;
    at the takeover, one overlay per monitor (2) and an active grab of ours.
    Escape does nothing, and the check proves the key event reached the takeover,
@@ -480,14 +498,16 @@ same setup headless and is the smoke's last step.
   `isolated_run` (which provides the private allowlist bus) with a throwaway
   `HOME` and `XDG_STATE_HOME`.
   The window is drawn by `/usr/libexec/mutter-devkit` (`stack.md`).
-- **Viewing aids, inside the product's range.** The sample sets two settings:
-  `headsup-display-seconds=120`, the top of that setting's own range (`data.md`),
-  so the heads-up stays long enough to look at; and `show-test-alert=true`, so
-  the menu offers Test alert (D-036). Each is an ordinary setting value
-  in the throwaway keyfile, not a sample-only code path: nothing under
-  `extension/` knows about the sample. Any other departure from product
-  behaviour for viewing's sake must also be expressible as an existing setting,
-  or it comes back here.
+- **Viewing aids.** The sample runs the **developer bundle** (ADR-0013), so the
+  menu always offers Test alert with no extra step (D-037); `sample-check.js`
+  checks the item is there (check `3b-test-alert`). It sets one setting,
+  `headsup-display-seconds=120`, the top of that setting's own range
+  (`data.md`), so the heads-up stays long enough to look at. That is an
+  ordinary setting value in the throwaway keyfile, and the developer marker is
+  a build fact, not a sample one: nothing under `extension/` knows about the
+  sample. Any other departure from product behaviour for viewing's sake must be
+  an existing setting or a developer aid recorded in `interfaces.md` §4.1, or it
+  comes back here.
 - **What it must never touch:** the owner's session bus, calendars (EDS),
   keyring, dconf, and `~/.local/share/gnome-shell/extensions`. The sample's
   private bus, which it uses by default (Layer 3: never the owner's bus by
@@ -538,8 +558,9 @@ journalctl --user -b -o cat /usr/bin/gnome-shell | grep -iE 'payattention|JS ERR
 ```
 
 Checklist (PRD "Done when" plus what headless cannot show): the top bar shows the
-next must-attend meeting from the real calendars; with Settings → Show Test alert
-in the menu turned on, Test alert runs all four steps;
+next must-attend meeting from the real calendars; the normal copy's menu has no
+Test alert; with the developer copy (`npm run install:developer`, above), Test
+alert runs all four steps;
 the takeover cannot be dismissed without an action, with PaperWM enabled, over a
 full-screen window, on every monitor, and in Do Not Disturb; lock during an
 alert and unlock (alert returns at the right step); suspend across a step time;
@@ -551,8 +572,8 @@ no `ai/main.js` process exists (`pgrep -af ai/main.js`). With a keyless local
 engine (Ollama at `http://127.0.0.1:11434/v1`), and by hand with the owner's
 cloud key, "Test connection" says yes, and every meeting without an override
 that is not cancelled, declined or all-day shows "AI: …" once answered. With the engine
-stopped, the menu says "AI unavailable — using rules", and (with Show Test alert
-in the menu on) a Test alert still runs all four steps on time. The key is visible in Passwords and Keys and absent
+stopped, the menu says "AI unavailable — using rules", and (with the developer
+copy) a Test alert still runs all four steps on time. The key is visible in Passwords and Keys and absent
 from `dconf dump /org/gnome/shell/extensions/payattention/`. `--purge` removes
 it. The journal holds no title, invite field, reason or key.
 

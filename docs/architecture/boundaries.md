@@ -8,7 +8,8 @@ senior engineer's call.
 
 ```
 extension/              the pack source: exactly what ships in the zip
-  metadata.json         uuid payattention@tonymalandain.github.io, shell-version ["50"]
+  metadata.json         uuid payattention@tonymalandain.github.io, shell-version ["50"];
+                        never the developer marker (only the developer bundle gets it, ADR-0013)
   extension.js          composition root (enable/disable only)
   prefs.js              preferences window (GTK4/Adw process)
   stylesheet.css
@@ -37,7 +38,8 @@ scripts/                build, install, uninstall (--purge), smoke and sample wr
 .isolation-probe/     short-lived probe dir of isolation-check.sh, removed on exit (git-ignored, lint-ignored)
 package.json            dev-only: test and lint tooling; never packed
 eslint.config.js        dev-only
-dist/                   build output (git-ignored)
+dist/                   build output (git-ignored): <uuid>.shell-extension.zip is always the
+                        normal bundle; <uuid>.developer.shell-extension.zip the developer one (ADR-0013)
 ```
 
 Everything under `extension/` other than the files `gnome-extensions pack` picks up
@@ -154,6 +156,10 @@ creating a `Gio.Settings`.
   age. It is the only code that reads or writes GSettings in the shell process;
   `extension.js` only obtains the `Gio.Settings` object (`getSettings()`) and
   hands it to the store.
+- **The developer marker** (ADR-0013, `interfaces.md` §4.1) is read only by
+  `extension.js`, from `this.metadata`, and handed to the controller as one
+  boolean. No other part reads `metadata.json`, and no part of `core/`, `app/`
+  or `ui/` knows the word "developer" or which bundle it runs in.
 - **Controller** must not draw. It must not reach into actors; it hands the UI a
   Plan and receives actions.
 - **UI** must not decide. It never computes a step, a verdict, a deadline, or

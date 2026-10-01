@@ -233,7 +233,7 @@ the writer's final flush.
   from the Plan, the judged list, data health and `Verdicts.ai.status`, and
   calls `ui.render(view)`. Everything about *what* to show is resolved there
   (travel only at steps 1–2, Join only with a link, never "no meetings" while
-  stale, Test alert in the menu only while `show-test-alert` is on, D-036), so `ui/` only draws. `render` is idempotent: the same View twice
+  stale, Test alert in the menu only in a developer build, ADR-0013), so `ui/` only draws. `render` is idempotent: the same View twice
   changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
   `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`, `setTravel`,
@@ -282,16 +282,47 @@ The `Extension` subclass exposes one public method, `runTestAlert()`, which the
 menu item also calls. The headless smoke script reaches it through
 `Main.extensionManager.lookup(uuid)` and drives the ladder with it. There is one
 entry point with two real callers; no test-only branch exists in the product code.
-`runTestAlert()` is not gated by `show-test-alert` (D-036): that setting decides
-only whether the menu offers the item, so the smoke can run the ladder with the
-item hidden, and a test alert already running when the switch is turned off
-runs to its end.
+`runTestAlert()` is **not gated, in any build** (ADR-0013): the build decides
+only whether the menu offers the item. So the smoke drives the ladder on the
+normal bundle, the one that ships, where the item does not exist.
+
+### 4.1 The developer build marker (ADR-0013, D-037; replaces the PG-12 setting)
+
+- **Where it is:** one key in the bundle's `metadata.json`,
+  `"payattention-developer": true`. Only the developer bundle has it. The
+  source file `extension/metadata.json` never has it, and no build step ever
+  writes into the working tree to add it (a crash mid-build would otherwise
+  leave a flagged source that the next normal build ships).
+- **What counts:** the value strictly `true`. Missing, `false`, `"true"` or
+  anything else is a normal build. A wrong or partial marker fails toward the
+  product: no item.
+- **Who reads it:** only `extension.js`, the composition root, from
+  `this.metadata`, which the shell has already parsed from the installed
+  directory. No file read of ours, so no I/O in the shell process. It turns it
+  into one plain boolean for the controller, "the menu offers Test alert".
+  `app/` never sees metadata; `ui/` keeps drawing `View.menu.showTestAlert`, now
+  computed from that boolean instead of a setting. `prefs.js` does not read it
+  and has no Test alert switch. The preview (§7) never offers Test alert.
+- **What it gates:** the presence of the Test alert item in the top-bar menu,
+  and nothing else. It is fixed for the life of the loaded copy: no live flip,
+  so no change signal.
+- **What it may grow to gate:** another developer-only aid, only by a new
+  entry in this section. It is not a general switch for alternative behaviour,
+  and it never changes a verdict, a step time, or anything the owner relies on.
+- **How it is removed:** installing the normal bundle. `gnome-extensions
+  install --force` replaces the install directory wholesale (measured
+  2026-10-01: a file present only in the earlier zip is gone afterwards), so
+  `metadata.json` is the normal one again. On Wayland the running shell keeps
+  the copy it loaded at login, marker included, until the next login; the same
+  is true of any code change.
 
 ## 5. Settings (stable)
 
 The GSettings schema in `data.md` is a public contract: `prefs.js`, the store, and
 the user's `dconf` database all depend on it. Keys may be added. Renaming or
-retyping a key needs an ADR, because stored values would be lost.
+retyping a key needs an ADR, because stored values would be lost. Removing a
+key needs a row in `data.md` "Removed keys", and its name is never reused.
+A developer-only aid is never a key (ADR-0013): it goes in §4.1.
 
 ## Addendum 2026-09-26 — provider sync freshness (D-013)
 

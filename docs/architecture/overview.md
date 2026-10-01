@@ -134,7 +134,8 @@ that sees consecutive Plans.
 
 - **Indicator and menu.** A panel button added to the status area. The menu shows
   today's remaining meetings with verdict, reason, mode, override toggle, travel
-  chooser, and, when the owner turns it on in Settings, "Test alert" (D-036).
+  chooser, and, in a developer build only, "Test alert" (D-037, ADR-0013;
+  `interfaces.md` §4.1). A normal install never offers it.
 - **Card (steps 1–3).** A shell actor added as chrome that stays above normal and
   full-screen windows and does not take keyboard focus. Shown on the monitor the
   owner is working on (`global.display.get_current_monitor()`). Step 3 is centred.

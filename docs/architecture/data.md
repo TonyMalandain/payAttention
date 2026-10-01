@@ -50,7 +50,6 @@ keyring (ADR-0009), never in GSettings.
 | `owner-domains` | `as` | `[]` | — | The owner's email domains. Empty means "detect from the calendars' own addresses" |
 | `extra-owner-addresses` | `as` | `[]` | — | Owner addresses beyond each calendar's own address, e.g. aliases (§6, D-009). Lowercased by core |
 | `sound-enabled` | `b` | `true` | — | Play a sound at insist and takeover |
-| `show-test-alert` | `b` | `false` | — | Show "Test alert" in the top-bar menu (§5, D-036). Off by default, also for an existing install (an unset key reads its default) |
 | `verdict-source` | `s` | `'rules'` | choices `rules`, `ai` | The mode: who decides verdicts (R-18, D-019). Rules by default |
 | `ai-endpoint` | `s` | `'http://127.0.0.1:11434/v1'` | — | The AI engine's address (R-19, D-021). The default is Ollama on this computer. It must be usable (`interfaces.md` §6.4), or AI stays not set up |
 | `ai-model` | `s` | `''` | — | The model name. Empty means AI is not set up, even in AI mode |
@@ -71,6 +70,21 @@ never sent to an address it was not saved for.
 These keys replace the `ai-enabled`, `ai-location`, `ai-local-*` and
 `ai-cloud-*` keys designed on 2026-09-26. Those keys never shipped, so there is
 nothing to migrate.
+
+### Removed keys
+
+A removed key leaves the schema; any value an install already stored for it
+stays in dconf under our path, unread. GSettings never exposes a key that is
+not in the compiled schema, and no code of ours names it, so the value cannot
+change behaviour. It is erased with everything else by
+`npm run uninstall:local -- --purge` (`dconf reset -f` on the path). We do not
+write code to delete it: that code would have to know the key forever.
+**A removed name is never reused** for a different meaning, or a value stored
+by the old version would come back to life.
+
+| Key | Type | Lived | Why it went |
+|---|---|---|---|
+| `show-test-alert` | `b` | PG-12 to PG-13, 2026-10-01 (owner's machine only) | Test alert is a developer tool, not a setting (D-037). Whether the menu offers it is now decided by the build, not by stored data (ADR-0013). An install that had it set to `true` shows no Test alert after the update, because nothing reads it |
 
 Defaults live once, in core (`DEFAULT_SETTINGS`); the schema repeats them and a
 unit test keeps the two equal. Core also clamps offsets, so steps can never come

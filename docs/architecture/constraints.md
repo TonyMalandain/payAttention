@@ -126,7 +126,23 @@ From the GNOME extensions review guidelines (gjs.guide), current for GNOME 45+:
   `/org/gnome/shell/extensions/`; file named `<schema-id>.gschema.xml`; the XML is
   in the zip.
 - `metadata.json`: only needed keys; no `session-modes` key (we use `user` only);
-  `shell-version` lists only released versions.
+  `shell-version` lists only released versions. The developer marker
+  (`payattention-developer`, ADR-0013) is never in the shipped bundle; the build
+  checks it.
+- **Developer-only code in the shipped bundle** (ADR-0013): the shipped zip
+  carries the Test alert ladder (`core/testAlert.js`, the controller's
+  `runTestAlert()`) and the menu item's code, which stays inert unless the
+  marker is there. No guideline forbids this (none found in the review
+  guidelines, 2026-10-01; `assumed` that a reviewer accepts it); it is readable,
+  unminified, logs nothing, and is the code the smoke drives. If a reviewer
+  objects, the answer is the build leaving that code out of the normal
+  bundle, never a setting.
+- **No environment variable of gnome-shell is a control.** On Wayland the
+  shell's environment is fixed at login by the user's systemd manager; setting
+  one means `environment.d` or `systemctl --user set-environment`, a login, and
+  it then applies to the whole session and survives a reinstall. Nothing of
+  ours depends on one (ADR-0013). The isolated shells' own allowlisted extras
+  (`testing-and-build.md` Layer 3) are not controls of the product.
 - Licence: Apache-2.0 (product decision D-026). GNOME's review rule asks for
   GPL-2.0-or-later-compatible terms; Apache-2.0 is GPL-3.0-compatible only, so an
   extensions.gnome.org reviewer may question it. D-026 accepts that cost; it does
