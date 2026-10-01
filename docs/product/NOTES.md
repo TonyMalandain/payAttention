@@ -570,3 +570,10 @@ Append only. Newest at the bottom.
 - **Why:** R-5 (every verdict explains itself) and the owner's choice of one standard connection for AI mode; "embeddable" is impossible today.
 - **Source:** web research 2026-10-01 (TypeSafe blog, Wikipedia, press); product manager.
 - **Touches:** docs/product/alternatives.md if adopted later
+
+## 2026-10-01 — Open "Jev-like" models exist, but not from TypeSafe
+- **Kind:** question
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner said TypeSafe ships open-source versions of Jev. Research found none from TypeSafe: its official SDKs are open, the model is not. Third parties ship open models that answer the same way (for example Laya, about 421M parameters, with ONNX builds; an Apache-2.0 4.2B model leads a community benchmark), and some accept Jev's request format. They run locally as a separate server, as Ollama does; they cannot live inside the extension. They still write no reason, and they use Jev's request format, not the standard connection.
+- **Source:** web research 2026-10-01; product manager. The owner may know of a release this research missed.
+- **Touches:** none unless adopted
