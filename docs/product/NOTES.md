@@ -593,3 +593,11 @@ Append only. Newest at the bottom.
 - **Why:** owner: "What's the point of having a dev feature activable via settings?"
 - **Source:** owner, 2026-10-01.
 - **Touches:** decisions.md, PRD §5 §6 and Done when, BACKLOG PG-12 PG-13 PG-2
+
+## 2026-10-01 — Travel time from where the owner starts that day
+- **Kind:** question
+- **Profiles:** Calendar owner (gains); Installer (one-time setup of home and office places)
+- **Fact:** The owner wants travel time to depend on where they start: the working place their calendar shows for that day (a named place, home, or the office), to the meeting's place. Today travel time depends only on the meeting's place (R-11). Open: whether times are still set by the owner per start-and-end pair (offline, no map), or computed by a map service, which the exclusion "No live traffic or map routing" rules out and which sends places off the machine (R-3).
+- **Why:** owner: "I want travel time to be smart and figure out the right time based on context … if I'm working from home or the office, it should draw from that".
+- **Source:** owner, 2026-10-01.
+- **Touches:** problem.md (only if the pain is widened), solution.md R-11 and "What the solution is not", PRD §4
