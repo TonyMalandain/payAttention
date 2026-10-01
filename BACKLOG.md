@@ -128,6 +128,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - one documented command or option puts a copy with Test alert into the developer's real desktop, and the normal install command removes it again;
     - the smoke checks both: no item in a normal build, the item in a developer run;
     - README "First five minutes" no longer mentions Test alert; the Development section says how to get it.
+    - README "The alert ladder" shows a screenshot of each step (heads-up, nudge, insist, takeover), from the existing files in docs/screenshots/, because D-037 says the README now shows the ladder in place of Test alert. Size set: **M** (plan docs/plans/PG-13.md).
 
 ## Now — needs the owner (cannot be done unattended)
 
