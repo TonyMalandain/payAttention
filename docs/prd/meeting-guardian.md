@@ -84,11 +84,11 @@ Behaviour:
 ### 5. Top bar (R-14)
 
 - An indicator shows the time left to the next must-attend deadline, for example "Client sync · 24m". When no must-attend meeting is in the next 12 h, it shows only a quiet icon.
-- The menu lists today's remaining meetings. Each one shows its time, title, verdict (must-attend or ignorable), reason, and online/in-person mark. It has a toggle to override the verdict, and for in-person meetings a travel-time chooser. A "Test alert" item runs through the whole ladder in about 30 seconds, so the owner can see the alerts without a real meeting.
+- The menu lists today's remaining meetings. Each one shows its time, title, verdict (must-attend or ignorable), reason, and online/in-person mark. It has a toggle to override the verdict, and for in-person meetings a travel-time chooser. A "Test alert" item, shown only when the "Show Test alert in the menu" setting is on (off by default, D-036), runs through the whole ladder in about 30 seconds, so the owner can see the alerts without a real meeting.
 
 ### 6. Settings (R-15)
 
-The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off, the owner's email domain(s) (detected automatically, and can be edited), and extra owner addresses.
+The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off, "Show Test alert in the menu" (off by default), the owner's email domain(s) (detected automatically, and can be edited), and extra owner addresses.
 
 ### 7. When the calendar cannot be read (R-16)
 
@@ -124,7 +124,7 @@ This whole spec is the smallest useful version. Verdicts without escalation woul
 
 - The extension installs on the author's GNOME 50 Wayland session and enables with no errors in the shell log.
 - The top bar shows the next must-attend meeting from the author's real connected calendars.
-- A built-in "Test alert" runs through all four steps, and the takeover cannot be dismissed without choosing an action.
+- A built-in "Test alert" (shown when its setting is on) runs through all four steps, and the takeover cannot be dismissed without choosing an action.
 - The top bar shows a warning when calendar data is stale.
 - Automated tests cover the verdict rules (every reason listed above), online/in-person detection, deadline and step timing (online, in person, hybrid, overrides, snooze limits, return after being away, overlapping meetings, and the 10-minutes-after cutoff).
 

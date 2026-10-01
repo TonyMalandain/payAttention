@@ -190,7 +190,7 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** The line can appear and disappear as meetings are asked. The engine may be asked slightly more often while it recovers.
 **Source:** the product manager, closing senior-engineer findings (PG-4c plan).
 
-### D-032 — Verdicts can be previewed from a terminal; no nested desktop — 2026-09-27
+### D-032 — Verdicts can be previewed from a terminal; no nested desktop — 2026-09-27  [SUPERSEDED by D-035 on 2026-10-01]
 **Decision:** We chose a terminal preview command (R-20) as the way to check verdicts without logging out. We rejected running a second GNOME desktop in a window.
 **Why:** The owner's choice. The owner also asked that it not be "a cheap trick… tightly coupled to the gnome-extension framework". It must reuse the same core and calendar access as the extension.
 **Costs accepted:** The preview shows verdicts, not the alerts themselves. Checking the look of alerts still needs a login, or the screenshots.
@@ -207,3 +207,15 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner does not want their work domain in the project. The old ID looked like a work email address.
 **Costs accepted:** The installed extension must move to the new ID once. Settings, saved choices and AI keys are kept, because their storage names do not include the domain. History is rewritten and force-pushed once more.
 **Source:** the owner, 2026-09-29.
+
+### D-035 — Verdicts are previewed from a terminal; the look of alerts is checked in a sample desktop window — 2026-10-01
+**Decision:** We kept the terminal preview (R-20) as the way to check verdicts, and added a sample GNOME desktop in a window, with a made-up calendar, as the way to check how alerts look without logging out.
+**Why:** The owner asked to "run a sample instance so I can see it on UI to confirm" the travel-time fix (PG-11). D-032 had accepted that checking the look of alerts needed a login; in practice that made every visual fix slow to confirm.
+**Costs accepted:** A development tool (`mutter-devkit`) on the owner's machine. The sample shows made-up meetings, never the owner's own, and runs the shipped code with longer display settings only. It must stay isolated from the owner's session, which the test suite checks on every run.
+**Source:** the owner, 2026-09-30.
+
+### D-036 — "Test alert" is hidden from the menu unless the owner turns it on — 2026-10-01
+**Decision:** We removed "Test alert" from the everyday menu. It appears only when the owner turns on one switch in Settings, "Show Test alert in the menu", which is off by default. The sample desktop turns it on.
+**Why:** The owner: "Useless in prod." The menu is looked at every day; a button used once or twice is noise there. A switch keeps it one click away for the rare checks that need the real desktop, such as hearing the alert sound or seeing the takeover over a full-screen window.
+**Costs accepted:** A new owner can no longer find the alert ladder by opening the menu; the README and screenshots show it instead, and the switch must be turned on first. One more setting.
+**Source:** the owner, 2026-10-01 ("remove it or make it flag-triggered"); the switch is the product manager's choice.

@@ -105,6 +105,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - the smoke checks that no number is cut off and that the row stays on one line within the card; screenshots replaced;
     - the owner looks at it again in `npm run sample`.
 
+- **PG-12 — "Test alert" is hidden from the menu unless turned on (S).** D-036.
+  - **What changes for the owner:** the everyday menu no longer shows "Test alert". Settings gets a switch, "Show Test alert in the menu", off by default; turning it on shows the item at once, without a re-login, and turning it off hides it.
+  - **Who it is for:** Calendar owner.
+  - **Why:** the owner: "Useless in prod."
+  - **Done when:**
+    - with the switch off (the default, also for an existing install), the menu has no "Test alert" item;
+    - turning the switch on or off in Settings updates the menu while it runs;
+    - `npm run sample` turns the switch on in its throwaway settings, so the sample still offers Test alert;
+    - an uninstall with `--purge` erases the switch like every other setting;
+    - README "First five minutes" and the PG-2 checklist say to turn the switch on first;
+    - the smoke checks the menu without the item by default and with it when the switch is on.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
@@ -112,7 +124,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. (Passed 2026-09-27 under the old ID; check again after the move.)
   2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
-  4. **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
+  4. Turn on Settings → "Show Test alert in the menu" (once PG-12 is in). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
   7. Sound (PG-7): run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.

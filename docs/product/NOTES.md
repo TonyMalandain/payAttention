@@ -577,3 +577,11 @@ Append only. Newest at the bottom.
 - **Fact:** The owner said TypeSafe ships open-source versions of Jev. Research found none from TypeSafe: its official SDKs are open, the model is not. Third parties ship open models that answer the same way (for example Laya, about 421M parameters, with ONNX builds; an Apache-2.0 4.2B model leads a community benchmark), and some accept Jev's request format. They run locally as a separate server, as Ollama does; they cannot live inside the extension. They still write no reason, and they use Jev's request format, not the standard connection.
 - **Source:** web research 2026-10-01; product manager. The owner may know of a release this research missed.
 - **Touches:** none unless adopted
+
+## 2026-10-01 — Test alert behind a switch; sample desktop recorded as a decision
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** "Test alert" leaves the everyday menu and is shown only when a Settings switch is on (D-036, PG-12). Checking for drift found that the sample desktop built in PG-11 contradicts D-032 ("no nested desktop"); it was the owner's own request, so it is recorded as an evolution (D-035 supersedes D-032).
+- **Why:** owner: "Useless in prod." The Installer loses discovery through the menu; README and screenshots cover it.
+- **Source:** owner, 2026-10-01; product manager for the switch.
+- **Touches:** decisions.md, PRD §5 and §6, BACKLOG PG-12 and PG-2
