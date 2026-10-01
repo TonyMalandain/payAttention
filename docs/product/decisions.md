@@ -214,8 +214,14 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** A development tool (`mutter-devkit`) on the owner's machine. The sample shows made-up meetings, never the owner's own, and runs the shipped code with longer display settings only. It must stay isolated from the owner's session, which the test suite checks on every run.
 **Source:** the owner, 2026-09-30.
 
-### D-036 — "Test alert" is hidden from the menu unless the owner turns it on — 2026-10-01
+### D-036 — "Test alert" is hidden from the menu unless the owner turns it on  [SUPERSEDED by D-037 on 2026-10-01]
 **Decision:** We removed "Test alert" from the everyday menu. It appears only when the owner turns on one switch in Settings, "Show Test alert in the menu", which is off by default. The sample desktop turns it on.
 **Why:** The owner: "Useless in prod." The menu is looked at every day; a button used once or twice is noise there. A switch keeps it one click away for the rare checks that need the real desktop, such as hearing the alert sound or seeing the takeover over a full-screen window.
 **Costs accepted:** A new owner can no longer find the alert ladder by opening the menu; the README and screenshots show it instead, and the switch must be turned on first. One more setting.
 **Source:** the owner, 2026-10-01 ("remove it or make it flag-triggered"); the switch is the product manager's choice.
+
+### D-037 — "Test alert" is a developer tool, not part of the product — 2026-10-01
+**Decision:** We took "Test alert" out of the product. A normal install never shows it, and Settings has no switch for it. It appears only in a development run where the developer asked for it: always in the sample desktop, and in the developer's real desktop only when they install it that way on purpose. How it is asked for is the architect's choice.
+**Why:** The owner: "The test alert is a dev feature. What's the point of having a dev feature activable via settings?" A setting is a promise to every user; a tool only the developer needs does not belong among them. The developer still needs it in the real desktop for the checks a sample window cannot do: the alert sound, both monitors, and the takeover over a full-screen window.
+**Costs accepted:** An owner can no longer see the alert ladder without a real meeting; the README and screenshots show it instead. The developer must install a special build, or pass an option, to run it in the real desktop.
+**Source:** the owner, 2026-10-01 ("I meant we should use a feature flag either triggered at build time or runtime via a command line argument or config file option when running the mutter-devkit").

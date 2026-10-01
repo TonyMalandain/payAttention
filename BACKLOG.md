@@ -117,6 +117,18 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - README "First five minutes" and the PG-2 checklist say to turn the switch on first;
     - the smoke checks the menu without the item by default and with it when the switch is on.
 
+- **PG-13 — "Test alert" is a developer tool, not a setting (size set by the senior engineer).** D-037 supersedes D-036; undoes the switch from PG-12.
+  - **What changes:** Settings no longer has "Show Test alert in the menu". A normal install never shows Test alert. The developer turns it on with a development option, not a setting: the sample desktop always has it, and the developer can install a build into their real desktop that has it. The architect chooses the option (build time or run time).
+  - **Who it is for:** Calendar owner (shorter menu, one setting fewer); developer (needs it in the sample and for the real-desktop checks in PG-2).
+  - **Why:** the owner: "The test alert is a dev feature. What's the point of having a dev feature activable via settings? I meant we should use a feature flag either triggered at build time or runtime via a command line argument or config file option when running the mutter-devkit".
+  - **Done when:**
+    - `npm run install:local` installs a copy whose menu never shows Test alert, and Settings has no switch for it;
+    - an install that had the PG-12 switch turned on also shows no Test alert after the update;
+    - `npm run sample` shows Test alert in the menu with no extra step;
+    - one documented command or option puts a copy with Test alert into the developer's real desktop, and the normal install command removes it again;
+    - the smoke checks both: no item in a normal build, the item in a developer run;
+    - README "First five minutes" no longer mentions Test alert; the Development section says how to get it.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
@@ -124,10 +136,10 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. (Passed 2026-09-27 under the old ID; check again after the move.)
   2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
-  4. Turn on Settings → "Show Test alert in the menu" (once PG-12 is in). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
+  4. Install the developer copy that has Test alert (PG-13 says how). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
-  7. Sound (PG-7): run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
+  7. Sound (PG-7): with the developer copy, run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
   8. AI mode (PG-4):
      - Settings → Verdicts: pick "AI".
      - Enter an endpoint and model. For example, install Ollama, then `ollama pull llama3.1:8b`, endpoint `http://127.0.0.1:11434/v1`, model `llama3.1:8b`, no key.

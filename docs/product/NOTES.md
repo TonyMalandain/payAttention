@@ -585,3 +585,11 @@ Append only. Newest at the bottom.
 - **Why:** owner: "Useless in prod." The Installer loses discovery through the menu; README and screenshots cover it.
 - **Source:** owner, 2026-10-01; product manager for the switch.
 - **Touches:** decisions.md, PRD §5 and §6, BACKLOG PG-12 and PG-2
+
+## 2026-10-01 — Test alert is a developer tool, not a setting
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner corrected D-036: Test alert is a developer feature and must be turned on by a development option (build time or run time), never by a Settings switch. D-037 supersedes D-036; PG-13 removes the switch. My reading of "flag-triggered" as a user setting was wrong.
+- **Why:** owner: "What's the point of having a dev feature activable via settings?"
+- **Source:** owner, 2026-10-01.
+- **Touches:** decisions.md, PRD §5 §6 and Done when, BACKLOG PG-12 PG-13 PG-2
