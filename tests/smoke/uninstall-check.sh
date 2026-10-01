@@ -109,6 +109,7 @@ gsettings get org.gnome.shell enabled-extensions | grep -qF "'$UUID'" \
 gsettings set org.gnome.shell disabled-extensions "['third@example.test', '$UUID']" \
     || fail 2-install "could not add $UUID to disabled-extensions"
 dconf write "$KEYS/snooze-minutes" 5 || fail 2-install "could not seed snooze-minutes"
+# show-test-alert left the schema in PG-13 (data.md "Removed keys"): a stored value is kept by a plain uninstall and erased by --purge.
 dconf write "$KEYS/show-test-alert" true || fail 2-install "could not seed show-test-alert"
 dconf write "$KEYS/travel-times" "{'hq': 30}" || fail 2-install "could not seed travel-times"
 dconf write "$KEYS/ai-verdicts" "'{\"v\":1,\"items\":{}}'" || fail 2-install "could not seed ai-verdicts"
@@ -338,7 +339,7 @@ plant() {
 # Runs install.sh; sets $status and $out.
 install_run() {
     status=0
-    out="$(bash "$ROOT/scripts/install.sh" 2>&1)" || status=$?
+    out="$(bash "$ROOT/scripts/install.sh" "$@" 2>&1)" || status=$?
     printf '%s\n' "$out"
 }
 lists() { gsettings get org.gnome.shell enabled-extensions; gsettings get org.gnome.shell disabled-extensions; }
@@ -434,5 +435,32 @@ uninstall
     || fail 5-uninstall "enabled-extensions is $(gsettings get org.gnome.shell enabled-extensions)"
 contains "Removed: an earlier payAttention install ($EXTDIR/$FORMER)." || fail 5-uninstall "no removal line: $out"
 decoys_untouched || fail 5-uninstall "a copy declaring another schema, or a symlink, was touched"
+
+# 6. The developer copy (PG-13, ADR-0013): install:developer puts the marker in the installed
+#    metadata.json; install:local replaces the whole directory with the normal copy.
+install_run --bogus
+[ "$status" -eq 2 ] || fail 6-bad-option "exited $status, want 2: $out"
+contains "unknown option '--bogus'. Nothing was changed." || fail 6-bad-option "no 'unknown option' in: $out"
+! contains "Built " || fail 6-bad-option "it built before refusing: $out"
+[ ! -e "$DIR" ] || fail 6-bad-option "$DIR was installed"
+
+install_run --developer
+[ "$status" -eq 0 ] || fail 6-developer "exited $status: $out"
+node -e 'const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.exit(m["payattention-developer"] === true ? 0 : 1)' "$DIR/metadata.json" \
+    || fail 6-developer "the installed metadata.json has no payattention-developer: true"
+contains "This is the developer copy" || fail 6-developer "no 'This is the developer copy' in: $out"
+gsettings get org.gnome.shell enabled-extensions | grep -qF "'$UUID'" || fail 6-developer "$UUID is not in enabled-extensions"
+# A file the normal bundle lacks: the normal install must not leave it behind.
+touch "$DIR/only-in-an-earlier-copy"
+
+install_run
+[ "$status" -eq 0 ] || fail 6-back-to-normal "exited $status: $out"
+! grep -q payattention-developer "$DIR/metadata.json" || fail 6-back-to-normal "the installed metadata.json still has the marker"
+[ ! -e "$DIR/only-in-an-earlier-copy" ] || fail 6-back-to-normal "a file of the developer copy was left behind"
+contains "Replaced the developer copy" || fail 6-back-to-normal "no 'Replaced the developer copy' in: $out"
+
+install_run
+[ "$status" -eq 0 ] || fail 6-normal-again "exited $status: $out"
+! contains "Replaced the developer copy" || fail 6-normal-again "claimed to replace a developer copy: $out"
 
 echo PAYATTENTION-UNINSTALL PASS

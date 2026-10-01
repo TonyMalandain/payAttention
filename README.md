@@ -50,8 +50,7 @@ To reinstall after uninstalling, run `npm run install:local`, then log out and b
 2. Open a meeting's row to see **why** it got that verdict, for example "external guests" or "no other guests: personal block".
 3. If a verdict is wrong, flip the **Must attend** switch. Use **Apply to whole series** so that every repeat of the meeting follows.
    - Personal tasks that matter but have no guests, such as picking up a child, are silent by default. Mark them once, for the whole series.
-4. To see the alerts without a real meeting, turn on **Show Test alert in the menu** in **Settings** (Alerts → Behaviour), then click **Test alert** in the menu. It runs the whole ladder in about 30 seconds. Turn the switch off again to keep the menu short.
-5. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. It is remembered for that place.
+4. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. It is remembered for that place.
 
 ## How it decides
 
@@ -110,6 +109,10 @@ It lists your meetings from now to about 36 hours ahead, by day: the time, MUST 
 | Insist | 3 min | 2 min | A red card at the centre of the screen, pulsing, with a sound. |
 | Takeover | 1 min, then every minute | at leave-by, then every minute | Full screen on every monitor. It goes away only when you choose an action. |
 
+| Heads-up | Nudge | Insist | Takeover |
+|---|---|---|---|
+| ![Heads-up](docs/screenshots/step1.png) | ![Nudge](docs/screenshots/step2.png) | ![Insist](docs/screenshots/step3.png) | ![Takeover](docs/screenshots/step4.png) |
+
 The sound at Insist and Takeover is the alert sound you chose in GNOME Settings → Sound → Alert Sound. If that sound file is missing, the standard bell plays. If you chose **None** there, GNOME silences it for payAttention too; the sound switch in payAttention's Settings turns it off on its own.
 
 Actions: **Join** (opens the video link, online meetings only), **I'm on it**, **Snooze**, **Skip this one**, and **Not important** (for this meeting or the whole series). **I'm on it** or **Join** stops all alerts for that meeting. Alerts stop 10 minutes after the start. Alerts appear even in Do Not Disturb.
@@ -140,6 +143,8 @@ All the timings, the default travel time (30 min), your extra important and igno
 ## Development
 
 Run the checks in this order: `npm run lint`, `npm test`, `npm run build`, `npm run test:helper`, `npm run smoke`. The smoke test checks install and uninstall in a throwaway home, then runs a hidden, headless GNOME Shell with its own test calendar. It never touches your session or your calendars. See [`docs/architecture/testing-and-build.md`](docs/architecture/testing-and-build.md). To preview a checkout's verdicts, install it (`npm run install:local`) and run `npm run preview`: the preview always runs the installed copy.
+
+**Test alert** runs the whole alert ladder in about 30 seconds, without a real meeting. It is a developer tool, so the normal install never offers it. `npm run sample` always offers it, in a separate GNOME Shell window (it needs the `mutter-devkit` package). To use it in your real desktop, run `npm run install:developer`, then log out and back in: the menu offers **Test alert**. To go back, run `npm run install:local`, then log out and back in.
 
 ## License
 

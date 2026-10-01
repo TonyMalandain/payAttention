@@ -173,7 +173,7 @@ export function makeAiClient(engine, h) {
  * A controller with fake parts. `h` holds the parts, the clock and helpers.
  * `aiClient(engine, h)` makes each AI client (default: makeAiClient).
  */
-export function setup({ settings = {}, seeds = null, aiAnswers = null, aiClient = makeAiClient } = {}) {
+export function setup({ settings = {}, seeds = null, aiAnswers = null, aiClient = makeAiClient, menuOffersTestAlert = false } = {}) {
     const h = { now: EN, log: [], launches: [], settings, seeds, aiAnswers, tickers: 0, aiClients: [], aiTickers: 0, aiTicker: null };
     h.store = makeStore(h);
     const deps = {
@@ -220,6 +220,7 @@ export function setup({ settings = {}, seeds = null, aiAnswers = null, aiClient 
             h.aiTicker = ticker;
             return ticker;
         },
+        menuOffersTestAlert,
         launchUri: (uri, onDone) => h.launches.push({ uri, onDone }),
         now: () => h.now,
     };
@@ -270,6 +271,7 @@ export function setupInto(h) {
             throw new Error('unused');
         },
         createAiTicker: () => ({ destroy() {} }),
+        menuOffersTestAlert: false,
         launchUri: () => {},
         now: () => EN,
     });

@@ -53,9 +53,8 @@ describe('the pages that existed before PG-4d', { skip: SKIP }, () => {
         assert.equal(seen.snooze, 7);
     });
 
-    test('the Show Test alert switch is off by default and writes show-test-alert', () => {
-        assert.equal(seen.testAlertBefore, false);
-        assert.equal(seen.testAlertStored, true);
+    test('Settings has no Test alert switch (D-037)', () => {
+        assert.equal(seen.showsTestAlert, false);
     });
 
     test('the email domains row stores the normalised list when applied', () => {

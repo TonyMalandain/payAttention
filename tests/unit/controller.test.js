@@ -9,7 +9,9 @@ process.env.TZ = 'UTC';
 const { formatSince } = await import('../../extension/core/display.js');
 const { occurrenceKey, seriesKey } = await import('../../extension/core/keys.js');
 const { T0, MIN, HOUR, SOURCE, snapshot } = await import('./support/builders.js');
-const { EN, JOIN, WORK, meeting, MEETING, KEY, SNAP, setup, setupInto } = await import('./support/controllerHarness.js');
+const { EN, JOIN, WORK, meeting, MEETING, KEY, SNAP, setup, setupInto, makeStore, makeFeed, makeAiClient } =
+    await import('./support/controllerHarness.js');
+const { Controller } = await import('../../extension/app/controller.js');
 
 // console.error is expected in some tests; count it and keep the output clean.
 let errors;
@@ -86,6 +88,26 @@ describe('controller: construction and the ladder', () => {
         h.dispatch({ type: 'snooze', key: KEY });
         assert.equal(h.at(T0 - 3 * MIN - 1).alert, null);
         assert.equal(h.at(T0 - 3 * MIN).alert.step, 3);
+    });
+
+    test('construction refuses a menuOffersTestAlert that is not a boolean, before building anything', () => {
+        const log = [];
+        const inner = { now: EN, log, settings: {}, seeds: null };
+        const deps = {
+            createStoreWriter: () => (log.push('store.create'), makeStore(inner).writer),
+            createStoreReader: () => (log.push('reader.create'), makeStore(inner).reader),
+            createEnvironment: () => (log.push('environment.create'), { isUserActive: () => true, destroy() {} }),
+            createFeed: onUpdate => (log.push('feed.create'), makeFeed(onUpdate, inner)),
+            createUi: () => (log.push('ui.create'), { render() {}, playAlertSound() {}, releaseTakeover() {}, destroy() {} }),
+            createTicker: () => (log.push('ticker.create'), { destroy() {} }),
+            createAiClient: engine => makeAiClient(engine, inner),
+            createAiTicker: () => (log.push('aiTicker.create'), { destroy() {} }),
+            launchUri: () => {},
+            now: () => EN,
+        };
+        assert.throws(() => new Controller(deps), TypeError);
+        assert.throws(() => new Controller({ ...deps, menuOffersTestAlert: 'true' }), TypeError);
+        assert.deepEqual(log, []);
     });
 });
 
@@ -447,28 +469,30 @@ describe('controller: test alert', () => {
         assert.equal(h.dispatch({ type: 'runTestAlert' }).alert.isTest, true);
     });
 
-    test('the menu does not offer Test alert by default (D-036)', () => {
+    test('a normal build: the menu does not offer Test alert (D-037)', () => {
         const h = setup();
         assert.equal(h.ui.last.menu.showTestAlert, false);
     });
 
-    test('the menu offers Test alert when the setting is on', () => {
-        const h = setup({ settings: { showTestAlert: true } });
+    test('a developer build: the menu offers Test alert', () => {
+        const h = setup({ menuOffersTestAlert: true });
         assert.equal(h.ui.last.menu.showTestAlert, true);
     });
 
-    test('turning the setting on or off updates the menu at the next tick, with no restart', () => {
-        const h = setup();
-        h.store.settings.showTestAlert = true;
-        h.store.onChange();
-        assert.equal(h.at(h.now + 1000).menu.showTestAlert, true);
-        h.store.settings.showTestAlert = false;
+    test('a value stored by the PG-12 switch does not bring it back', () => {
+        const h = setup({ settings: { showTestAlert: true } });
+        assert.equal(h.ui.last.menu.showTestAlert, false);
         h.store.onChange();
         assert.equal(h.at(h.now + 1000).menu.showTestAlert, false);
-        assert.equal(h.tickers, 1);
     });
 
-    test('the switch never stops a test alert from starting', () => {
+    test('it stays as built across a settings change', () => {
+        const h = setup({ menuOffersTestAlert: true });
+        h.store.onChange();
+        assert.equal(h.at(h.now + 1000).menu.showTestAlert, true);
+    });
+
+    test('a normal build still runs the test alert', () => {
         const h = setup();
         h.controller.runTestAlert();
         assert.equal(h.ui.last.alert.isTest, true);

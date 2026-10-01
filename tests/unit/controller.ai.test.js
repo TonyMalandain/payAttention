@@ -496,6 +496,7 @@ describe('controller AI: lifecycle', () => {
             createUi: () => (log.push('ui.create'), { render() {}, playAlertSound() {}, releaseTakeover() {}, destroy() {} }),
             createTicker: () => (log.push('ticker.create'), { destroy() {} }),
             createAiClient: engine => makeAiClient(engine, inner),
+            menuOffersTestAlert: false,
             launchUri: () => {},
             now: () => EN,
         };

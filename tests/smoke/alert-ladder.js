@@ -337,29 +337,21 @@ async function checkMenuTravelMarks(name) {
     }
 }
 
-/** "Test alert" is in the menu only while show-test-alert is on, and follows a flip without a restart (D-036). */
-async function checkMenuTestAlert(name, ext) {
+/** The normal bundle's menu offers no Test alert, even with show-test-alert stored as true (D-037, ADR-0013). */
+async function checkMenuNoTestAlert(name, ext) {
+    check(!Object.hasOwn(ext.metadata, 'payattention-developer'), name, 'the smoke is not running the normal bundle');
+    check(!ext.stateObj.getSettings().settings_schema.has_key('show-test-alert'), name, 'the installed schema still has show-test-alert');
     const indicator = Main.panel.statusArea.payattention;
-    const settings = ext.stateObj.getSettings();
     const item = findByName(indicator.menu.actor, 'payattention-menu-test-alert');
     check(item, name, 'no Test alert menu item actor');
-    check(settings.get_boolean('show-test-alert') === false, name, 'show-test-alert is not off by default');
-    check(!item.visible, name, 'Test alert is in the menu with the switch off');
-
-    settings.set_boolean('show-test-alert', true);
-    await mustWait(() => item.visible, 3000, name, 'Test alert did not appear after the switch was turned on');
     try {
         indicator.menu.open(false);
-        await mustWait(() => item.mapped, 3000, name, 'the Test alert item is not mapped in the open menu');
-        check(item.label.text === 'Test alert', name, `the item reads "${item.label.text}"`);
+        await mustWait(() => indicator.menu.actor.mapped, 3000, name, 'the menu did not open');
+        check(!item.visible && !item.mapped, name, 'the normal bundle\'s menu offers Test alert');
     } finally {
         indicator.menu.close(false);
         await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open');
     }
-
-    settings.set_boolean('show-test-alert', false);
-    await mustWait(() => !item.visible, 3000, name, 'Test alert stayed after the switch was turned off');
-    settings.reset('show-test-alert');
 }
 
 /** Every action button of the takeover lies inside its own monitor. */
@@ -654,7 +646,7 @@ async function runLadder() {
     await checkIndicator('2-indicator', home);
     await checkMenuVerdict('2-menu-verdict', ext);
     await checkMenuTravelMarks('2b-menu-travel');
-    await checkMenuTestAlert('2c-menu-test-alert', ext);
+    await checkMenuNoTestAlert('2c-menu-test-alert', ext);
 
     // 3. The test ladder, step by step.
     // Records which sound the ladder asks for. It does not call through: the headless

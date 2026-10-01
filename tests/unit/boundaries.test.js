@@ -3,6 +3,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { ESLint } from 'eslint';
 
@@ -232,4 +233,14 @@ describe('lint enforces the module boundaries', () => {
             }
         });
     }
+});
+
+describe('only the composition root knows the developer marker (boundaries.md, ADR-0013)', () => {
+    test('no file under extension/ but extension.js names payattention-developer', () => {
+        const dir = path.join(repoRoot, 'extension');
+        const found = fs.readdirSync(dir, { recursive: true })
+            .filter(f => f.endsWith('.js'))
+            .filter(f => fs.readFileSync(path.join(dir, f), 'utf8').includes('payattention-developer'));
+        assert.deepEqual(found, ['extension.js']);
+    });
 });

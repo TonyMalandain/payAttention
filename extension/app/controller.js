@@ -58,13 +58,18 @@ export class Controller {
      * @param {(engine: import('./aiQueue.js').AiEngine) => import('./aiQueue.js').AiClientPort} deps.createAiClient
      *   the AI helper client for one engine (AI mode only)
      * @param {(onTick: () => void) => {destroy(): void}} deps.createAiTicker the AI queue's 1 s ticker (AI mode only)
+     * @param {boolean} deps.menuOffersTestAlert whether the menu offers Test alert; fixed for the life of
+     *   the controller (decided by the build, interfaces.md §4.1)
      * @param {(uri: string, onDone: (ok: boolean) => void) => void} deps.launchUri
      * @param {() => number} deps.now
-     * @throws {TypeError} before building anything, when createAiClient or createAiTicker is not a function
+     * @throws {TypeError} before building anything, when createAiClient or createAiTicker is not a function,
+     *   or menuOffersTestAlert is not a boolean
      */
     constructor(deps) {
         if (typeof deps.createAiClient !== 'function' || typeof deps.createAiTicker !== 'function')
             throw new TypeError('controller: deps.createAiClient and deps.createAiTicker must be functions');
+        if (typeof deps.menuOffersTestAlert !== 'boolean')
+            throw new TypeError('controller: deps.menuOffersTestAlert must be a boolean');
         this._deps = deps;
         this._destroyed = false;
         this._writer = null;
@@ -83,6 +88,7 @@ export class Controller {
         // The card whose travel choices are open, and the alert last rendered. In memory only (data.md).
         this._openTravelChoices = null;
         this._shownAlert = null;
+        this._menuOffersTestAlert = deps.menuOffersTestAlert;
         try {
             this._writer = deps.createStoreWriter();
             this._environment = deps.createEnvironment(() => this._onResume());
@@ -256,7 +262,7 @@ export class Controller {
             health,
             now,
             aiStatus: this._verdicts.ai.status,
-            showTestAlert: settings.showTestAlert,
+            showTestAlert: this._menuOffersTestAlert,
             openTravelChoices: this._openTravelChoices,
         });
         // A hold never outlives its card: ack, skip, snooze, the nudge, another alert taking the card.

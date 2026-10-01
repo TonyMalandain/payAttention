@@ -353,12 +353,12 @@ describe('view: menu status (D-010, D-013, D-014)', () => {
     });
 });
 
-describe('view: the Test alert item (D-036)', () => {
-    test('offered when the setting is on', () => {
+describe('view: the Test alert item (ADR-0013)', () => {
+    test('offered in a developer build', () => {
         assert.equal(view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: true }).menu.showTestAlert, true);
     });
 
-    test('not offered when the setting is off', () => {
+    test('not offered in a normal build', () => {
         assert.equal(view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: false }).menu.showTestAlert, false);
     });
 
@@ -378,7 +378,7 @@ describe('view: the Test alert item (D-036)', () => {
         assert.equal(v.menu.showTestAlert, false);
     });
 
-    test('the switch does not rebuild the menu rows', () => {
+    test('whether it is offered does not rebuild the menu rows', () => {
         const on = view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: true }).menu.signature;
         const off = view(T0 - 2 * HOUR, [ONLINE], { showTestAlert: false }).menu.signature;
         assert.equal(on, off);

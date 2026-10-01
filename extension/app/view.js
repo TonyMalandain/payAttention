@@ -163,7 +163,7 @@ function signatureOf(rows) {
  * @param {Health} p.health
  * @param {number} p.now
  * @param {'off'|'ok'|'unavailable'} p.aiStatus the AI queue's status (aiQueue.js aiStatusOf decides it)
- * @param {boolean} p.showTestAlert whether the menu offers Test alert (the show-test-alert setting, D-036)
+ * @param {boolean} p.showTestAlert whether the menu offers Test alert (decided by the build, interfaces.md §4.1)
  * @param {{key: string, step: number}|null} p.openTravelChoices the card whose travel choices the owner
  *   opened, or null; the controller holds it (interfaces.md §3)
  * @returns {View}

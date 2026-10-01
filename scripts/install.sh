@@ -7,17 +7,34 @@
 # owner logs out and back in. It also switches over from any earlier install
 # under a former UUID (testing-and-build.md, "Switching an existing install to
 # the new UUID"): the lists swap in one write, and the running shell, never this
-# script, deletes a former copy it has loaded.
+# script, deletes a former copy it has loaded. With --developer it installs the
+# developer bundle instead, whose menu offers Test alert (ADR-0013).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The UUID has one source: extension/metadata.json (PG-10).
 UUID="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).uuid' "$ROOT/extension/metadata.json")"
 DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
+USAGE='Usage: npm run install:local, or npm run install:developer for the copy whose menu offers Test alert'
 
 die() {
     echo "install: $1" >&2
     exit 1
 }
+
+# Succeeds only when <file> parses and its "payattention-developer" is strictly true (ADR-0013).
+developer_marker_in() {
+    node -e 'try { process.exit(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))["payattention-developer"] === true ? 0 : 1); } catch { process.exit(1); }' "$1"
+}
+
+# a. Arguments, all checked before anything changes.
+bundle=normal
+for arg in "$@"; do
+    case "$arg" in
+        --developer) bundle=developer ;;
+        -h|--help) echo "$USAGE"; exit 0 ;;
+        *) echo "install: unknown option '$arg'. Nothing was changed." >&2; echo "$USAGE" >&2; exit 2 ;;
+    esac
+done
 
 # shell_state and the former-copy rule, shared with uninstall.sh.
 source "$ROOT/scripts/extension-state.sh"
@@ -30,9 +47,23 @@ refuse_if_unreachable "${FORMERS[@]}"
 
 # 2. Build and install. A failure here leaves any former copy enabled and running.
 bash "$ROOT/scripts/build.sh"
+if [ "$bundle" = developer ]; then
+    zip="$ROOT/dist/$UUID.developer.shell-extension.zip"
+else
+    zip="$ROOT/dist/$UUID.shell-extension.zip"
+fi
+was_developer=0
+if [ -f "$DIR/metadata.json" ] && developer_marker_in "$DIR/metadata.json"; then
+    was_developer=1
+fi
 # Also compiles the schemas into the install directory.
-gnome-extensions install --force "$ROOT/dist/$UUID.shell-extension.zip"
+gnome-extensions install --force "$zip"
 test -f "$DIR/schemas/gschemas.compiled"
+if [ "$bundle" = developer ]; then
+    developer_marker_in "$DIR/metadata.json" || die "the installed copy is not the $bundle one ($DIR/metadata.json)."
+else
+    ! developer_marker_in "$DIR/metadata.json" || die "the installed copy is not the $bundle one ($DIR/metadata.json)."
+fi
 
 # 3. One settings write: no stored list ever holds a former UUID and UUID together.
 #    The running shell runs a former copy's disable() and ignores UUID until login.
@@ -59,6 +90,12 @@ done
 
 if [ "$(gsettings get org.gnome.shell disable-user-extensions)" = "true" ]; then
     echo "Warning: user extensions are disabled (org.gnome.shell disable-user-extensions is true); payAttention will not load until they are enabled." >&2
+fi
+
+if [ "$bundle" = developer ]; then
+    echo "This is the developer copy: its menu offers Test alert. To go back to the normal copy: npm run install:local, then log out and back in."
+elif [ "$was_developer" -eq 1 ]; then
+    echo "Replaced the developer copy: after you log out and back in, the menu has no Test alert."
 fi
 
 if [ "${#FORMERS[@]}" -gt 0 ]; then

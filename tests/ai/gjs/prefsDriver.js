@@ -205,10 +205,7 @@ const SCENARIOS = {
         findByTitle(window, Adw.SpinRow, t => t === 'Snooze (minutes)').value = 7;
         step({ snooze: settings.get_int('snooze-minutes') });
 
-        const testAlert = findByTitle(window, Adw.SwitchRow, t => t === 'Show Test alert in the menu');
-        const testAlertBefore = testAlert.active;
-        testAlert.active = true;
-        step({ testAlertBefore, testAlertStored: settings.get_boolean('show-test-alert') });
+        step({ showsTestAlert: shows(window, 'Test alert') });
 
         const domains = findByTitle(window, Adw.EntryRow, t => t.startsWith('Your email domains'));
         domains.text = ' Acme.TEST , b.test';

@@ -43,6 +43,9 @@ const OTHER_KEYS = {
 
 const TYPE_OF_KIND = { int: 'i', bool: 'b', strv: 'as', str: 's' };
 
+// data.md "Removed keys".
+const REMOVED_KEYS = ['show-test-alert'];
+
 /** Every <key> of the schema: name → {type, default, range}. */
 function readSchema() {
     const xml = fs.readFileSync(SCHEMA_FILE, 'utf8');
@@ -108,6 +111,13 @@ describe('schema equals DEFAULT_SETTINGS and data.md', () => {
         });
     }
 
+    test('a removed key never comes back (data.md "Removed keys")', () => {
+        for (const key of REMOVED_KEYS) {
+            assert.equal(readSchema().has(key), false, `${key} is in the schema`);
+            assert.equal(SETTINGS_KEYS.some(k => k.key === key), false, `${key} is in SETTINGS_KEYS`);
+        }
+    });
+
     test('there are no other keys', () => {
         const expected = [...SETTINGS_KEYS.map(k => k.key), ...Object.keys(OTHER_KEYS)].sort();
         assert.deepEqual([...schema.keys()].sort(), expected);
@@ -140,7 +150,6 @@ describe('settings keys', () => {
         assert.equal(byField.onlineHeadsupMinutes.key, 'online-headsup-minutes');
         assert.deepEqual(byField.extraOwnerAddresses, { field: 'extraOwnerAddresses', key: 'extra-owner-addresses', kind: 'strv' });
         assert.equal(byField.soundEnabled.kind, 'bool');
-        assert.deepEqual(byField.showTestAlert, { field: 'showTestAlert', key: 'show-test-alert', kind: 'bool' });
         assert.equal(byField.cutoffMinutes.kind, 'int');
         assert.deepEqual(byField.verdictSource, { field: 'verdictSource', key: 'verdict-source', kind: 'str' });
         assert.equal(byField.aiModel.kind, 'str');

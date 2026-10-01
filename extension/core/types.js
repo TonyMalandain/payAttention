@@ -19,7 +19,7 @@
  *   inpersonHeadsupMinutes:number,inpersonNudgeMinutes:number,inpersonInsistMinutes:number,inpersonTakeoverMinutes:number,
  *   defaultTravelMinutes:number,headsupDisplaySeconds:number,snoozeMinutes:number,takeoverSnoozeMinutes:number,cutoffMinutes:number,
  *   largeMeetingSize:number,extraImportantWords:string[],extraIgnoreWords:string[],ownerDomains:string[],extraOwnerAddresses:string[],
- *   soundEnabled:boolean,showTestAlert:boolean,verdictSource:string,aiEndpoint:string,aiModel:string}} Settings */
+ *   soundEnabled:boolean,verdictSource:string,aiEndpoint:string,aiModel:string}} Settings */
 
 /** judge() reads only these fields of Settings, plus `ai`, which the caller adds for AI mode (absent or null = rules mode).
  * @typedef {{extraImportantWords:string[],extraIgnoreWords:string[],extraOwnerAddresses:string[],ownerDomains:string[],

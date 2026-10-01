@@ -50,12 +50,21 @@ _isolated_home() {
     printf '%s\n' "$repo/$name"
 }
 
-# Installs dist/<UUID>.shell-extension.zip into <home>/data and creates the XDG directories an isolated shell needs.
+# Installs one bundle into <home>/data and creates the XDG directories an isolated shell needs.
 # <home> must be <repository>/.smoke-home or <repository>/.sample-home (ISOLATED_HOMES).
+# <bundle> is normal (dist/<UUID>.shell-extension.zip) or developer (dist/<UUID>.developer.shell-extension.zip, ADR-0013).
+# isolated_install <home> <bundle>
 isolated_install() {
     local home zip
     home="$(_isolated_home "${1:-}")" || return 1
-    zip="$ROOT/dist/$UUID.shell-extension.zip"
+    case "${2:-}" in
+        normal) zip="$ROOT/dist/$UUID.shell-extension.zip" ;;
+        developer) zip="$ROOT/dist/$UUID.developer.shell-extension.zip" ;;
+        *)
+            echo "isolated_install: refusing bundle '${2:-}': it is normal or developer" >&2
+            return 1
+            ;;
+    esac
     if [ ! -f "$zip" ]; then
         echo "isolated_install: $zip is missing; run scripts/build.sh first" >&2
         return 1

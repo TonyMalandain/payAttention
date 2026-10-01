@@ -16,6 +16,8 @@ import { Ui } from './ui/ui.js';
 
 const HELPER_ENTRY = 'main.js';
 const AI_HELPER_ENTRY = 'main.js';
+// Only the developer bundle's metadata.json has it, strictly true (ADR-0013, interfaces.md §4.1).
+const DEVELOPER_MARKER = 'payattention-developer';
 
 export default class PayAttentionExtension extends Extension {
     enable() {
@@ -32,6 +34,7 @@ export default class PayAttentionExtension extends Extension {
                 argv: ['gjs', '-m', `${this.path}/ai/${AI_HELPER_ENTRY}`], engine, now: () => Date.now(),
             }),
             createAiTicker: onTick => new Ticker(1000, onTick),
+            menuOffersTestAlert: this.metadata[DEVELOPER_MARKER] === true,
             launchUri,
             now: () => Date.now(),
         });

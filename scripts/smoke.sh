@@ -4,8 +4,9 @@
 
 # The smoke test (testing-and-build.md, layer 3): a GJS store check, an
 # install/uninstall check in a throwaway home with its own dconf, then a
-# headless gnome-shell with two virtual monitors, its own D-Bus session, its
-# own XDG directories and one fixture calendar written here. It never touches
+# headless gnome-shell with the normal bundle installed, two virtual monitors,
+# its own D-Bus session, its own XDG directories and one fixture calendar
+# written here. It never touches
 # the owner's calendars, settings or session bus.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -36,8 +37,8 @@ if ! grep -q '^PAYATTENTION-UNINSTALL PASS' "$T/uninstall.log"; then
     exit 1
 fi
 
-# 2. Isolated home with the built extension installed.
-isolated_install "$T"
+# 2. Isolated home with the normal bundle installed.
+isolated_install "$T" normal
 
 # 2b. The isolation environment itself: throwaway homes only, allowlisted extras,
 #     a private bus that can start no keyring, a guard and a clean-up that work.
@@ -77,7 +78,9 @@ printf '%s\r\n' \
     'END:VEVENT' 'END:VCALENDAR' \
     | isolated_calendar "$T" smoke-cal Smoke owner@smoke.test
 
-# 4. Shell settings: the extension enabled, and Do Not Disturb on (R-12).
+# 4. Shell settings: the extension enabled, Do Not Disturb on (R-12), and show-test-alert=true,
+#    as an install that had the PG-12 switch on has stored it: it must change nothing (D-037,
+#    data.md "Removed keys").
 cat > "$T/config/glib-2.0/settings/keyfile" <<EOF
 [org/gnome/shell]
 enabled-extensions=['$UUID']
@@ -85,6 +88,9 @@ welcome-dialog-last-shown-version='999'
 
 [org/gnome/desktop/notifications]
 show-banners=false
+
+[org/gnome/shell/extensions/payattention]
+show-test-alert=true
 EOF
 
 # 5. The headless shell, with a minimal environment: never the caller's, which

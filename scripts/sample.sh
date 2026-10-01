@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Tony Malandain
 
 # The sample shell (testing-and-build.md, "Layer 3b"): a separate GNOME Shell on
-# the extension built from the working tree, with a throwaway home, keyfile
+# the developer bundle built from the working tree, with a throwaway home, keyfile
 # settings, its own private session bus that can start only an allowlist of
 # services (no keyring, no portals) and one test calendar, so the owner can
 # look at it without logging out. `npm run sample` shows it in a window (drawn by
@@ -75,7 +75,7 @@ trap cleanup EXIT
 # 4. The home: fresh, in the repository (gnome-extensions install fails across filesystems).
 rm -rf "$T"
 bash "$ROOT/scripts/build.sh"
-isolated_install "$T"
+isolated_install "$T" developer
 mkdir -p "$T/home"
 
 # 5. The calendar: one in-person must-attend meeting ("client" is a built-in
@@ -101,7 +101,7 @@ printf '%s\r\n' \
 
 # 6. Shell settings: the extension enabled; the heads-up stays 120 s, the top of
 #    its own range, so there is time to look. No Do Not Disturb: the owner sees
-#    what they would see; Test alert is offered in the menu (show-test-alert=true), as a viewing aid.
+#    what they would see.
 cat > "$T/config/glib-2.0/settings/keyfile" <<EOF
 [org/gnome/shell]
 enabled-extensions=['$UUID']
@@ -109,7 +109,6 @@ welcome-dialog-last-shown-version='999'
 
 [org/gnome/shell/extensions/payattention]
 headsup-display-seconds=120
-show-test-alert=true
 EOF
 
 # 7. Run.
@@ -133,7 +132,7 @@ sample: a separate GNOME Shell opens in a window, with one test calendar; your o
   - Within about a minute, the heads-up for "Client site visit" shows "Travel: 30 min (default)".
   - Its "Change time" link shows the travel choices as one row of minutes.
   - The alarm icon in the window's top bar opens the menu; the "Client site visit" row expands to the travel choices.
-  - The menu also offers "Test alert" (turned on here): it runs all four steps in about 30 seconds.
+  - The menu also offers "Test alert" (this is the developer copy): it runs all four steps in about 30 seconds.
   - The heads-up stays 120 s here instead of 15 s, so there is time to look.
   - To stop: close the window, or press Ctrl+C here.
 EOF

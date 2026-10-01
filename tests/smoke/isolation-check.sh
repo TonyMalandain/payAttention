@@ -49,10 +49,12 @@ in_list() {
 }
 
 # 0. Only the throwaway homes can be written.
-refuses isolated_install "$PROBE" || fail 0-refuse-home "isolated_install accepted $PROBE"
+refuses isolated_install "$PROBE" normal || fail 0-refuse-home "isolated_install accepted $PROBE"
 [ ! -e "$PROBE" ] || fail 0-refuse-home "isolated_install wrote into $PROBE"
-refuses isolated_install "$HOME/.smoke-home" || fail 0-refuse-home "isolated_install accepted $HOME/.smoke-home"
-refuses isolated_install "$ROOT/.git" || fail 0-refuse-home "isolated_install accepted $ROOT/.git"
+refuses isolated_install "$HOME/.smoke-home" normal || fail 0-refuse-home "isolated_install accepted $HOME/.smoke-home"
+refuses isolated_install "$ROOT/.git" normal || fail 0-refuse-home "isolated_install accepted $ROOT/.git"
+refuses isolated_install "$H" || fail 0-refuse-bundle "isolated_install accepted no bundle"
+refuses isolated_install "$H" bogus || fail 0-refuse-bundle "isolated_install accepted the bundle bogus"
 printf x | refuses isolated_calendar "$PROBE" c N e@example.test \
     || fail 0-refuse-home "isolated_calendar accepted $PROBE"
 printf x | refuses isolated_calendar "$H" ../x N e@example.test \

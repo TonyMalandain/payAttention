@@ -16,6 +16,7 @@
     "smoke": "bash scripts/smoke.sh",
     "sample": "bash scripts/sample.sh",
     "install:local": "bash scripts/install.sh",
+    "install:developer": "bash scripts/install.sh --developer",
     "uninstall:local": "bash scripts/uninstall.sh",
     "preview": "gjs -m \"${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$(node -p \"require('./extension/metadata.json').uuid\")/preview/main.js\""
   },
