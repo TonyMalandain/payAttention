@@ -117,7 +117,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - README "First five minutes" and the PG-2 checklist say to turn the switch on first;
     - the smoke checks the menu without the item by default and with it when the switch is on.
 
-- **PG-13 — "Test alert" is a developer tool, not a setting (size set by the senior engineer).** D-037 supersedes D-036; undoes the switch from PG-12.
+- **PG-13 — "Test alert" is a developer tool, not a setting (M). DONE 2026-10-01**, accepted in review round 1 (6f4a058), no defects. D-037 supersedes D-036; undoes the switch from PG-12.
   - **What changes:** Settings no longer has "Show Test alert in the menu". A normal install never shows Test alert. The developer turns it on with a development option, not a setting: the sample desktop always has it, and the developer can install a build into their real desktop that has it. The architect chooses the option (build time or run time).
   - **Who it is for:** Calendar owner (shorter menu, one setting fewer); developer (needs it in the sample and for the real-desktop checks in PG-2).
   - **Why:** the owner: "The test alert is a dev feature. What's the point of having a dev feature activable via settings? I meant we should use a feature flag either triggered at build time or runtime via a command line argument or config file option when running the mutter-devkit".
@@ -137,7 +137,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   1. `gnome-extensions info payattention@tonymalandain.github.io` shows `ACTIVE`. (Passed 2026-09-27 under the old ID; check again after the move.)
   2. `journalctl --user -b | grep -i payattention` shows no errors. **PASSED 2026-09-27**: no payAttention or shell script errors this boot.
   3. The top bar shows your next must-attend meeting. The menu lists today's meetings with their reasons.
-  4. Run `npm run install:developer`, then log out and back in (once PG-13 is in). **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
+  4. Run `npm run install:developer`, then log out and back in **Test alert** from the menu shows all four steps. The takeover covers both monitors, even over a full-screen window, and works alongside PaperWM.
   5. Mark a personal task that matters (for example the piano pick-up) as must-attend for the whole series.
   6. Optional: turn the network off for 15 minutes and check that the "not updating" warning names the calendar.
   7. Sound (PG-7): with the developer copy, run **Test alert** and hear your GNOME alert sound at the insist and takeover steps. Change it in GNOME Settings (for example to Swing, then Hum) and run it again with no re-login; the sound follows. Set GNOME's alert sound to "None" and confirm payAttention is silent (D-028). Then restore your choice.
@@ -192,6 +192,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 ## Housekeeping (engineering)
 
+- The unit test "digits split by spaces: under 200 ms" (invite tests) measures wall-clock time and failed once at 210 ms on a busy machine (PG-13 build). For the senior engineer: make it not depend on machine load.
+- PG-13 review preferences: build checks run after both zips are written, so a failed build leaves bad zips in `dist/`; the controller test repeats the hand-built dependency list of the AI controller test; one uninstall-check line uses a loose match where the line above checks strictly.
 - The plans in `docs/plans/` do not show the deviations accepted in review (the PG-1b start-up sync order, the PG-1c takeover panel layout, the menu idle rebuild, the compact takeover). Update them if the plans are reused.
 - Two lint rules the architect logged as debt: forbid St/Clutter in `shell/`, and forbid creating settings in `ui/`.
 - `buildInvite` accepts a start time beyond the range of a date (above 8.64e15 ms) and produces an invalid invite. Widen the check (PG-4a leftover).
