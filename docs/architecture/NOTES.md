@@ -1100,3 +1100,17 @@ Append only. Newest at the bottom.
 - **Why:** D-040: one "clear" that leaves half the times behind would surprise the owner.
 - **Source:** docs/product/decisions.md D-040; extension/prefs.js:522.
 - **Touches:** data.md (already said so), boundaries.md (already said so), testing-and-build.md travel target — folded.
+
+## 2026-10-02 — Place text is empty only when the location is all video-call wording (closes "A real place plus a service name reads as online")
+- **Kind:** boundary
+- **Fact:** Rule 2 of the place-text rule changed from "names a service anywhere" to "made entirely of video-call wording": take out every whole-word video-call phrase (service names as phrases, plus join, meeting, call, online, video, Besprechung, beitreten); if only punctuation, separators and whitespace remain, there is no place, otherwise the whole text is the place.
+- **Why:** Product revised D-040's wording on the 2026-10-02 for-product finding: "Board room + Zoom" read as online fails late (no travel time). The new rule fails only early. Multi-word service names stay phrases so "Microsoft" or "Google" alone is still a place; whole-location words such as TBD, remote, none stay in the rule-1 list only, so they never consume part of a real place.
+- **Source:** docs/prd/meeting-guardian.md §2; docs/product/NOTES.md 2026-10-02 "Mixed place and video wording counts as in person"; BACKLOG PG-14 Done when; extension/core/attendance.js:31 and extension/core/words.js:52 (edges reused).
+- **Touches:** interfaces.md §2, data.md place key, testing-and-build.md online/in-person tests — folded. The earlier entries "Service names anywhere in a location mean no place" and "A real place plus a service name reads as online" are superseded and closed by this one.
+
+## 2026-10-02 — "beitreten" counted as video-call wording
+- **Kind:** decision
+- **Fact:** The rule-2 vocabulary includes "beitreten" (German "join") beside "Besprechung", so "Microsoft Teams-Besprechung beitreten" stays online.
+- **Why:** The PRD lists "join" as a generic word and gives "Besprechung" for German Teams invitations; "beitreten" is the same word in the same invitations. Leaving it out would make that text in person, the early direction, so the cost of getting it wrong either way is small.
+- **Source:** assumed (reading of PRD §2 "words like join"); product may strike it.
+- **Touches:** interfaces.md §2 — folded.

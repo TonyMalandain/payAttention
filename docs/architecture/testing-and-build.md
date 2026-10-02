@@ -170,12 +170,14 @@ The PRD's "Done when" list maps onto core tests:
 - **Online / in-person:** each named conferencing service, links in location vs
   description vs conference property, a place with a link is in person (D-038, which superseded D-007's "link wins"), placeholder words
   ("online", "TBD"), the mode override, and the https-plus-allowlist rule for Join.
-  From PG-14 (D-040): a location naming a service anywhere ("Join Zoom
-  Meeting", "Teams-Besprechung", "Microsoft Teams Meeting – Room link below")
-  is online; a generic word inside a real place ("Meet at reception", "Remote
-  office, 3rd floor") stays in person; a service name inside a longer word
-  ("Zoomlion Tower") is not a match; "Board room + Zoom" is online (the
-  accepted consequence in `interfaces.md` §2). Join: an in-person meeting with
+  From PG-14 (D-040): a location made only of video-call wording, in any
+  mix and with any punctuation ("Join Zoom Meeting", "Teams-Besprechung",
+  "Microsoft Teams Meeting", "Google Meet – join"), is online; anything left
+  over makes it in person: "Board room + Zoom", "Room 4.12 / Teams", "Meet at
+  reception", "Remote office, 3rd floor", "Zoom 2", "Microsoft"; a service
+  name inside a longer word ("Zoomlion Tower") is not a match; the
+  whole-location no-place words ("TBD", "n/a", "remote") still mean no
+  place. Join: an in-person meeting with
   a link has a `joinUrl`, also when switched to in person by the owner; a
   meeting without a link never has one, in either mode. In `app/view.js`, an
   in-person card with a link offers both the travel line and Join.

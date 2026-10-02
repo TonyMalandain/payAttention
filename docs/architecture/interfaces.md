@@ -148,28 +148,41 @@ Three pure functions. The names are indicative; the shapes are the contract.
     It is the location with links removed, and it is empty when either
     1. what is left, as a whole, is a no-place word (`NOT_A_PLACE_WORDS`:
        "online", "TBD", "phone call", "Zoom", …), or
-    2. what is left names a video-call service **anywhere**, as a whole word
-       (PRD §2, D-040): "Join Zoom Meeting", "Teams-Besprechung",
-       "Microsoft Teams-Besprechung beitreten".
+    2. what is left is made **entirely** of video-call wording (PRD §2,
+       D-040 as revised 2026-10-02): once every whole-word occurrence of a
+       video-call phrase is taken out, nothing remains but punctuation,
+       separators and whitespace. "Join Zoom Meeting", "Teams-Besprechung",
+       "Microsoft Teams Meeting", "Google Meet – join" are empty; "Board room
+       + Zoom", "Room 4.12 / Teams", "Meet at reception", "Zoom 2" are not.
 
-    Rule 2 uses its own list of **service names only** (Zoom, Teams, Google
-    Meet, Webex, …), never the generic words of rule 1. A generic word found
-    anywhere ("call", "meet", "phone", "remote", "none") would empty real
-    places ("Meet at reception", "Remote office, 3rd floor"), and a real
-    place read as no place is the late direction: no travel time, alerts at
-    the start instead of at leave-by. Matching is whole-word with Unicode
-    letter/digit edges, so a hyphen or a following word in another language
-    still ends the name ("Teams-Besprechung" matches, "Zoomlion Tower" does
-    not); the existing word matcher in `core/words.js` (`compileWords` /
-    `findWord`) already does exactly this and is the one to use. The list is
-    compiled once per module, not per meeting (`judge` budget,
-    `testing-and-build.md`). It is a constant in core, like the conferencing
-    host allowlist, and stays separate from it: hosts are what Join may open,
-    names are what a location says; they change for different reasons.
+    Rule 2 uses its own vocabulary, a constant in core: service names as
+    phrases (Zoom, Microsoft Teams, Teams, Google Meet, Meet, Webex,
+    Whereby, Jitsi, GoTo Meeting, Slack Huddle, …) and the generic meeting
+    words the PRD names (join, meeting, call, online, video, and
+    "Besprechung", with "beitreten" as the German "join"). Multi-word
+    service names are matched as phrases, so a company name alone
+    ("Microsoft", "Google") is never consumed and stays a place. The rule
+    only says no place when **nothing** is left over, so a real word next to
+    a service name always survives; that is the point. Any doubt (a meeting
+    ID, a room number, a word not in the vocabulary) leaves text behind and
+    reads as in person: a wrong in-person costs an early alert, a wrong
+    online can make the owner late (no travel time, alert at the start
+    instead of at leave-by). Whole-location words that are not video-call
+    wording ("TBD", "n/a", "remote", "none", "phone") stay in rule 1 only
+    and are not in this vocabulary.
 
-    Accepted consequence (PRD §2 wording): a location that names a real
-    place **and** a service ("Board room + Zoom") has no place text, so the
-    meeting is online and gets no travel time unless the owner switches it.
+    Matching is whole-word with Unicode letter/digit edges, the same edges
+    `compileWords` in `core/words.js` builds, so a hyphen or a following
+    word in another language still ends a word ("Teams-Besprechung" is two
+    vocabulary words, "Zoomlion Tower" contains none). Phrases are tried
+    longest first, as `compileWords` already orders them. Whether this is a
+    new function beside `findWord` or lives in `core/attendance.js` is the
+    component's design, not a contract. The vocabulary is compiled once per
+    module, not per meeting (`judge` budget, `testing-and-build.md`). It
+    stays separate from the conferencing host allowlist in `core/links.js`:
+    hosts are what Join may open, words are what a location says; they
+    change for different reasons.
+
     The same place text drives the travel target, so the mode and "has a
     place" still cannot disagree (`data.md`, key formats).
   - *Travel input:* `travel` is `{byPlace, byMeeting}`, two maps of key →
