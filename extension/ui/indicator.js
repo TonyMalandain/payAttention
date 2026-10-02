@@ -11,11 +11,18 @@ import St from 'gi://St';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import { MeetingRow } from './meetingRow.js';
+
 const HIGHLIGHT = 'payattention-indicator-highlight';
 
 function setText(actor, text) {
     if (actor.text !== text)
         actor.text = text;
+}
+
+/** True when both lists hold the same keys in the same order. */
+function sameKeys(rowsDrawn, rows) {
+    return rowsDrawn.length === rows.length && rowsDrawn.every((r, i) => r.key === rows[i].key);
 }
 
 export const Indicator = GObject.registerClass({ GTypeName: 'PayAttentionIndicator' },
@@ -30,6 +37,7 @@ class Indicator extends PanelMenu.Button {
         this.name = 'payattention-indicator';
         this._dispatch = dispatch;
         this._signature = null;
+        this._rows = [];
         this._pendingRows = null;
         this._rebuildId = 0;
 
@@ -94,24 +102,32 @@ class Indicator extends PanelMenu.Button {
         if (menu.signature === this._signature)
             return;
         this._signature = menu.signature;
-        // Deferred: this may run inside a menu item's own activate(), and the
-        // menu still uses the item after its handlers return (close-on-activate).
+        // Deferred: this may run inside a menu item's own handler, and a redraw can
+        // destroy that item (a rebuild, or the travel lines of a mode switch).
         this._pendingRows = menu.meetings;
         if (!this._rebuildId) {
             this._rebuildId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 this._rebuildId = 0;
-                this._rebuildRows();
+                this._drawRows();
                 return GLib.SOURCE_REMOVE;
             });
         }
     }
 
-    _rebuildRows() {
+    _drawRows() {
         const rows = this._pendingRows;
         this._pendingRows = null;
+        if (sameKeys(this._rows, rows)) {
+            rows.forEach((row, i) => this._rows[i].update(row));
+            return;
+        }
+        // A meeting came, went or moved: rebuild, and keep the open row open if it is still listed.
+        const openKey = this.menu.isOpen ? (this._rows.find(r => r.expanded)?.key ?? null) : null;
         this._meetings.removeAll();
-        for (const row of rows)
-            this._meetings.addMenuItem(this._rowItem(row));
+        this._rows = rows.map(row => new MeetingRow(row, this._dispatch));
+        for (const r of this._rows)
+            this._meetings.addMenuItem(r.item);
+        this._rows.find(r => r.key === openKey)?.expand();
     }
 
     _onDestroy() {
@@ -120,50 +136,5 @@ class Indicator extends PanelMenu.Button {
             this._rebuildId = 0;
         }
         super._onDestroy();
-    }
-
-    _rowItem(row) {
-        const dispatch = this._dispatch;
-        const key = row.key;
-        const item = new PopupMenu.PopupSubMenuMenuItem(row.label);
-        item.insert_child_above(new St.Label({
-            text: row.detail,
-            style_class: 'payattention-row-detail',
-            y_align: Clutter.ActorAlign.CENTER,
-        }), item.label);
-
-        const reason = new PopupMenu.PopupMenuItem(row.reason);
-        reason.setSensitive(false);
-        item.menu.addMenuItem(reason);
-
-        const must = new PopupMenu.PopupSwitchMenuItem('Must attend', row.isMust);
-        must.connect('toggled', (_item, state) =>
-            dispatch({ type: 'setVerdict', key, verdict: state ? 'must' : 'ignore', scope: 'occ' }));
-        item.menu.addMenuItem(must);
-
-        if (row.recurring) {
-            item.menu.addAction('Apply to whole series', () =>
-                dispatch({ type: 'setVerdict', key, verdict: row.isMust ? 'must' : 'ignore', scope: 'series' }));
-        }
-        if (row.overridden) {
-            item.menu.addAction('Back to automatic', () => {
-                dispatch({ type: 'setVerdict', key, verdict: null, scope: 'occ' });
-                if (row.recurring)
-                    dispatch({ type: 'setVerdict', key, verdict: null, scope: 'series' });
-            });
-        }
-        item.menu.addAction(row.modeSwitchLabel, () => dispatch({ type: 'setMode', key, mode: row.otherMode }));
-
-        if (row.travel) {
-            const header = new PopupMenu.PopupMenuItem(row.travel.header);
-            header.setSensitive(false);
-            item.menu.addMenuItem(header);
-            for (const minutes of row.travel.choices) {
-                const choice = item.menu.addAction(`${minutes} min`, () =>
-                    dispatch({ type: 'setTravel', target: row.travel.target, minutes }));
-                choice.setOrnament(minutes === row.travel.minutes ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NO_DOT);
-            }
-        }
-        return item;
     }
 });

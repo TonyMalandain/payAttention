@@ -433,6 +433,12 @@ describe('view: menu signature', () => {
         const b = view(now, [{ ...IN_PERSON, travelTarget: { kind: 'meeting', key: 'series:p1' } }]).menu.signature;
         assert.notEqual(a, b);
     });
+
+    test('changes when only the travel header changes (a pick equal to the default drops "(default)")', () => {
+        const a = view(LEAVE - 2 * HOUR, [IN_PERSON]).menu.signature;
+        const b = view(LEAVE - 2 * HOUR, [{ ...IN_PERSON, travelIsDefault: false }]).menu.signature;
+        assert.notEqual(a, b);
+    });
 });
 
 describe('view: AI mode', () => {

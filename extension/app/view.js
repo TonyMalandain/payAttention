@@ -146,13 +146,9 @@ function statusLine(health, rowCount, now) {
     return rowCount === 0 ? 'No more meetings today' : null;
 }
 
-// Each row's click handlers capture its travel target, so a changed target must rebuild the menu.
+// The UI redraws rows only when this changes, so it covers every field the menu draws.
 function signatureOf(rows) {
-    const targetOf = r => (r.travel?.target ? `${r.travel.target.kind}:${r.travel.target.key}` : '');
-    return rows
-        .map(r => [r.key, r.label, r.detail, r.reason, r.overridden, r.recurring, r.mode, r.travel?.minutes ?? '',
-            targetOf(r)].join('|'))
-        .join('\n');
+    return JSON.stringify(rows);
 }
 
 /**

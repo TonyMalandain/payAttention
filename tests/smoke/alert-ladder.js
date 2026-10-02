@@ -277,35 +277,57 @@ async function openFixtureRow(name, indicator, title) {
     return row;
 }
 
-/** The verdict switch in the menu: toggling it must not destroy the item during its own activation. */
+/** A line of row's submenu that is shown (mapped: hidden lines stay in the tree) and reads text. */
+const shownMenuLine = (row, text) => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem && a.mapped &&
+    a.label?.text === text)[0] ?? null;
+const rowDetail = row => findAll(row, a => a instanceof St.Label && a.has_style_class_name('payattention-row-detail'))[0]?.text;
+const menuRow = (indicator, title) => findAll(indicator.menu.actor, a => a instanceof PopupMenu.PopupSubMenuMenuItem &&
+    a.label.text.endsWith(title))[0] ?? null;
+
+/**
+ * The verdict switch in the menu: a click stores the override and leaves the menu and the
+ * row open, now offering Back to automatic, which clears it, still without closing (PG-15).
+ */
 async function checkMenuVerdict(name, ext) {
     const indicator = Main.panel.statusArea.payattention;
     const settings = ext.stateObj.getSettings();
     await pointerDevice(name);
     check(Object.keys(verdictOverrides(settings)).length === 0, name, 'overrides stored before the check');
 
-    let row = await openFixtureRow(name, indicator, 'Smoke all-day check');
-    const must = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupSwitchMenuItem)[0];
-    check(must?.state === false, name, `the must-attend switch is not off (${must?.state})`);
-    let clicked;
     try {
-        clicked = await clickActor(must, name);
-    } catch (e) {
-        if (e instanceof CheckFailed)
-            e.message += `; menu open=${indicator.menu.isOpen} mapped=${indicator.menu.actor.mapped} sub open=${row.menu.isOpen} item mapped=${must.mapped} overview=${Main.overview.visible} startingUp=${Main.layoutManager._startingUp} grab=${global.stage.get_grab_actor()?.constructor.name}`;
-        throw e;
-    }
-    await mustWait(() => Object.values(verdictOverrides(settings)).includes('must'), 3000, name,
-        `the switch stored no must override (${clicked})`);
-    await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the switch was activated');
+        const row = await openFixtureRow(name, indicator, 'Smoke all-day check');
+        const must = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupSwitchMenuItem)[0];
+        check(must?.state === false, name, `the must-attend switch is not off (${must?.state})`);
+        let clicked;
+        try {
+            clicked = await clickActor(must, name);
+        } catch (e) {
+            if (e instanceof CheckFailed)
+                e.message += `; menu open=${indicator.menu.isOpen} mapped=${indicator.menu.actor.mapped} sub open=${row.menu.isOpen} item mapped=${must.mapped} overview=${Main.overview.visible} startingUp=${Main.layoutManager._startingUp} grab=${global.stage.get_grab_actor()?.constructor.name}`;
+            throw e;
+        }
+        await mustWait(() => Object.values(verdictOverrides(settings)).includes('must'), 3000, name,
+            `the switch stored no must override (${clicked})`);
+        await Scripting.sleep(1000);
+        check(indicator.menu.isOpen, name, 'the menu closed after the switch was activated');
+        check(row.menu.isOpen && indicator.menu.actor.contains(row), name,
+            `the row is not open in the menu after the switch (open=${row.menu.isOpen})`);
+        check(must.state === true, name, `the must-attend switch is ${must.state} after the click`);
+        const detail = rowDetail(row);
+        check(detail?.startsWith('Must attend') && detail.includes('overridden'), name, `the row's detail reads "${detail}"`);
+        check(!menuRow(indicator, 'Smoke all-day site visit')?.menu.isOpen, name, 'another row opened');
 
-    row = await openFixtureRow(name, indicator, 'Smoke all-day check');
-    const back = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
-        a.label?.text === 'Back to automatic')[0];
-    check(back, name, 'no "Back to automatic" after the override');
-    await clickActor(back, name);
-    await mustWait(() => Object.keys(verdictOverrides(settings)).length === 0, 3000, name, 'Back to automatic left an override');
-    await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after Back to automatic');
+        const back = await mustWait(() => shownMenuLine(row, 'Back to automatic'), 3000, name,
+            'the open row shows no "Back to automatic" after the override');
+        await clickActor(back, name);
+        await mustWait(() => Object.keys(verdictOverrides(settings)).length === 0, 3000, name, 'Back to automatic left an override');
+        await mustWait(() => !back.mapped, 3000, name, '"Back to automatic" is still shown after it cleared the override');
+        check(indicator.menu.isOpen && row.menu.isOpen, name,
+            `after Back to automatic: menu open=${indicator.menu.isOpen}, row open=${row.menu.isOpen}`);
+    } finally {
+        indicator.menu.close(false);
+        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open');
+    }
     await mustWait(() => stageFind('payattention-indicator-label')?.text.startsWith(FIXTURE_TITLE), 3000, name,
         'the indicator did not return to the fixture meeting');
 }
@@ -337,44 +359,62 @@ async function checkMenuTravelMarks(name) {
     }
 }
 
-const travelLines = row => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem && /^\d+ min$/.test(a.label?.text ?? ''));
+// Shown means mapped: hidden lines stay in the tree (PG-15).
+const travelLines = row => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem && a.mapped &&
+    /^\d+ min$/.test(a.label?.text ?? ''));
+const markOf = line => findAll(line, a => a instanceof St.Icon && a.has_style_class_name('popup-menu-ornament'))[0]?.icon_name;
+/** The shown travel choices of row whose round mark is filled. */
+const filledChoices = row => travelLines(row).filter(l => markOf(l) === 'ornament-dot-checked-symbolic').map(l => l.label.text);
 const unpacked = (settings, key) => settings.get_value(key).recursiveUnpack();
 
 /**
  * A meeting with no place, switched to in person, gets the travel choices, and a
  * pick is saved for its series in meeting-travel-times, not travel-times (D-039, ADR-0014).
+ * The switches and the pick all happen in one opening of the menu (PG-15).
  */
 async function checkPlacelessTravel(name, ext) {
     const indicator = Main.panel.statusArea.payattention;
     const settings = ext.stateObj.getSettings();
     const title = 'Smoke all-day workshop';
+    const open = row => `menu open=${indicator.menu.isOpen}, row open=${row.menu.isOpen}`;
     try {
-        let row = await openFixtureRow(name, indicator, title);
+        const row = await openFixtureRow(name, indicator, title);
         check(travelLines(row).length === 0, name, 'the row has travel choices while online with no place');
-        const switchItem = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
-            a.label?.text === 'Switch to in person')[0];
+        const switchItem = shownMenuLine(row, 'Switch to in person');
         check(switchItem, name, 'no "Switch to in person" in the row');
         const switched = await clickActor(switchItem, name);
         await mustWait(() => Object.values(unpacked(settings, 'mode-overrides')).includes('in-person'), 3000, name,
             `the switch stored no in-person override (${switched})`);
-        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the switch');
 
-        row = await openFixtureRow(name, indicator, title);
         const lines = await mustWait(() => (travelLines(row).length === 7 ? travelLines(row) : null), 3000, name,
-            `the switched row holds ${travelLines(row).length} travel choices, want 7`);
+            'the switched row, without reopening, does not show seven travel choices');
+        check(indicator.menu.isOpen && row.menu.isOpen, name, `after Switch to in person: ${open(row)}`);
+        check(shownMenuLine(row, 'Switch to online'), name, 'the switched row offers no "Switch to online"');
+
         const placeTravel = JSON.stringify(unpacked(settings, 'travel-times'));
         const pick = lines.find(l => l.label.text === '45 min');
         check(pick, name, 'no "45 min" choice');
         const picked = await clickActor(pick, name);
         const want = JSON.stringify({ 'series:smoke-workshop@smoke.test': 45 });
         await mustWait(() => JSON.stringify(unpacked(settings, 'meeting-travel-times')) === want, 3000, name,
-            `meeting-travel-times is ${JSON.stringify(unpacked(settings, 'meeting-travel-times'))}, want ${want} (${picked})`);
+            `meeting-travel-times is not ${want} (${picked})`);
         check(JSON.stringify(unpacked(settings, 'travel-times')) === placeTravel, name, 'the pick changed travel-times');
-        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the pick');
+        check(indicator.menu.isOpen && row.menu.isOpen, name, `after the pick: ${open(row)}`);
+        const header = await mustWait(() => shownMenuLine(row, 'Travel time: 45 min'), 3000, name,
+            'the open row does not read "Travel time: 45 min"');
+        check(!header.sensitive, name, 'the travel header is clickable');
+        check(JSON.stringify(filledChoices(row)) === JSON.stringify(['45 min']), name,
+            `the filled mark is on ${JSON.stringify(filledChoices(row))}, want 45 min alone`);
 
-        row = await openFixtureRow(name, indicator, title);
-        await mustWait(() => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
-            a.label?.text === 'Travel time: 45 min' && !a.sensitive)[0], 3000, name, 'the row does not read "Travel time: 45 min"');
+        // Past a tick: the row stays open.
+        await Scripting.sleep(1500);
+        check(indicator.menu.isOpen && row.menu.isOpen, name, `a tick after the pick: ${open(row)}`);
+
+        const toOnline = shownMenuLine(row, 'Switch to online');
+        check(toOnline, name, 'no "Switch to online" after the pick');
+        await clickActor(toOnline, name);
+        await mustWait(() => travelLines(row).length === 0, 3000, name, 'the travel choices still show after Switch to online');
+        check(indicator.menu.isOpen && row.menu.isOpen, name, `after Switch to online: ${open(row)}`);
     } finally {
         indicator.menu.close(false);
         settings.reset('mode-overrides');
@@ -519,6 +559,23 @@ const IN_PERSON_ALERT = Object.freeze({
     also: [], canJoin: false, offerSeries: false,
 });
 
+/** Menu rows for 6e-menu-rows: synthetic Views, so the check needs no calendar and no tick (PG-15). */
+const ROW_A = Object.freeze({
+    key: 'occ:smoke-a|1', label: '09:00  Smoke row A', detail: 'Ignorable · online', reason: 'Why: a',
+    isMust: false, overridden: false, recurring: true, mode: 'online', otherMode: 'in-person',
+    modeSwitchLabel: 'Switch to in person', travel: null,
+});
+const ROW_B = Object.freeze({
+    key: 'occ:smoke-b|1', label: '10:00  Smoke row B', detail: 'Must attend · in person', reason: 'Why: b',
+    isMust: true, overridden: false, recurring: false, mode: 'in-person', otherMode: 'online',
+    modeSwitchLabel: 'Switch to online',
+    travel: Object.freeze({
+        target: { kind: 'place', key: 'smoke-place' }, minutes: 30, header: 'Travel time: 30 min (default)',
+        choices: [10, 15, 20, 30, 45, 60, 90],
+    }),
+});
+const ROW_C = Object.freeze({ ...ROW_A, key: 'occ:smoke-c|1', label: '08:00  Smoke row C', recurring: false });
+
 /** WORST_ALERT, drawn by the installed UI modules as a takeover and as each card. */
 async function checkWorstCase(name, home) {
     const base = `file://${home}/data/gnome-shell/extensions/${UUID}/ui`;
@@ -646,6 +703,113 @@ async function checkTravelChoices(name, home) {
         } finally {
             card.destroy();
         }
+    }
+}
+
+/**
+ * The installed indicator, driven with synthetic Views: rows are redrawn in place, so an
+ * open row stays open showing its new state, a drawn change is never reported as the
+ * owner's, and a row still listed stays open across a rebuild (PG-15).
+ */
+async function checkMenuRowsInPlace(name, home) {
+    const { Indicator } = await import(`file://${home}/data/gnome-shell/extensions/${UUID}/ui/indicator.js`);
+    await pointerDevice(name);
+    const actions = [];
+    const indicator = new Indicator({ dispatch: a => actions.push(a), openPreferences: () => {} });
+    Main.panel.addToStatusArea('payattention-smoke-rows', indicator, 0, 'right');
+    let n = 0;
+    const draw = rows => indicator.update({ text: null, highlighted: false, flashing: false, warning: false },
+        { status: null, aiStatus: null, showTestAlert: false, meetings: rows, signature: `smoke-${n++}` });
+    const rowItems = () => findAll(indicator.menu.actor, a => a instanceof PopupMenu.PopupSubMenuMenuItem);
+    const rowTitled = title => menuRow(indicator, title);
+    const switchOf = row => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupSwitchMenuItem)[0];
+    const state = () => `menu open=${indicator.menu.isOpen}; rows ${rowItems().map(r => `${r.label.text} open=${r.menu.isOpen}`).join(', ')}`;
+
+    try {
+        // a. Two rows; the owner opens B.
+        draw([ROW_A, ROW_B]);
+        await mustWait(() => rowTitled('Smoke row A') && rowTitled('Smoke row B'), 3000, name, 'rows A and B were not drawn');
+        indicator.menu.open(false);
+        const rowA = rowTitled('Smoke row A');
+        const rowB = rowTitled('Smoke row B');
+        rowB.setSubmenuShown(true);
+        await mustWait(() => rowB.menu.actor.mapped, 3000, name, 'row B did not open');
+
+        // b. A new travel time: the same row, still open, the header and the mark moved.
+        draw([ROW_A, { ...ROW_B, travel: { ...ROW_B.travel, minutes: 45, header: 'Travel time: 45 min' } }]);
+        // Ends on either outcome, so the checks below say which one happened.
+        await mustWait(() => rowTitled('Smoke row B') !== rowB || shownMenuLine(rowB, 'Travel time: 45 min'), 3000, name,
+            'row B neither redrew nor was replaced');
+        check(rowTitled('Smoke row B') === rowB, name, `row B was rebuilt, not redrawn (${state()})`);
+        check(shownMenuLine(rowB, 'Travel time: 45 min'), name, 'row B does not read "Travel time: 45 min"');
+        check(rowB.menu.isOpen && indicator.menu.isOpen, name, `after a travel change: ${state()}`);
+        check(!rowA.menu.isOpen, name, 'row A opened by itself');
+        check(JSON.stringify(filledChoices(rowB)) === JSON.stringify(['45 min']), name,
+            `the filled mark is on ${JSON.stringify(filledChoices(rowB))}, want 45 min alone`);
+
+        // c. Switched to online: the travel lines are gone, the switch offers in person.
+        const online = { ...ROW_B, mode: 'online', otherMode: 'in-person', modeSwitchLabel: 'Switch to in person',
+            detail: 'Must attend · online', travel: null };
+        draw([ROW_A, online]);
+        await mustWait(() => travelLines(rowB).length === 0 && shownMenuLine(rowB, 'Switch to in person') &&
+            rowDetail(rowB) === 'Must attend · online', 3000, name, 'row B did not show itself online');
+        check(rowTitled('Smoke row B') === rowB && rowB.menu.isOpen && indicator.menu.isOpen, name, `after online: ${state()}`);
+
+        // d. Back in person: the seven choices are in the same open row.
+        draw([ROW_A, ROW_B]);
+        await mustWait(() => travelLines(rowB).length === 7, 3000, name, 'row B does not show seven travel lines');
+        check(rowTitled('Smoke row B') === rowB && rowB.menu.isOpen, name, `after in person: ${state()}`);
+
+        // e. An override drawn from the View: the switch follows, and nothing is reported.
+        draw([ROW_A, { ...ROW_B, isMust: false, overridden: true, detail: 'Ignorable · in person · overridden' }]);
+        const back = await mustWait(() => shownMenuLine(rowB, 'Back to automatic'), 3000, name, 'row B shows no "Back to automatic"');
+        check(switchOf(rowB)?.state === false, name, `the Must attend switch is ${switchOf(rowB)?.state}, want off`);
+        check(actions.length === 0, name, `a drawn change was reported as the owner's: ${JSON.stringify(actions)}`);
+
+        // f. The focused line is hidden: the keyboard lands on the switch.
+        back.grab_key_focus();
+        check(back.has_key_focus(), name, '"Back to automatic" did not take key focus');
+        draw([ROW_A, { ...ROW_B, isMust: false, detail: 'Ignorable · in person' }]);
+        await mustWait(() => !back.mapped, 3000, name, '"Back to automatic" is still shown');
+        check(switchOf(rowB).has_key_focus(), name,
+            `the switch does not have key focus (focus on ${global.stage.get_key_focus()?.constructor.name})`);
+
+        // g. A meeting came: rebuilt, and B is still open.
+        draw([ROW_C, ROW_A, ROW_B]);
+        await mustWait(() => rowItems().length === 3 && rowTitled('Smoke row C'), 3000, name, 'row C did not come');
+        await mustWait(() => rowTitled('Smoke row B')?.menu.isOpen, 3000, name, 'row B is not open after the rebuild');
+        check(!rowTitled('Smoke row A').menu.isOpen && !rowTitled('Smoke row C').menu.isOpen && indicator.menu.isOpen, name,
+            `after a meeting came: ${state()}`);
+
+        // h. B left: nothing open, the menu still is.
+        draw([ROW_C, ROW_A]);
+        await mustWait(() => rowItems().length === 2 && !rowTitled('Smoke row B'), 3000, name, 'row B did not leave');
+        check(rowItems().every(r => !r.menu.isOpen) && indicator.menu.isOpen, name, `after B left: ${state()}`);
+
+        // i. The owner's clicks in a row report the action and leave the menu and the row open.
+        draw([ROW_C, ROW_A, ROW_B]);
+        const rowB2 = await mustWait(() => rowTitled('Smoke row B'), 3000, name, 'row B did not come back');
+        rowB2.setSubmenuShown(true);
+        await mustWait(() => rowB2.menu.actor.mapped, 3000, name, 'row B did not open again');
+        await Scripting.sleep(300);
+        const clicks = [
+            ['45 min', { type: 'setTravel', target: { kind: 'place', key: 'smoke-place' }, minutes: 45 }],
+            ['Switch to online', { type: 'setMode', key: 'occ:smoke-b|1', mode: 'online' }],
+        ];
+        for (const [text, want] of clicks) {
+            const line = shownMenuLine(rowB2, text);
+            check(line, name, `row B shows no "${text}"`);
+            const before = actions.length;
+            const clicked = await clickActor(line, name);
+            await mustWait(() => actions.length > before, 3000, name, `"${text}" reported nothing (${clicked})`);
+            check(JSON.stringify(actions.at(-1)) === JSON.stringify(want), name,
+                `"${text}" reported ${JSON.stringify(actions.at(-1))}, want ${JSON.stringify(want)}`);
+            await Scripting.sleep(300);
+            check(indicator.menu.isOpen && rowB2.menu.isOpen, name, `after "${text}": ${state()}`);
+        }
+    } finally {
+        indicator.menu.close(false);
+        indicator.destroy();
     }
 }
 
@@ -788,6 +952,9 @@ async function runLadder() {
 
         // 6d. The travel boxes of an in-person card open from a button and read in full.
         await checkTravelChoices('6d-travel-choices', home);
+
+        // 6e. The menu redraws a meeting's row in place, so an open row stays open (PG-15).
+        await checkMenuRowsInPlace('6e-menu-rows', home);
 
         // 7. Disable: nothing of ours remains.
         await checkDisabled('7-disable', home);

@@ -459,11 +459,16 @@ What the smoke script checks:
    Do Not Disturb is set (`show-banners=false`) for the whole run.
    The fixture also has an all-day event (`Smoke all-day check`): it is in
    today's menu at any hour and never alerts. The script opens the menu, clicks
-   that event's Must attend switch, and checks the override was stored and the
-   menu closed; then "Back to automatic" clears it. A second all-day event with a
-   place (`Smoke all-day site visit`) is in person: the script opens its row and
+   that event's Must attend switch, and checks the override was stored and that
+   the menu and the row stayed open, showing Back to automatic; then Back to
+   automatic clears it, still without closing the menu (PG-15). A second
+   all-day event with a place (`Smoke all-day site visit`) is in person: the
+   script opens its row and
    checks the seven travel lines carry one kind of round mark in one column, the
-   30 min one filled (check `2b-menu-travel`). From PG-13 (D-037, ADR-0013):
+   30 min one filled (check `2b-menu-travel`). A third all-day event with no
+   place (`Smoke all-day workshop`) is switched to in person, given a travel
+   time, and switched back to online, all without reopening the menu (check
+   `2d-placeless-travel`, PG-15). From PG-13 (D-037, ADR-0013):
    the normal bundle's menu offers no Test alert item, and the installed schema
    has no `show-test-alert` key (check `2c-menu-test-alert`; replaces the PG-12
    flip check). The developer bundle's item is checked by the sample's check
@@ -479,7 +484,11 @@ What the smoke script checks:
    alert (150-character title, Join, whole series, three "also" lines) through
    the installed `ui/` modules as a takeover and as each card: every button on
    screen, the title at most two lines and ellipsized. Then a `Ui` and a `Card`
-   whose construction fails leave nothing on the stage.
+   whose construction fails leave nothing on the stage. Then the menu redraws
+   rows in place from synthetic Views through the installed `ui/indicator.js`
+   (check `6e-menu-rows`, PG-15): an open row stays open with its new state, a
+   drawn change is never reported as a click, and a row that is still listed
+   stays open across a rebuild.
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
 6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.
