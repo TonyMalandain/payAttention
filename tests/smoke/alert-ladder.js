@@ -337,6 +337,52 @@ async function checkMenuTravelMarks(name) {
     }
 }
 
+const travelLines = row => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem && /^\d+ min$/.test(a.label?.text ?? ''));
+const unpacked = (settings, key) => settings.get_value(key).recursiveUnpack();
+
+/**
+ * A meeting with no place, switched to in person, gets the travel choices, and a
+ * pick is saved for its series in meeting-travel-times, not travel-times (D-039, ADR-0014).
+ */
+async function checkPlacelessTravel(name, ext) {
+    const indicator = Main.panel.statusArea.payattention;
+    const settings = ext.stateObj.getSettings();
+    const title = 'Smoke all-day workshop';
+    try {
+        let row = await openFixtureRow(name, indicator, title);
+        check(travelLines(row).length === 0, name, 'the row has travel choices while online with no place');
+        const switchItem = findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
+            a.label?.text === 'Switch to in person')[0];
+        check(switchItem, name, 'no "Switch to in person" in the row');
+        const switched = await clickActor(switchItem, name);
+        await mustWait(() => Object.values(unpacked(settings, 'mode-overrides')).includes('in-person'), 3000, name,
+            `the switch stored no in-person override (${switched})`);
+        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the switch');
+
+        row = await openFixtureRow(name, indicator, title);
+        const lines = await mustWait(() => (travelLines(row).length === 7 ? travelLines(row) : null), 3000, name,
+            `the switched row holds ${travelLines(row).length} travel choices, want 7`);
+        const placeTravel = JSON.stringify(unpacked(settings, 'travel-times'));
+        const pick = lines.find(l => l.label.text === '45 min');
+        check(pick, name, 'no "45 min" choice');
+        const picked = await clickActor(pick, name);
+        const want = JSON.stringify({ 'series:smoke-workshop@smoke.test': 45 });
+        await mustWait(() => JSON.stringify(unpacked(settings, 'meeting-travel-times')) === want, 3000, name,
+            `meeting-travel-times is ${JSON.stringify(unpacked(settings, 'meeting-travel-times'))}, want ${want} (${picked})`);
+        check(JSON.stringify(unpacked(settings, 'travel-times')) === placeTravel, name, 'the pick changed travel-times');
+        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open after the pick');
+
+        row = await openFixtureRow(name, indicator, title);
+        await mustWait(() => findAll(row.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
+            a.label?.text === 'Travel time: 45 min' && !a.sensitive)[0], 3000, name, 'the row does not read "Travel time: 45 min"');
+    } finally {
+        indicator.menu.close(false);
+        settings.reset('mode-overrides');
+        settings.reset('meeting-travel-times');
+        await mustWait(() => !indicator.menu.isOpen, 3000, name, 'the menu stayed open');
+    }
+}
+
 /** The normal bundle's menu offers no Test alert, even with show-test-alert stored as true (D-037, ADR-0013). */
 async function checkMenuNoTestAlert(name, ext) {
     check(!Object.hasOwn(ext.metadata, 'payattention-developer'), name, 'the smoke is not running the normal bundle');
@@ -657,6 +703,7 @@ async function runLadder() {
     await checkMenuVerdict('2-menu-verdict', ext);
     await checkMenuTravelMarks('2b-menu-travel');
     await checkMenuNoTestAlert('2c-menu-test-alert', ext);
+    await checkPlacelessTravel('2d-placeless-travel', ext);
 
     // 3. The test ladder, step by step.
     // Records which sound the ladder asks for. It does not call through: the headless

@@ -49,9 +49,10 @@ if ! grep -q '^PAYATTENTION-ISOLATION PASS' "$T/isolation.log"; then
 fi
 
 # 3. The fixture calendar: one must-attend online meeting 2-3 h ahead, so no
-#    real step fires during the run, and two all-day events, which are always in
+#    real step fires during the run, and three all-day events, which are always in
 #    today's menu (whatever the hour) and never alert: one for the menu check,
-#    one in person for the travel marks check.
+#    one in person for the travel marks check, and one with no place for the
+#    placeless travel check.
 S=$(( ( $(date +%s) / 3600 + 3 ) * 3600 ))
 DTSTART=$(date -u -d "@$S" +%Y%m%dT%H%M%SZ)
 DTEND=$(date -u -d "@$(( S + 1800 ))" +%Y%m%dT%H%M%SZ)
@@ -75,6 +76,11 @@ printf '%s\r\n' \
     "DTSTART;VALUE=DATE:$(date +%Y%m%d)" "DTEND;VALUE=DATE:$(date -d tomorrow +%Y%m%d)" \
     'SUMMARY:Smoke all-day site visit' \
     'LOCATION:Smoke site\, 1 Example Street' \
+    'END:VEVENT' \
+    'BEGIN:VEVENT' \
+    'UID:smoke-workshop@smoke.test' 'DTSTAMP:20260101T000000Z' \
+    "DTSTART;VALUE=DATE:$(date +%Y%m%d)" "DTEND;VALUE=DATE:$(date -d tomorrow +%Y%m%d)" \
+    'SUMMARY:Smoke all-day workshop' \
     'END:VEVENT' 'END:VCALENDAR' \
     | isolated_calendar "$T" smoke-cal Smoke owner@smoke.test
 
