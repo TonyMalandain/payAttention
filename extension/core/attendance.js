@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Tony Malandain
 
-// Online or in person (PRD §2): a join link, a real place, or neither. Internal to core.
+// Online or in person (PRD §2): a join link and a real place, read from the same text. Internal to core.
 import { extractUrls, isConferenceUrl } from './links.js';
 import { NOT_A_PLACE_WORDS, VIDEO_CALL_WORDS, compileWords, isMadeOfWords } from './words.js';
 
@@ -15,7 +15,7 @@ const VIDEO_CALL = compileWords(VIDEO_CALL_WORDS, []);
  * What the calendar data says about attending one meeting.
  *
  * @param {import('./types.js').OccurrenceDTO} event
- * @returns {{detected:'online'|'in-person'|'unknown', link:string|null, placeText:string}}
+ * @returns {{detected:'online'|'in-person', link:string|null, placeText:string}}
  *   `link` is the first allowlisted https link (conference field, then location,
  *   then description); `placeText` is the location without links, or '' when it
  *   is not a place (empty, a word like "online" or "TBD", or only video-call
@@ -35,6 +35,7 @@ export function detectAttendance(event) {
     const notAPlace = comparable === '' || NOT_A_PLACE_WORDS.includes(comparable) || isMadeOfWords(VIDEO_CALL, p);
     const placeText = notAPlace ? '' : p;
 
-    const detected = link ? 'online' : placeText ? 'in-person' : 'unknown';
+    // A place means in person, link or not (D-038).
+    const detected = placeText !== '' ? 'in-person' : 'online';
     return { detected, link, placeText };
 }

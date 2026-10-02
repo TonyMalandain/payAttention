@@ -40,7 +40,7 @@ try {
         events: [{
             sourceUid: 'src-1', uid: 'evt-1', recurrenceId: null, recurring: false,
             start, end: start + 1800000, allDay: false,
-            summary: 'Sync', location: 'HQ, Room 2', description: 'Join https://meet.google.com/abc-defg-hij',
+            summary: 'Sync', location: '', description: 'Join https://meet.google.com/abc-defg-hij',
             conferenceUris: [], status: 'confirmed', transparency: 'opaque',
             organizer: { email: 'alice@acme.test', name: 'alice' },
             attendees: [attendee('me@acme.test'), attendee('alice@acme.test'), attendee('bob@acme.test')],

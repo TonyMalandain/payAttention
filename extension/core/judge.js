@@ -84,7 +84,7 @@ function judgeEvent(event, config, overrides, travel, identity, ctx) {
 
     const att = detectAttendance(event);
     const mo = lookupOverride(overrides.mode, key, sKey, MODE_VALUES);
-    const mode = mo ?? (att.detected === 'in-person' ? 'in-person' : 'online');
+    const mode = mo ?? att.detected;
     const pKey = placeKey(att.placeText);
 
     let travelMinutes = null;

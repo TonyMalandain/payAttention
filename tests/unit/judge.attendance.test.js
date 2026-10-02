@@ -137,19 +137,25 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
         assert.equal(r.deadline, T0);
     });
 
-    test('a link and a place together is online, keeping the place (D-007)', () => {
+    test('a place with a link is in person (D-038)', () => {
         const r = judgeOne(event({ location: 'HQ, Room 2', description: MEET }));
-        assert.equal(r.mode, 'online');
-        assert.equal(r.joinUrl, MEET);
-        assert.equal(r.placeText, 'HQ, Room 2');
+        assert.equal(r.mode, 'in-person');
+        assert.equal(r.modeOverridden, false);
         assert.equal(r.placeKey, 'hq, room 2');
+        assert.equal(r.travelMinutes, 30);
+        assert.equal(r.travelIsDefault, true);
+        assert.equal(r.deadline, T0 - 30 * MIN);
+    });
+
+    test('a series mode override to online wins over a place', () => {
+        const r = judgeOne(event({ location: 'HQ, Room 2', description: MEET }), modes({ [sKey]: 'online' }));
+        assert.equal(r.mode, 'online');
         assert.equal(r.travelMinutes, null);
         assert.equal(r.deadline, T0);
-        assert.equal(r.modeOverridden, false);
     });
 
     test('an occurrence mode override to in-person moves the deadline to leave-by', () => {
-        const r = judgeOne(event({ location: 'HQ, Room 2', description: MEET }), modes({ [oKey]: 'in-person' }));
+        const r = judgeOne(event({ description: MEET }), modes({ [oKey]: 'in-person' }));
         assert.equal(r.mode, 'in-person');
         assert.equal(r.modeOverridden, true);
         assert.equal(r.joinUrl, null);

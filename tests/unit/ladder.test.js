@@ -40,11 +40,10 @@ describe('end to end', () => {
         assert.deepEqual([S - 55 * MIN, S - 50 * MIN, S - 47 * MIN, S - 45 * MIN].map(n => stepAt(n)), [1, 2, 3, 4]);
     });
 
-    test('hybrid uses online timing even though a place is present', () => {
+    test('a place with a video link counts to leave-by with the default travel', () => {
         const { stepAt } = pipeline([event({ location: 'HQ, Room 2', description: MEET })]);
-        assert.equal(stepAt(S - 30 * MIN), 1);
-        assert.equal(stepAt(S - MIN - 1), 3);
-        assert.equal(stepAt(S - MIN), 4);
+        const L = S - 30 * MIN;
+        assert.deepEqual([L - 10 * MIN, L - 5 * MIN, L - 2 * MIN, L].map(n => stepAt(n)), [1, 2, 3, 4]);
     });
 
     test('a placeholder overridden to must-attend alerts', () => {
@@ -60,11 +59,11 @@ describe('end to end', () => {
         assert.equal(r.indicator, null);
     });
 
-    test('a hybrid meeting switched to in person takes over at leave-by', () => {
+    test('a place with a video link switched to online takes over 1 min before the start', () => {
         const { stepAt } = pipeline([event({ location: 'HQ, Room 2', description: MEET })],
-            { overrides: { verdict: {}, mode: { ['occ:evt-1|' + S]: 'in-person' } } });
-        assert.equal(stepAt(S - 30 * MIN - 1), 3);
-        assert.equal(stepAt(S - 30 * MIN), 4);
+            { overrides: { verdict: {}, mode: { ['occ:evt-1|' + S]: 'online' } } });
+        assert.equal(stepAt(S - MIN - 1), 3);
+        assert.equal(stepAt(S - MIN), 4);
     });
 
     test('an in-person nudge snooze never goes past the insist step', () => {
