@@ -38,9 +38,9 @@ When calendar data is missing (for example, the owner's own address is unknown, 
 ### 2. Online or in person (R-10)
 
 - **Online:** the location, description, or conference field holds a video-call link (Google Meet, Zoom, Microsoft Teams, Webex, Whereby, Jitsi, GoTo, Slack huddle, or any https link to one of those services).
-- **In person:** there is no link, and the location is not empty and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, TBA, n/a, none, phone, phone call, call, video call, zoom, zoom meeting, teams, teams meeting, microsoft teams, microsoft teams meeting, google meet, meet, webex, hangout, google hangouts, whereby, jitsi, goto meeting, gotomeeting, slack, slack huddle, huddle.
+- **In person:** the location is not empty, is not a link, and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, TBA, n/a, none, phone, phone call, call, video call, zoom, zoom meeting, teams, teams meeting, microsoft teams, microsoft teams meeting, google meet, meet, webex, hangout, google hangouts, whereby, jitsi, goto meeting, gotomeeting, slack, slack huddle, huddle.
 - **Unknown:** there is no link and no location. Treat it as online (short lead time).
-- Both a link and a place: online (D-007). The owner can switch it in the menu.
+- Both a link and a place: in person (D-038). The owner can switch any meeting in the menu.
 
 ### 3. The escalation ladder (R-8, R-9, R-11, R-13)
 
@@ -78,7 +78,7 @@ Behaviour:
 - The heads-up and nudge cards for an in-person meeting show the line "Travel: 30 min (default)", and next to it a "Change time" link. It reads as a link (link colour, underlined), is small, and never looks like one of the card's action buttons.
 - "Change time" shows one compact row of small boxes holding only the numbers 10, 15, 20, 30, 45, 60 and 90, with the unit "min" said once before the row. The row fits on one line of every card, and every number is readable in full. The current value is marked. Picking one saves it, the line shows the new value, and the alert times move to the new leave-by time at once. Picking a travel time is not an acknowledgement: the escalation goes on.
 - While the boxes are shown, the heads-up card does not go away on its own. This never holds back another meeting: when another meeting reaches its nudge or a later step, it takes the card exactly as it would with the boxes closed.
-- The value is remembered for that place. The same place text, compared without letter case and extra spaces, uses the stored value from then on.
+- Every in-person meeting offers "Change time" and the menu chooser, whether or not it has a place (D-039). With a place, the value is remembered for that place: the same place text, compared without letter case and extra spaces, uses the stored value from then on. With no place, the value is remembered for the whole series, or for that one meeting when it does not repeat.
 - The top-bar menu shows the travel time for each in-person meeting. Its travel choices look like one list: every line has the same kind of mark in the same column, and the mark on the current value is filled.
 
 ### 5. Top bar (R-14)
@@ -88,7 +88,7 @@ Behaviour:
 
 ### 6. Settings (R-15)
 
-The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off the owner's email domain(s) (detected automatically, and can be edited), and extra owner addresses.
+The lead time for online meetings, the in-person margin, the default travel time, the step times, the heads-up display time, extra important words, extra ignore words, the large-meeting size, sound on/off, the owner's email domain(s) (detected automatically, and can be edited), and extra owner addresses.
 
 ### 7. When the calendar cannot be read (R-16)
 

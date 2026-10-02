@@ -608,3 +608,11 @@ Append only. Newest at the bottom.
 - **Fact:** Travel time is stored per place, so a meeting whose place field is empty shows no travel choices, even after the owner switches it to in person; it always uses the default. A meeting with a video link, no place, or a place like "Zoom" counts as online and shows no travel at all until switched. The owner hit one of these on two afternoon meetings and could not set a travel time. This is a hole in "set it from the alert and it is remembered" (R-11) for personal tasks with no address, such as a pick-up.
 - **Source:** owner report 2026-10-02; behaviour confirmed by reading the menu and alert rules.
 - **Touches:** solution.md R-11, PRD §4
+
+## 2026-10-02 — A place means in person; travel time is not tied to a place
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The owner set two rules: a meeting with a place is in person (D-038, replaces my D-007 assumption that link plus place is online), and every in-person meeting can get a travel time, with or without a place (D-039). With no place the time is kept for the series. Opened PG-14.
+- **Why:** owner: "sometimes the user will know the location and won't need it written down".
+- **Source:** owner, 2026-10-02; per-series storage is the product manager's choice.
+- **Touches:** decisions.md, solution.md R-10 R-11, PRD §2 §4, BACKLOG PG-14

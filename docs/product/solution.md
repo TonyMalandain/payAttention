@@ -86,14 +86,14 @@ Environment requirements come first.
 ### R-10 — Online and in-person meetings are told apart
 - **Serves:** one lead time "is too early for a video call and too late for a meeting across town".
 - **Who it serves:** Calendar owner.
-- **What they get:** a meeting with a video-call link is online. A meeting with only a physical place is in-person. A meeting with both is treated as online, and the user can switch it.
+- **What they get:** a meeting with a physical place is in-person, even when it also has a video-call link. A meeting with no physical place is online. The user can switch any meeting.
 - **State:** real
 - **Evidence:** verified in code
 
 ### R-11 — In-person meetings count down to the leave-by time
 - **Serves:** "the right moment to warn someone depends on whether they must travel".
 - **Who it serves:** Calendar owner.
-- **What they get:** alerts timed to when they must leave. The travel time comes from what they set for that place, or from a default travel time. They can set it from the alert and it is remembered for that place.
+- **What they get:** alerts timed to when they must leave. The travel time comes from what they set for that place, or from a default travel time. They can set it from the alert or the menu for any in-person meeting. It is remembered for that place, or for the meeting's series when it has no place.
 - **State:** real
 - **Evidence:** verified in code
 

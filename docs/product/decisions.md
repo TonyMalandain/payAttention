@@ -38,7 +38,7 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** The travel default is a guess. It will be wrong for some places until the owner sets them.
 **Source:** the author's prompt (30 minutes); the other defaults are assumed.
 
-### D-007 — A meeting with both a video link and a place counts as online — 2026-09-26
+### D-007 — A meeting with both a video link and a place counts as online  [SUPERSEDED by D-038 on 2026-10-02]
 **Decision:** We treated hybrid meetings as online by default, and the owner can switch one to in-person.
 **Why:** A remote option always exists, so the shorter warning is never fatal. It is also the more common case in the author's calendar (assumed).
 **Costs accepted:** If the owner plans to go in person, they get a late warning unless they switch the meeting once.
@@ -225,3 +225,15 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner: "The test alert is a dev feature. What's the point of having a dev feature activable via settings?" A setting is a promise to every user; a tool only the developer needs does not belong among them. The developer still needs it in the real desktop for the checks a sample window cannot do: the alert sound, both monitors, and the takeover over a full-screen window.
 **Costs accepted:** An owner can no longer see the alert ladder without a real meeting; the README and screenshots show it instead. The developer must install a special build, or pass an option, to run it in the real desktop.
 **Source:** the owner, 2026-10-01 ("I meant we should use a feature flag either triggered at build time or runtime via a command line argument or config file option when running the mutter-devkit").
+
+### D-038 — A meeting with a place counts as in person, even with a video link — 2026-10-02
+**Decision:** We made every meeting whose place field names a physical place count as in person, whether or not it also has a video link. A place that only says "Zoom", "online" or similar, or is itself a link, is not a physical place. A meeting with no place is online. The owner can still switch any meeting in the menu.
+**Why:** The owner: "it should be: if location -> set to in person." D-007 was the product manager's assumption; the owner's rule replaces it.
+**Costs accepted:** An office meeting with a room name and a video link now gets in-person timing, with the default travel time, until the owner sets a short travel time or switches it to online.
+**Source:** the owner, 2026-10-02.
+
+### D-039 — Every in-person meeting can get a travel time, with or without a place — 2026-10-02
+**Decision:** We let the owner set the travel time of any in-person meeting from the menu and from its alert. With a place, the time is remembered for that place, as before. With no place, it is remembered for the whole series, or for that one meeting when it does not repeat.
+**Why:** The owner: "Travel time shouldn't be tied to a location set. sometimes the user will know the location and won't need it written down." Two real meetings switched to in person could not get a travel time.
+**Costs accepted:** Two places a travel time can be remembered: the place, or the series. A meeting with no place that the owner switches to in person starts at the default travel time.
+**Source:** the owner, 2026-10-02; remembering per series when there is no place is the product manager's choice.
