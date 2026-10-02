@@ -212,7 +212,7 @@ describe('controller: overrides', () => {
 
     test('8. setMode and setTravel reach the store and the next render', () => {
         const h = setup();
-        h.deliverAt(T0 - 2 * HOUR);
+        h.deliverAt(T0 - 2 * HOUR, snapshot([meeting({ location: 'HQ' })], [WORK]));
         let v = h.dispatch({ type: 'setMode', key: KEY, mode: 'in-person' });
         assert.deepEqual(h.store.modeCalls, [[KEY, 'in-person']]);
         assert.equal(v.menu.meetings[0].mode, 'in-person');
@@ -241,10 +241,11 @@ describe('controller: travel choices', () => {
     const HEADS_UP = T0 - 40 * MIN;
     const PAST_DISPLAY = HEADS_UP + 20_000;
     const toggle = { type: 'toggleTravelChoices', key: KEY };
+    const VISIT = meeting({ location: 'HQ' });
 
     function inPerson(options) {
         const h = setup(options);
-        h.deliverAt(T0 - 2 * HOUR);
+        h.deliverAt(T0 - 2 * HOUR, snapshot([VISIT], [WORK]));
         h.dispatch({ type: 'setMode', key: KEY, mode: 'in-person' });
         return h;
     }
@@ -340,7 +341,7 @@ describe('controller: travel choices', () => {
         test('another meeting reaching its nudge takes the card, and the hold does not come back', () => {
             const B = other(T0 - 28 * MIN);   // online: nudge at T0 - 38 min
             const h = inPerson();
-            h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+            h.deliverAt(HEADS_UP, snapshot([VISIT, B], [WORK]));
             h.dispatch(toggle);
             const v = h.at(T0 - 38 * MIN);
             assert.equal(v.alert.key, occurrenceKey(B));
@@ -352,7 +353,7 @@ describe('controller: travel choices', () => {
         test('while the held card is still on its display time, the choices close when another meeting is at its nudge', () => {
             const B = other(T0 - 30 * MIN + 5000);   // online: nudge 5 s after the heads-up
             const h = inPerson();
-            h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+            h.deliverAt(HEADS_UP, snapshot([VISIT, B], [WORK]));
             h.dispatch(toggle);
             let v = h.at(HEADS_UP + 5000);
             assert.equal(v.alert.key, KEY);   // earlier leave-by, display time unspent
@@ -366,7 +367,7 @@ describe('controller: travel choices', () => {
         test('choices opened on a nudge card beside another meeting at its nudge open and stay open', () => {
             const B = other(T0 - 25 * MIN);   // online: nudge at T0 - 35 min, same as the card's
             const h = inPerson();
-            h.deliverAt(T0 - 34 * MIN, snapshot([MEETING, B], [WORK]));
+            h.deliverAt(T0 - 34 * MIN, snapshot([VISIT, B], [WORK]));
             assert.equal(h.ui.last.alert.key, KEY);
             assert.equal(h.ui.last.alert.step, 2);
             let v = h.dispatch(toggle);
@@ -389,9 +390,9 @@ describe('controller: travel choices', () => {
     });
 
     test('11. a toggle with the key of a meeting whose heads-up is spent and hidden does nothing', () => {
-        const B = meeting({ uid: 'site-1', summary: 'Site visit', start: T0 + 30_000, end: T0 + 30 * MIN });
+        const B = meeting({ uid: 'site-1', summary: 'Site visit', location: 'HQ', start: T0 + 30_000, end: T0 + 30 * MIN });
         const h = inPerson();
-        h.deliverAt(HEADS_UP, snapshot([MEETING, B], [WORK]));
+        h.deliverAt(HEADS_UP, snapshot([VISIT, B], [WORK]));
         h.dispatch({ type: 'setMode', key: occurrenceKey(B), mode: 'in-person' });
         h.at(PAST_DISPLAY);
         // B's heads-up (30 s after the card's) is shown; the card's is spent.

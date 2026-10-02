@@ -18,7 +18,7 @@ export const WORK = { ...SOURCE, remote: true, connection: 'connected' };
 /** A must-attend online meeting: important word, the owner organises, 2 other guests, a Meet link. */
 export function meeting(over = {}) {
     return event({
-        uid: 'client-1', summary: 'Client review', location: 'HQ', conferenceUris: [JOIN],
+        uid: 'client-1', summary: 'Client review', location: '', conferenceUris: [JOIN],
         organizer: { email: OWNER, name: 'me' },
         attendees: [att(OWNER), att('alice@external.test'), att('bob@external.test')],
         ...over,
