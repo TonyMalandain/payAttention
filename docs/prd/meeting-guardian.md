@@ -86,6 +86,7 @@ Behaviour:
 
 - An indicator shows the time left to the next must-attend deadline, for example "Client sync · 24m". When no must-attend meeting is in the next 12 h, it shows only a quiet icon.
 - The menu lists today's remaining meetings. Each one shows its time, title, verdict (must-attend or ignorable), reason, and online/in-person mark. It has a toggle to override the verdict, and for in-person meetings a travel-time chooser.
+- A change made in a meeting's row (the Must attend switch, Apply to whole series, Back to automatic, Switch to in person or online, a travel time) never closes the menu. The menu stays open, the same meeting stays expanded, and it shows the new state at once: for example, after Switch to in person its travel choices appear right there.
 
 ### 6. Settings (R-15)
 

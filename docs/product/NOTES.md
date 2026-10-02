@@ -624,3 +624,10 @@ Append only. Newest at the bottom.
 - **Why:** a wrong in-person costs an early alert; a wrong online can make the owner late, which is the problem the product exists to solve.
 - **Source:** product manager, from the architect's PG-14 finding.
 - **Touches:** PRD §2, BACKLOG PG-14
+
+## 2026-10-02 — Menu stays open after a change in a meeting's row
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** Every change made from a meeting's row in the menu keeps the menu open and the row expanded, showing the new state. Today each action closes the menu, so switching to in person and picking a travel time needs two trips. Opened PG-15.
+- **Source:** owner, 2026-10-02, after trying PG-14 in the sample.
+- **Touches:** PRD §5, BACKLOG PG-15
