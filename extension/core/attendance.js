@@ -3,11 +3,13 @@
 
 // Online or in person (PRD §2): a join link, a real place, or neither. Internal to core.
 import { extractUrls, isConferenceUrl } from './links.js';
-import { NOT_A_PLACE_WORDS } from './words.js';
+import { NOT_A_PLACE_WORDS, VIDEO_CALL_WORDS, compileWords, isMadeOfWords } from './words.js';
 
 // The same pattern as extractUrls, used to blank links out of the location.
 const URL_IN_TEXT = /https?:\/\/[^\s<>"'`()[\]{}]+/gi;
 const EDGE_PUNCTUATION = /^[\s.,;:!?()[\]{}"'-]+|[\s.,;:!?()[\]{}"'-]+$/g;
+// Compiled once per module (testing-and-build.md judge budget).
+const VIDEO_CALL = compileWords(VIDEO_CALL_WORDS, []);
 
 /**
  * What the calendar data says about attending one meeting.
@@ -16,7 +18,8 @@ const EDGE_PUNCTUATION = /^[\s.,;:!?()[\]{}"'-]+|[\s.,;:!?()[\]{}"'-]+$/g;
  * @returns {{detected:'online'|'in-person'|'unknown', link:string|null, placeText:string}}
  *   `link` is the first allowlisted https link (conference field, then location,
  *   then description); `placeText` is the location without links, or '' when it
- *   is not a place (empty, or a word like "online" or "TBD")
+ *   is not a place (empty, a word like "online" or "TBD", or only video-call
+ *   wording like "Join Zoom Meeting")
  */
 export function detectAttendance(event) {
     const candidates = [
@@ -28,7 +31,9 @@ export function detectAttendance(event) {
 
     const p = event.location.replace(URL_IN_TEXT, ' ').replace(/\s+/g, ' ').trim();
     const comparable = p.toLowerCase().replace(EDGE_PUNCTUATION, '');
-    const placeText = comparable === '' || NOT_A_PLACE_WORDS.includes(comparable) ? '' : p;
+    // Rule 1: a whole not-a-place word. Rule 2: only video-call wording (interfaces.md §2).
+    const notAPlace = comparable === '' || NOT_A_PLACE_WORDS.includes(comparable) || isMadeOfWords(VIDEO_CALL, p);
+    const placeText = notAPlace ? '' : p;
 
     const detected = link ? 'online' : placeText ? 'in-person' : 'unknown';
     return { detected, link, placeText };

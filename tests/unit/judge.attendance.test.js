@@ -91,6 +91,33 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
         });
     }
 
+    // interfaces.md §2 place-text rule 2: only video-call wording names no place.
+    for (const location of ['Join Zoom Meeting', 'Teams-Besprechung', 'Microsoft Teams Meeting', 'Google Meet – join',
+        'Microsoft Teams-Besprechung beitreten']) {
+        test(`the location '${location}', made only of video-call wording, is not a place`, () => {
+            const r = judgeOne(event({ location }));
+            assert.equal(r.mode, 'online');
+            assert.equal(r.placeText, '');
+            assert.equal(r.placeKey, null);
+            assert.equal(r.deadline, T0);
+        });
+    }
+
+    for (const location of ['Board room + Zoom', 'Room 4.12 / Teams', 'Meet at reception', 'Remote office, 3rd floor',
+        'Zoom 2', 'Microsoft', 'Zoomlion Tower']) {
+        test(`the location '${location}' names a place: in person`, () => {
+            const r = judgeOne(event({ location }));
+            assert.equal(r.mode, 'in-person');
+            assert.equal(r.placeText, location);
+        });
+    }
+
+    test('video-call wording with a link in the location is not a place, and the link is the Join link', () => {
+        const r = judgeOne(event({ location: 'Join Zoom Meeting https://zoom.us/j/1' }));
+        assert.equal(r.placeText, '');
+        assert.equal(r.joinUrl, 'https://zoom.us/j/1');
+    });
+
     test('a room name is a place: in person', () => {
         const r = judgeOne(event({ location: 'Conference Room B' }));
         assert.equal(r.mode, 'in-person');
