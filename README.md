@@ -50,7 +50,8 @@ To reinstall after uninstalling, run `npm run install:local`, then log out and b
 2. Open a meeting's row to see **why** it got that verdict, for example "external guests" or "no other guests: personal block".
 3. If a verdict is wrong, flip the **Must attend** switch. Use **Apply to whole series** so that every repeat of the meeting follows.
    - Personal tasks that matter but have no guests, such as picking up a child, are silent by default. Mark them once, for the whole series.
-4. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. It is remembered for that place.
+4. For in-person meetings, set the travel time once: in the meeting's row in the menu, or with the **Change time** link on its heads-up or nudge card. With a place, it is remembered for that place. With no place, it is remembered for that meeting (every repeat of it).
+5. A meeting with no place counts as online. If you will go in person, use **Switch to in person** in its row; it then gets a travel time like any other.
 
 ## How it decides
 
@@ -66,6 +67,12 @@ The first rule that matches wins:
 | Must-attend | Not enough information to judge. When unsure, it warns you. |
 
 Meeting rooms are not counted as guests. The full rules are in [`docs/prd/meeting-guardian.md`](docs/prd/meeting-guardian.md).
+
+### Online or in person
+
+- A meeting whose location names a place is **in person**, even when it also has a video link. Its alerts count down to the time you must leave, and still offer **Join**.
+- A meeting with only a video link, no location, or a location made only of video-call wording ("Zoom", "Join Zoom Meeting", "Teams-Besprechung") is **online**. "Board room + Zoom" names a place, so it is in person.
+- You can switch any meeting in its menu row.
 
 ## AI mode (optional)
 
@@ -125,7 +132,7 @@ All the timings, the default travel time (30 min), your extra important and igno
 
 - It only reads your calendar. It never changes it.
 - It cannot tell that you joined a call some other way. Click **I'm on it**.
-- Travel time is what you set per place, or the default. It does not use live traffic.
+- Travel time is what you set per place (or per meeting when it has no place), or the default. It does not use live traffic.
 - Meetings booked on the web can take about 10 minutes to reach the desktop.
 - Nothing shows over the lock screen.
 
