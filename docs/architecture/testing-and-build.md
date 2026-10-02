@@ -463,12 +463,12 @@ What the smoke script checks:
    the menu and the row stayed open, showing Back to automatic; then Back to
    automatic clears it, still without closing the menu (PG-15). A second
    all-day event with a place (`Smoke all-day site visit`) is in person: the
-   script opens its row and
-   checks the seven travel lines carry one kind of round mark in one column, the
-   30 min one filled (check `2b-menu-travel`). A third all-day event with no
-   place (`Smoke all-day workshop`) is switched to in person, given a travel
-   time, and switched back to online, all without reopening the menu (check
-   `2d-placeless-travel`, PG-15). From PG-13 (D-037, ADR-0013):
+   script opens its row and checks the seven travel lines carry one kind of
+   round mark in one column, the 30 min one filled (check `2b-menu-travel`). A
+   third all-day event with no place (`Smoke all-day workshop`) is switched to
+   in person, given a travel time, and switched back to online, all without
+   reopening the menu (check `2d-placeless-travel`, PG-15). From PG-13 (D-037,
+   ADR-0013):
    the normal bundle's menu offers no Test alert item, and the installed schema
    has no `show-test-alert` key (check `2c-menu-test-alert`; replaces the PG-12
    flip check). The developer bundle's item is checked by the sample's check
@@ -488,7 +488,8 @@ What the smoke script checks:
    rows in place from synthetic Views through the installed `ui/indicator.js`
    (check `6e-menu-rows`, PG-15): an open row stays open with its new state, a
    drawn change is never reported as a click, and a row that is still listed
-   stays open across a rebuild.
+   stays open across a rebuild; a time picked after the meeting's place changed
+   is saved under the new place.
 5. Disables the extension; checks no actors of ours remain in the stage, no grab
    remains, and the helper process has exited.
 6. The lock path: re-enable, start a takeover, disable during it, and repeat 5.

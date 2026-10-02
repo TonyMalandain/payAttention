@@ -315,7 +315,9 @@ async function checkMenuVerdict(name, ext) {
         check(must.state === true, name, `the must-attend switch is ${must.state} after the click`);
         const detail = rowDetail(row);
         check(detail?.startsWith('Must attend') && detail.includes('overridden'), name, `the row's detail reads "${detail}"`);
-        check(!menuRow(indicator, 'Smoke all-day site visit')?.menu.isOpen, name, 'another row opened');
+        const siteVisit = menuRow(indicator, 'Smoke all-day site visit');
+        check(siteVisit, name, 'the menu has no "Smoke all-day site visit" row');
+        check(!siteVisit.menu.isOpen, name, 'another row opened');
 
         const back = await mustWait(() => shownMenuLine(row, 'Back to automatic'), 3000, name,
             'the open row shows no "Back to automatic" after the override');
@@ -709,7 +711,8 @@ async function checkTravelChoices(name, home) {
 /**
  * The installed indicator, driven with synthetic Views: rows are redrawn in place, so an
  * open row stays open showing its new state, a drawn change is never reported as the
- * owner's, and a row still listed stays open across a rebuild (PG-15).
+ * owner's, a row still listed stays open across a rebuild, and a travel pick after the
+ * place changed carries the new place (PG-15).
  */
 async function checkMenuRowsInPlace(name, home) {
     const { Indicator } = await import(`file://${home}/data/gnome-shell/extensions/${UUID}/ui/indicator.js`);
@@ -807,6 +810,20 @@ async function checkMenuRowsInPlace(name, home) {
             await Scripting.sleep(300);
             check(indicator.menu.isOpen && rowB2.menu.isOpen, name, `after "${text}": ${state()}`);
         }
+
+        // j. The meeting's place changed, same choices: redrawn in place, a pick is saved under the new place.
+        const moved = { kind: 'place', key: 'smoke-place-moved' };
+        draw([ROW_C, ROW_A, { ...ROW_B, travel: { ...ROW_B.travel, target: moved } }]);
+        await Scripting.sleep(300);
+        check(rowTitled('Smoke row B') === rowB2 && rowB2.menu.isOpen, name, `after the place moved: ${state()}`);
+        const pick = shownMenuLine(rowB2, '45 min');
+        check(pick, name, 'row B shows no "45 min" after the place moved');
+        const before = actions.length;
+        const clicked = await clickActor(pick, name);
+        await mustWait(() => actions.length > before, 3000, name, `"45 min" reported nothing after the place moved (${clicked})`);
+        const wantMoved = { type: 'setTravel', target: moved, minutes: 45 };
+        check(JSON.stringify(actions.at(-1)) === JSON.stringify(wantMoved), name,
+            `after the place moved, "45 min" reported ${JSON.stringify(actions.at(-1))}, want ${JSON.stringify(wantMoved)}`);
     } finally {
         indicator.menu.close(false);
         indicator.destroy();
