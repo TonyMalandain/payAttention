@@ -39,7 +39,7 @@ keyring (ADR-0009), never in GSettings.
 | `inperson-nudge-minutes` | `i` | 5 | 0–120 | Nudge, minutes before leave-by (D-008) |
 | `inperson-insist-minutes` | `i` | 2 | 0–60 | Insist, minutes before leave-by (D-008) |
 | `inperson-takeover-minutes` | `i` | 0 | 0–30 | Takeover, at leave-by (D-008) |
-| `default-travel-minutes` | `i` | 30 | 0–240 | Travel time for a place with no stored value (D-006) |
+| `default-travel-minutes` | `i` | 30 | 0–240 | Travel time for an in-person meeting with no stored value, with or without a place (D-006, D-039) |
 | `headsup-display-seconds` | `i` | 15 | 5–120 | How long the heads-up stays |
 | `snooze-minutes` | `i` | 2 | 1–30 | Snooze at steps 1–3 |
 | `takeover-snooze-minutes` | `i` | 1 | 1–10 | Snooze at step 4 |
@@ -101,7 +101,30 @@ Every integer key gets a `<range>` in the schema, so a bad value cannot reach co
 |---|---|---|
 | `verdict-overrides` | `a{ss}` | key → `"must"` or `"ignore"` |
 | `mode-overrides` | `a{ss}` | key → `"online"` or `"in-person"` |
-| `travel-times` | `a{si}` | place key → minutes |
+| `travel-times` | `a{si}` | place key → minutes. The travel time of every in-person meeting that has a place (D-039) |
+| `meeting-travel-times` | `a{si}` | series key (`series:<uid>`) → minutes. The travel time of an in-person meeting with **no** place (D-039, PG-14, ADR-0014). The key is the series key even for a meeting that does not repeat: its UID names that one meeting, so the value survives the meeting being moved |
+
+**Which entry a meeting uses (ADR-0014).** Core (`judge`) names exactly one
+*travel target* per in-person meeting, and reads and the owner's pick writes
+that one entry and no other:
+
+- the meeting has a place → `travel-times[<place key>]`;
+- it has no place → `meeting-travel-times[series:<uid>]`.
+
+There is no fallback from one to the other: a meeting with a place never reads
+`meeting-travel-times`, even if an entry exists for its series (left from a
+time it had no place), and a missing or invalid value means the default
+travel time. So the value the menu and the card show is always the value a
+pick overwrites. Values outside 1–1440 are ignored by core, as before.
+
+"Clear travel times" in prefs resets **both** keys: to the owner they are one
+thing, travel times.
+
+Both live under our dconf path, so a plain uninstall keeps them and
+`npm run uninstall:local -- --purge` erases them with everything else
+(`dconf reset -f`); `scripts/uninstall.sh` names no key and needs no change.
+The uninstall check seeds `meeting-travel-times` next to `travel-times`, so a
+future move of either out of the path cannot pass unseen.
 
 ### Internal
 
@@ -129,11 +152,17 @@ written once per `disable()`, never per tick. See `interfaces.md`, addendum
   acknowledgements survive that. When a single (non-recurring) meeting is moved,
   its key changes and it is judged and alerted afresh. That is the safe direction:
   it warns rather than stays silent.
-- **Place key:** the location text, trimmed, whitespace runs collapsed to one space,
-  lowercased (PRD §4).
+- **Place key:** the place text, trimmed, whitespace runs collapsed to one space,
+  lowercased (PRD §4). The place text is the location with links removed, and
+  empty when what is left is a no-place word ("Zoom", "online", "TBD", …). It
+  is computed once, in `core/attendance.js`, and the same value decides both
+  the mode (a place means in person, D-038) and which travel entry is used
+  (D-039). Place keys and series keys live in different settings keys, so a
+  location that happens to read `series:…` cannot collide with a series.
 
 Lookup order in `judge`: occurrence override, then series override, then the rules
-(PRD §1 step 1). The same order applies to mode overrides.
+(PRD §1 step 1). The same order applies to mode overrides. Travel times have no
+occurrence scope: one entry, chosen as above.
 
 ## Alert state
 
@@ -195,8 +224,14 @@ Lookup order in `judge`: occurrence override, then series override, then the rul
 
 - `alert-state` items, `ai-verdicts` items and `occ:` overrides are removed once
   `<t>` is more than 7 days in the past (assumed retention). The store prunes on `enable()` and daily.
-- `series:` overrides and `travel-times` are kept until the owner clears them. They
-  are small (one entry per series or place the owner ever touched).
+- `series:` overrides, `travel-times` and `meeting-travel-times` are kept until
+  the owner clears them. They are small (one entry per series, place or
+  placeless meeting the owner ever touched). `meeting-travel-times` is not
+  pruned even for a one-off meeting long past, because its key holds no time;
+  an entry is about 60 bytes and is written only when the owner picks a
+  travel time for an in-person meeting with no place (a few a month,
+  assumed), so it stays far below the ADR-0003 64 KiB trigger for years.
+  If it ever nears it, that is ADR-0014's revisit trigger.
 
 ## Reading `alert-state` if it is corrupt
 

@@ -32,5 +32,6 @@ authority; none of them may add or change an ADR.
 | ADR-0011 | Ports and adapters: rules (`core/`) and orchestration (`app/`) are GNOME-free; every GNOME part is an adapter behind a named port; only the verdict component calls `judge` (owner's principle, 2026-09-27) |
 | ADR-0012 | The verdict preview (R-20, PG-8) is a gjs front end shipped in the pack, run from the installed copy, read-only by construction |
 | ADR-0013 | Developer aids (Test alert in the menu, D-037) are a build variant: a developer bundle marked in its `metadata.json`, read only by `extension.js`; never a setting, an environment variable or a file of ours |
+| ADR-0014 | A meeting's travel time has one target, named by core: its place (`travel-times`), or, with no place, its series key in `meeting-travel-times`, also for a one-off meeting; no fallback between them; `setTravel` carries the target (PG-14, D-038, D-039) |
 
 Last restructure: none.

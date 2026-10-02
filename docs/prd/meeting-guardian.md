@@ -39,6 +39,7 @@ When calendar data is missing (for example, the owner's own address is unknown, 
 
 - **Online:** the location, description, or conference field holds a video-call link (Google Meet, Zoom, Microsoft Teams, Webex, Whereby, Jitsi, GoTo, Slack huddle, or any https link to one of those services).
 - **In person:** the location is not empty, is not a link, and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, TBA, n/a, none, phone, phone call, call, video call, zoom, zoom meeting, teams, teams meeting, microsoft teams, microsoft teams meeting, google meet, meet, webex, hangout, google hangouts, whereby, jitsi, goto meeting, gotomeeting, slack, slack huddle, huddle.
+- A location that names a video-call service anywhere in its text (for example "Join Zoom Meeting" or "Teams-Besprechung") is not a physical place either. A wrong flip to in person only costs early alerts, but it must not happen to ordinary video-call wording.
 - **Unknown:** there is no link and no location. Treat it as online (short lead time).
 - Both a link and a place: in person (D-038). The owner can switch any meeting in the menu.
 
@@ -58,7 +59,7 @@ The **deadline** is the start time for an online meeting. For an in-person meeti
 The steps are always in this order (D-008).
 
 Actions shown at every step:
-- **Join** (online meetings with a link only). Opens the link and acknowledges the meeting.
+- **Join** (any meeting with a video-call link, online or in person, D-040). Opens the link and acknowledges the meeting.
 - **I'm on it.** Acknowledges the meeting. No more alerts for this occurrence.
 - **Snooze.** The card hides for 2 min (1 min at step 4). A snooze never goes past the next step's time, except at step 4.
 - **Skip this one.** Acknowledges the meeting and records that the owner chose not to attend.

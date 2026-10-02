@@ -140,6 +140,9 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - picking a time there saves it for the whole series (or that one meeting if it does not repeat), and the alert times move at once;
     - a meeting with a place still remembers its time for the place, as before;
     - `npm run uninstall:local -- --purge` erases the new saved times; a plain uninstall keeps them;
+    - Join stays on every meeting with a video link, also when it is in person (D-040);
+    - a location that names a video-call service anywhere ("Join Zoom Meeting", "Teams-Besprechung") stays online;
+    - "Clear travel times" clears both kinds;
     - README "How it decides" / "First five minutes" say this; the owner checks it in `npm run sample`.
 
 ## Now — needs the owner (cannot be done unattended)

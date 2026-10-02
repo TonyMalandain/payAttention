@@ -131,8 +131,27 @@ Three pure functions. The names are indicative; the shapes are the contract.
   key, title, start, end, `verdict` (`'must'`|`'ignore'`), `reason` (the one-line
   text from the PRD) and a stable `reasonCode`, `mode` and whether it was
   overridden, `joinUrl` or null, place text and place key, travel minutes and
-  whether it is the default, `deadline`. Duplicates of the same occurrence from
-  two calendars are merged here, by occurrence key.
+  whether it is the default, the **travel target**, `deadline`. Duplicates of
+  the same occurrence from two calendars are merged here, by occurrence key.
+
+  **The mode and the travel target (PG-14, D-038, D-039, ADR-0014).** Both are
+  decided in core and nowhere else; `app/` and `ui/` only carry them.
+  - *Mode:* the mode override (occurrence, then series) wins. Without one, a
+    meeting whose place text is not empty is `'in-person'`, and every other
+    meeting is `'online'`. A video link no longer decides the mode; it decides
+    only whether an online meeting has a `joinUrl` (an in-person one never
+    has). "Place text" is the one computed in `core/attendance.js`: the
+    location with links removed, empty when what is left is a no-place word
+    (`NOT_A_PLACE_WORDS`) (`data.md`, key formats).
+  - *Travel input:* `travel` is `{byPlace, byMeeting}`, two maps of key →
+    minutes, read from `travel-times` and `meeting-travel-times` (`data.md`).
+  - *Travel target:* for an in-person meeting, `{kind: 'place', key: <place
+    key>}` when it has a place, else `{kind: 'meeting', key: <series key>}`
+    (the series key also for a meeting that does not repeat). `null` for an
+    online meeting. `travelMinutes` is read from that one entry only
+    (`byPlace` or `byMeeting`), else the default; there is no fallback from
+    one map to the other. The target is what a travel pick writes, so the
+    value shown and the value overwritten are always the same entry.
 - **`plan(now, judged, alertState, timing, env)` → Plan.**
   `env` carries `userActive`, `dataHealthy` and **`heldHeadsUpKey`**
   (`string|null`, required; PG-11): the occurrence whose heads-up the owner is
@@ -202,8 +221,9 @@ consumer: `StoreReaderPort` and `FeedPort` in `app/verdicts.js`,
 **The store's two facets** (both over the one `Gio.Settings`; the split is
 the contract, ADR-0011/ADR-0012):
 
-- **`StoreReaderPort`**: `readSettings`, `readOverrides`, `readTravel`,
-  `readAiAnswers`, `destroy`. It connects to `changed` and calls `onChange`
+- **`StoreReaderPort`**: `readSettings`, `readOverrides`, `readTravel`
+  (→ `{byPlace, byMeeting}` from `travel-times` and `meeting-travel-times`,
+  PG-14), `readAiAnswers`, `destroy`. It connects to `changed` and calls `onChange`
   for every key except `INTERNAL_KEYS` (`alert-state`, `health-*`,
   `ai-verdicts`), so `ai-verdicts` is read once, to seed the queue, and the
   queue's copy is the live one after that. It has no write method and keeps the
@@ -212,7 +232,10 @@ the contract, ADR-0011/ADR-0012):
 - **`StoreWriterPort`**: `readAlertState`/`writeAlertState` (coalesced),
   `writeAiAnswers` (coalesced; writing the stored text again is a no-op),
   `readHealthSeeds`/`writeHealthClocks`, `setVerdictOverride`,
-  `setModeOverride`, `setTravel`, `pruneOccurrenceOverrides`, and `destroy`
+  `setModeOverride`, `setTravel(target, minutes)` (PG-14: `target` is the
+  judged travel target; `kind: 'place'` writes `travel-times`, `kind:
+  'meeting'` writes `meeting-travel-times`, any other kind is refused and
+  writes nothing), `pruneOccurrenceOverrides`, and `destroy`
   (flushes pending coalesced writes). It never connects to `changed`. The
   writer's own reads are of keys only the alert front end uses (alert state,
   health seeds).
@@ -236,9 +259,20 @@ the writer's final flush.
   stale, Test alert in the menu only in a developer build, ADR-0013), so `ui/` only draws. `render` is idempotent: the same View twice
   changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
-  `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`, `setTravel`,
-  `toggleTravelChoices {key}`, `runTestAlert`. The UI never reports
-  `headsUpShown` (see §2).
+  `join`, `ack`, `snooze`, `skip`, `setVerdict`, `setMode`,
+  `setTravel {target, minutes}`, `toggleTravelChoices {key}`, `runTestAlert`.
+  The UI never reports `headsUpShown` (see §2).
+- **Travel in the View (PG-14, D-039).** Every in-person meeting, with or
+  without a place, gets travel choices: the menu row's `travel` and the alert's
+  `travel` (steps 1–2) carry the judged travel target, the minutes, the text
+  and the full choice list. The UI passes the target back untouched in
+  `setTravel {target, minutes}`; it never builds, reads or changes a target,
+  and neither does `app/view.js` (it copies the judged one). The controller
+  hands it to `StoreWriterPort.setTravel` and calls
+  `reloadOverridesAndTravel()`, as before. The old `placeKey` field of the
+  action is gone: a placeless meeting has no place key, and a second field
+  that could disagree with the target is what this contract exists to
+  avoid.
 - **Travel choices on a card (PG-11).** The UI holds no open/closed state for
   them. It draws them open when `view.alert.travel.choicesOpen` is true, and
   its small "Change time" link dispatches `toggleTravelChoices` with the

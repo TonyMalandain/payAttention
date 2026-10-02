@@ -237,3 +237,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner: "Travel time shouldn't be tied to a location set. sometimes the user will know the location and won't need it written down." Two real meetings switched to in person could not get a travel time.
 **Costs accepted:** Two places a travel time can be remembered: the place, or the series. A meeting with no place that the owner switches to in person starts at the default travel time.
 **Source:** the owner, 2026-10-02; remembering per series when there is no place is the product manager's choice.
+
+### D-040 — Join is offered on every meeting with a video link, in person or online — 2026-10-02
+**Decision:** We kept the Join action on every meeting that has a video-call link, including meetings that count as in person because they also name a place. "Clear travel times" in Settings clears both the per-place and the per-series travel times.
+**Why:** After D-038 a room-plus-link meeting is in person; taking Join away would remove the one-click way to join it and stop the alerts (R-9). One "clear" that leaves half the times behind would surprise the owner.
+**Costs accepted:** An in-person card can show Join beside the travel line, so the card holds one more button.
+**Source:** product manager, from the architect's PG-14 findings, 2026-10-02.

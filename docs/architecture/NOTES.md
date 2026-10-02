@@ -1030,3 +1030,45 @@ Append only. Newest at the bottom.
 - **Why:** D-037 "the smoke must check both"; the PG-12 flip check tests a setting that no longer exists.
 - **Source:** docs/product/decisions.md D-037; BACKLOG PG-13 done-when.
 - **Touches:** testing-and-build.md steps 4 and 6, Layers 3, 3b, 4 — folded.
+
+## 2026-10-02 — A place decides the mode; a link does not (PG-14)
+- **Kind:** boundary
+- **Fact:** Without an override, a meeting is in person exactly when the place text from `core/attendance.js` is not empty; the link only decides `joinUrl` for an online meeting.
+- **Why:** D-038 supersedes D-007. Keeping the rule inside core, on the same place text the travel target uses, means the mode and "has a place" can never disagree. The current code (`core/attendance.js:33`, link wins) is the loser.
+- **Source:** docs/product/decisions.md D-038; extension/core/attendance.js:33, extension/core/judge.js:87.
+- **Touches:** interfaces.md §2 — folded.
+
+## 2026-10-02 — Placeless travel times live in their own key, keyed by series key
+- **Kind:** data
+- **Fact:** New GSettings key `meeting-travel-times` (`a{si}`), `series:<uid>` → minutes, for every in-person meeting with no place, recurring or not.
+- **Why:** A separate key keeps free-text place keys from colliding with `series:` keys and keeps two lifetimes out of one map. The series key for a one-off meeting survives a move; an `occ:` key would lose the value and silently fall back to the default, which can make the leave-by time later than needed.
+- **Source:** ADR-0014; data.md "Keys — the stored format".
+- **Touches:** data.md, ADR-0014 — folded.
+
+## 2026-10-02 — One travel target per meeting, no fallback
+- **Kind:** interface
+- **Fact:** `judge` returns `travelTarget` `{kind:'place'|'meeting', key}` (null when online); `setTravel` carries it instead of `placeKey`; the writer maps kind → settings key.
+- **Why:** The value shown and the value a pick overwrites must be the same entry. A fallback (place, else series) would show one entry and write another.
+- **Source:** ADR-0014; extension/app/view.js:41 (the `[]` for null place key), extension/app/controller.js:316.
+- **Touches:** interfaces.md §2, §3 — folded.
+
+## 2026-10-02 — Hybrid meetings lose Join by default
+- **Kind:** question
+- **Fact:** `judge` sets `joinUrl` only for online meetings (`extension/core/judge.js:116`), and PRD §3 offers Join for online meetings only. Under D-038 a meeting with a room and a video link is in person, so its alert no longer has Join unless the owner switches it online.
+- **Why:** Not a design conflict; the PRD already says so. Raised so the product side knows it is a visible change of D-038, not an oversight.
+- **Source:** docs/prd/meeting-guardian.md §3 "Join (online meetings with a link only)".
+- **Touches:** nothing in architecture unless product changes it.
+
+## 2026-10-02 — Unknown location wording now flips meetings to in person early
+- **Kind:** for-product
+- **Fact:** A location the built-in no-place list does not match exactly (for example "Join Zoom Meeting", a localised "Teams-Besprechung") used to be harmless when the meeting had a link; under D-038 it makes the meeting in person, with the default 30-minute travel time.
+- **Why:** The failure is in the early direction (alerts about 30 minutes sooner), never silent; the owner can switch the series once. The verdict preview (ADR-0012) can show the owner which real meetings flip before the change ships.
+- **Source:** extension/core/words.js:17 (whole-string match); extension/core/attendance.js:31.
+- **Touches:** none; product decides whether it matters.
+
+## 2026-10-02 — testing-and-build.md step 4 matched to the PG-13 build
+- **Kind:** constraint
+- **Fact:** Step 4 now says every build makes both bundles, no flag, and describes the pack command from the `DIRS` array.
+- **Why:** The inbox note (2026-10-01, PG-13) found the row read as if the developer bundle were optional. Inbox entry left for the owner to remove, as `docs/inbox.md` says.
+- **Source:** scripts/build.sh; docs/inbox.md.
+- **Touches:** testing-and-build.md step 4 — folded.

@@ -197,7 +197,7 @@ itself; its one output to storage, AI answers, goes through the
 | Judged occurrences | verdict component (computed by core `judge`, in memory) | controller, via `judgedList` |
 | Plan | controller (computed by core `plan`, in memory) | UI |
 | Settings keys | prefs.js; the store writer for none today (the menu sets only overrides and travel) | store reader (→ verdict component), prefs.js |
-| Verdict overrides, mode overrides, travel times | store writer (on controller request), then the controller calls `reloadOverridesAndTravel()` | store reader (→ verdict component, into `judge`), prefs.js may clear |
+| Verdict overrides, mode overrides, travel times (`travel-times` per place, `meeting-travel-times` per placeless meeting, ADR-0014) | store writer (on controller request, travel to the target core named), then the controller calls `reloadOverridesAndTravel()` | store reader (→ verdict component, into `judge`), prefs.js may clear ("Clear travel times" clears both travel keys) |
 | Alert state | store writer (on controller request, via core `reduce`) | controller, through the writer (`readAlertState`) |
 | Persisted health clocks (`health-*` keys) | store writer (on controller request, in `disable()`) | controller, through the writer at `enable()` |
 | AI settings (`verdict-source`, `ai-endpoint`, `ai-model`) | prefs.js | store reader (→ verdict component), prefs.js |
