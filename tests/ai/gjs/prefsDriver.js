@@ -213,9 +213,16 @@ const SCENARIOS = {
         step({ domains: settings.get_strv('owner-domains') });
 
         settings.set_value('travel-times', new GLib.Variant('a{si}', { hq: 30 }));
+        settings.set_value('meeting-travel-times', new GLib.Variant('a{si}', { 'series:a': 45 }));
         const before = settings.get_value('travel-times').recursiveUnpack();
+        const meetingBefore = settings.get_value('meeting-travel-times').recursiveUnpack();
         findByTitle(window, Adw.ButtonRow, t => t === 'Clear travel times').emit('activated');
-        step({ travelBefore: before, travelAfter: settings.get_value('travel-times').recursiveUnpack() });
+        step({
+            travelBefore: before,
+            travelAfter: settings.get_value('travel-times').recursiveUnpack(),
+            meetingTravelBefore: meetingBefore,
+            meetingTravelAfter: settings.get_value('meeting-travel-times').recursiveUnpack(),
+        });
     },
 
     // The Verdicts page as it opens on default settings.

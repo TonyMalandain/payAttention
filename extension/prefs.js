@@ -519,7 +519,10 @@ export default class PayAttentionPreferences extends ExtensionPreferences {
             settings.reset('verdict-overrides');
             settings.reset('mode-overrides');
         }));
-        saved.add(buttonRow('Clear travel times', () => settings.reset('travel-times')));
+        saved.add(buttonRow('Clear travel times', () => {
+            settings.reset('travel-times');
+            settings.reset('meeting-travel-times');
+        }));
         judgment.add(saved);
 
         window.add(alerts);

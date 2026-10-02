@@ -61,9 +61,11 @@ describe('the pages that existed before PG-4d', { skip: SKIP }, () => {
         assert.deepEqual(seen.domains, normalizeDomains(parseList(' Acme.TEST , b.test')));
     });
 
-    test('Clear travel times resets travel-times', () => {
+    test('Clear travel times resets travel-times and meeting-travel-times', () => {
         assert.deepEqual(seen.travelBefore, { hq: 30 });
         assert.deepEqual(seen.travelAfter, {});
+        assert.deepEqual(seen.meetingTravelBefore, { 'series:a': 45 });
+        assert.deepEqual(seen.meetingTravelAfter, {});
     });
 });
 
