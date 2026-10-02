@@ -160,7 +160,7 @@ class Indicator extends PanelMenu.Button {
             item.menu.addMenuItem(header);
             for (const minutes of row.travel.choices) {
                 const choice = item.menu.addAction(`${minutes} min`, () =>
-                    dispatch({ type: 'setTravel', placeKey: row.travel.placeKey, minutes }));
+                    dispatch({ type: 'setTravel', target: row.travel.target, minutes }));
                 choice.setOrnament(minutes === row.travel.minutes ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NO_DOT);
             }
         }

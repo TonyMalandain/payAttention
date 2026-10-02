@@ -20,7 +20,10 @@ const LEAVE = T0 - 30 * MIN;
 const IN_PERSON = judged({
     key: 'occ:p1|' + T0, seriesKey: 'series:p1', title: 'Site visit', mode: 'in-person',
     placeText: 'HQ', placeKey: 'hq', travelMinutes: 30, travelIsDefault: true, deadline: LEAVE,
+    travelTarget: { kind: 'place', key: 'hq' },
 });
+// An online meeting with no place that the owner switched to in person (D-039).
+const NO_PLACE = { ...IN_PERSON, placeText: '', placeKey: null, travelTarget: { kind: 'meeting', key: 'series:j1' } };
 
 /** The view the controller would build for `list` at `now`. */
 function view(now, list, { state = E, health = OK, test = null, env = ENV, aiStatus = 'off', showTestAlert = false, openTravelChoices = null } = {}) {
@@ -103,7 +106,8 @@ describe('view: the alert', () => {
         for (const now of [LEAVE - 10 * MIN, LEAVE - 5 * MIN]) {
             const a = view(now, [IN_PERSON]).alert;
             assert.deepEqual(a.travel, {
-                placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: TRAVEL_CHOICES_MIN, choicesOpen: false,
+                target: { kind: 'place', key: 'hq' }, minutes: 30, text: 'Travel: 30 min (default)', choices: TRAVEL_CHOICES_MIN,
+                choicesOpen: false,
             });
         }
     });
@@ -119,11 +123,17 @@ describe('view: the alert', () => {
         assert.equal(view(T0 - 50 * MIN, [stored]).alert.travel.text, 'Travel: 45 min');
     });
 
-    test('an in-person meeting with no place has no travel choices', () => {
-        const noPlace = { ...IN_PERSON, placeText: '', placeKey: null };
-        const a = view(LEAVE - 10 * MIN, [noPlace]).alert;
-        assert.equal(a.travel.placeKey, null);
+    test('an in-person meeting with no place offers the choices for its meeting target', () => {
+        const a = view(LEAVE - 10 * MIN, [NO_PLACE]).alert;
+        assert.deepEqual(a.travel.target, { kind: 'meeting', key: 'series:j1' });
+        assert.deepEqual(a.travel.choices, TRAVEL_CHOICES_MIN);
+    });
+
+    test('an in-person meeting with no target has no choices', () => {
+        const noTarget = { ...IN_PERSON, travelTarget: null };
+        const a = view(LEAVE - 10 * MIN, [noTarget], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
         assert.deepEqual(a.travel.choices, []);
+        assert.equal(a.travel.choicesOpen, false);
     });
 
     test('the choices are open on the card they were opened on', () => {
@@ -142,10 +152,9 @@ describe('view: the alert', () => {
         assert.equal(a.travel.choicesOpen, false);
     });
 
-    test('an in-person meeting with no place never has its choices open', () => {
-        const noPlace = { ...IN_PERSON, placeText: '', placeKey: null };
-        const a = view(LEAVE - 10 * MIN, [noPlace], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
-        assert.equal(a.travel.choicesOpen, false);
+    test('an in-person meeting with no place has its choices open on the card they were opened on', () => {
+        const a = view(LEAVE - 10 * MIN, [NO_PLACE], { openTravelChoices: { key: IN_PERSON.key, step: 1 } }).alert;
+        assert.equal(a.travel.choicesOpen, true);
     });
 
     test('the travel choices', () => {
@@ -280,10 +289,17 @@ describe('view: menu rows', () => {
     test('travel for in-person rows only, at any step', () => {
         const [online] = view(NOW, [later]).menu.meetings;
         assert.equal(online.travel, null);
-        const [row] = view(NOW, [{ ...later, mode: 'in-person', travelMinutes: 20, travelIsDefault: false, placeKey: 'hq', deadline: at(12, 40) }]).menu.meetings;
-        assert.deepEqual(row.travel, { placeKey: 'hq', minutes: 20, header: 'Travel time: 20 min', choices: TRAVEL_CHOICES_MIN });
-        const [noPlace] = view(NOW, [{ ...later, mode: 'in-person', travelMinutes: 30, travelIsDefault: true, placeKey: null, deadline: at(12, 30) }]).menu.meetings;
-        assert.deepEqual(noPlace.travel, { placeKey: null, minutes: 30, header: 'Travel time: 30 min (default)', choices: [] });
+        const [row] = view(NOW, [{ ...later, mode: 'in-person', travelMinutes: 20, travelIsDefault: false, placeKey: 'hq',
+            travelTarget: { kind: 'place', key: 'hq' }, deadline: at(12, 40) }]).menu.meetings;
+        assert.deepEqual(row.travel, {
+            target: { kind: 'place', key: 'hq' }, minutes: 20, header: 'Travel time: 20 min', choices: TRAVEL_CHOICES_MIN,
+        });
+        const [noPlace] = view(NOW, [{ ...later, mode: 'in-person', travelMinutes: 30, travelIsDefault: true, placeKey: null,
+            travelTarget: { kind: 'meeting', key: 'series:j1' }, deadline: at(12, 30) }]).menu.meetings;
+        assert.deepEqual(noPlace.travel, {
+            target: { kind: 'meeting', key: 'series:j1' }, minutes: 30, header: 'Travel time: 30 min (default)',
+            choices: TRAVEL_CHOICES_MIN,
+        });
     });
 
     test('recurring is carried', () => {
@@ -408,6 +424,13 @@ describe('view: menu signature', () => {
         const now = LEAVE - 2 * HOUR;
         const a = view(now, [IN_PERSON]).menu.signature;
         const b = view(now, [{ ...IN_PERSON, travelMinutes: 45 }]).menu.signature;
+        assert.notEqual(a, b);
+    });
+
+    test("changes when a row's travel target changes at the same minutes", () => {
+        const now = LEAVE - 2 * HOUR;
+        const a = view(now, [IN_PERSON]).menu.signature;
+        const b = view(now, [{ ...IN_PERSON, travelTarget: { kind: 'meeting', key: 'series:p1' } }]).menu.signature;
         assert.notEqual(a, b);
     });
 });

@@ -231,9 +231,26 @@ describe('controller: overrides', () => {
         assert.equal(v.menu.meetings[0].mode, 'in-person');
         assert.equal(v.menu.meetings[0].travel.minutes, 30);
 
-        v = h.dispatch({ type: 'setTravel', placeKey: 'hq', minutes: 45 });
-        assert.deepEqual(h.store.travelCalls, [['hq', 45]]);
+        const target = v.menu.meetings[0].travel.target;
+        assert.deepEqual(target, { kind: 'place', key: 'hq' });
+        v = h.dispatch({ type: 'setTravel', target, minutes: 45 });
+        assert.deepEqual(h.store.travelCalls, [[{ kind: 'place', key: 'hq' }, 45]]);
         assert.equal(v.menu.meetings[0].travel.minutes, 45);
+    });
+
+    test('8b. a meeting with no place switched to in person gets travel choices, saved for its series', () => {
+        const h = setup();
+        h.deliverAt(T0 - 2 * HOUR);
+        let v = h.dispatch({ type: 'setMode', key: KEY, mode: 'in-person' });
+        const target = v.menu.meetings[0].travel.target;
+        assert.deepEqual(target, { kind: 'meeting', key: seriesKey(MEETING) });
+        assert.equal(v.menu.meetings[0].travel.choices.length, 7);
+
+        v = h.dispatch({ type: 'setTravel', target, minutes: 45 });
+        assert.deepEqual(h.store.travelCalls, [[target, 45]]);
+        assert.equal(v.menu.meetings[0].travel.minutes, 45);
+        // Leave by T0 - 45 min: the heads-up is due at T0 - 55 min.
+        assert.equal(h.at(T0 - 55 * MIN).alert.step, 1);
     });
 
     test('18. a settings change from outside is picked up on the next tick', () => {
@@ -299,7 +316,7 @@ describe('controller: travel choices', () => {
         const h = inPerson({ settings: { inpersonHeadsupMinutes: 60 } });
         h.at(T0 - 80 * MIN);   // 50 min before leave-by
         h.dispatch(toggle);
-        let v = h.dispatch({ type: 'setTravel', placeKey: 'hq', minutes: 45 });
+        let v = h.dispatch({ type: 'setTravel', target: { kind: 'place', key: 'hq' }, minutes: 45 });
         assert.equal(v.alert.step, 1);   // 35 min before the new leave-by
         assert.equal(v.alert.travel.choicesOpen, true);
         assert.equal(v.alert.travel.text, 'Travel: 45 min');
@@ -398,7 +415,7 @@ describe('controller: travel choices', () => {
         assert.equal(h.at(T0 - 35 * MIN).alert.step, 2);
         h.dispatch(toggle);
         // 25 min travel: leave by T0 - 25 min, so T0 - 35 min is the heads-up again, already shown.
-        const v = h.dispatch({ type: 'setTravel', placeKey: 'hq', minutes: 25 });
+        const v = h.dispatch({ type: 'setTravel', target: { kind: 'place', key: 'hq' }, minutes: 25 });
         assert.equal(v.alert, null);
     });
 

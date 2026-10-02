@@ -25,7 +25,7 @@ const PRUNE_EVERY_MS = 24 * 60 * 60 * 1000;
  * @property {(clocks: {dataAt: number, providerAt: number}) => void} writeHealthClocks
  * @property {(key: string, verdict: 'must'|'ignore'|null) => void} setVerdictOverride
  * @property {(key: string, mode: 'online'|'in-person'|null) => void} setModeOverride
- * @property {(placeKey: string, minutes: number) => void} setTravel
+ * @property {(target: import('../core/types.js').TravelTarget, minutes: number) => void} setTravel
  * @property {(now: number) => void} pruneOccurrenceOverrides
  * @property {() => void} destroy flushes pending alert-state and ai-verdicts writes
  */
@@ -38,7 +38,7 @@ const PRUNE_EVERY_MS = 24 * 60 * 60 * 1000;
  * @typedef {{type: 'join'|'ack'|'snooze'|'skip', key: string}
  *   | {type: 'setVerdict', key: string, verdict: 'must'|'ignore'|null, scope: 'occ'|'series'}
  *   | {type: 'setMode', key: string, mode: 'online'|'in-person'}
- *   | {type: 'setTravel', placeKey: string, minutes: number}
+ *   | {type: 'setTravel', target: import('../core/types.js').TravelTarget, minutes: number}
  *   | {type: 'toggleTravelChoices', key: string}
  *   | {type: 'runTestAlert'}} UiAction
  */
@@ -314,7 +314,7 @@ export class Controller {
             this._verdicts.reloadOverridesAndTravel();
             break;
         case 'setTravel':
-            this._writer.setTravel(action.placeKey, action.minutes);
+            this._writer.setTravel(action.target, action.minutes);
             this._verdicts.reloadOverridesAndTravel();
             break;
         case 'toggleTravelChoices':

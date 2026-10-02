@@ -466,7 +466,10 @@ const IN_PERSON_ALERT = Object.freeze({
     key: 'occ:smoke-visit|0', isTest: false, step: 1, presentation: 'card',
     headline: 'Heads-up', title: 'Site visit', timeLine: 'Leave by 10:00 AM · in 10 min',
     countdown: '10:00', countdownCaption: 'until you leave', reason: 'Why: important: \'client\'',
-    travel: { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min (default)', choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false },
+    travel: {
+        target: { kind: 'meeting', key: 'series:smoke-visit' }, minutes: 30, text: 'Travel: 30 min (default)',
+        choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false,
+    },
     also: [], canJoin: false, offerSeries: false,
 });
 
@@ -493,7 +496,7 @@ async function checkWorstCase(name, home) {
     }
 
     for (const step of [1, 2, 3]) {
-        const travel = step <= 2 ? { placeKey: 'hq', minutes: 30, text: 'Travel: 30 min', choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false } : null;
+        const travel = step <= 2 ? { target: { kind: 'meeting', key: 'series:smoke-visit' }, minutes: 30, text: 'Travel: 30 min', choices: [10, 15, 20, 30, 45, 60, 90], choicesOpen: false } : null;
         const card = new Card({ ...alert, step, presentation: 'card', travel }, () => {});
         try {
             await mustWait(() => card.actor.mapped && buttonsOffMonitors(card.actor).length === 0, 2000, name,
@@ -535,7 +538,8 @@ async function checkTravelChoices(name, home) {
             closed.destroy();
         }
 
-        const card = new Card({ ...alert, travel: { ...alert.travel, choicesOpen: true } }, () => {});
+        const openActions = [];
+        const card = new Card({ ...alert, travel: { ...alert.travel, choicesOpen: true } }, action => openActions.push(action));
         try {
             await mustWait(() => card.actor.mapped, 2000, name, `the open step-${step} card was never mapped`);
             const change = findByName(card.actor, 'payattention-travel-change');
@@ -587,6 +591,12 @@ async function checkTravelChoices(name, home) {
             check((hovered.get_text_decoration() & St.TextDecoration.UNDERLINE) !== 0, name,
                 `step-${step} card: the hovered Change time link is not underlined`);
             change.hover = false;
+            // A pick hands back the View's travel target untouched (interfaces.md §3).
+            const pick = await clickActor(findByName(card.actor, 'payattention-travel-choice-45'), name);
+            await mustWait(() => openActions.length > 0, 2000, name, `step-${step} card: the 45 min pick dispatched nothing (${pick})`);
+            const wantPick = JSON.stringify([{ type: 'setTravel', target: IN_PERSON_ALERT.travel.target, minutes: 45 }]);
+            check(JSON.stringify(openActions) === wantPick, name,
+                `step-${step} card: the pick dispatched ${JSON.stringify(openActions)}, want ${wantPick}`);
         } finally {
             card.destroy();
         }

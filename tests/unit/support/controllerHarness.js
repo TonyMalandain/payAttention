@@ -81,9 +81,9 @@ export function makeStore(h) {
             else
                 store.overrides.mode[key] = mode;
         },
-        setTravel: (placeKey, minutes) => {
-            store.travelCalls.push([placeKey, minutes]);
-            store.travel.byPlace[placeKey] = minutes;
+        setTravel: (target, minutes) => {
+            store.travelCalls.push([target, minutes]);
+            store.travel[{ place: 'byPlace', meeting: 'byMeeting' }[target.kind]][target.key] = minutes;
         },
         pruneOccurrenceOverrides: now => store.prunes.push(now),
         destroy: () => h.log.push('store.destroy'),

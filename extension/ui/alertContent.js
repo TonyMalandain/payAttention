@@ -155,7 +155,7 @@ export class AlertContent {
             const button = unclippedButton(`payattention-travel-choice-${minutes}`, String(minutes), 'payattention-button payattention-travel-choice');
             if (minutes === travel.minutes)
                 button.add_style_class_name('payattention-choice-current');
-            button.connect('clicked', () => this._dispatch({ type: 'setTravel', placeKey: travel.placeKey, minutes }));
+            button.connect('clicked', () => this._dispatch({ type: 'setTravel', target: travel.target, minutes }));
             choices.add_child(button);
         }
         // The controller holds whether the choices are open: while they are, the heads-up stays (interfaces.md §3).

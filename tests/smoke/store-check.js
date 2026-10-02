@@ -58,8 +58,23 @@ async function main() {
     writer.setModeOverride('series:b', null);
     check(sameJson(reader.readOverrides(), { verdict: {}, mode: {} }), 'overrides back to empty');
 
-    writer.setTravel('hq', 45);
-    check(reader.readTravel().hq === 45, 'travel round-trips');
+    // Travel: each target kind goes to its own key (data.md, ADR-0014).
+    writer.setTravel({ kind: 'place', key: 'hq' }, 45);
+    check(sameJson(reader.readTravel(), { byPlace: { hq: 45 }, byMeeting: {} }), 'place travel round-trips');
+    writer.setTravel({ kind: 'meeting', key: 'series:b' }, 20);
+    const bothTravel = { byPlace: { hq: 45 }, byMeeting: { 'series:b': 20 } };
+    check(sameJson(reader.readTravel(), bothTravel), 'meeting travel round-trips beside the place');
+    for (const [what, target] of [['an unknown kind', { kind: 'occ', key: 'x' }], ['null', null],
+        ['an empty key', { kind: 'place', key: '' }]]) {
+        let threw = null;
+        try {
+            writer.setTravel(target, 5);
+        } catch (e) {
+            threw = e;
+        }
+        check(threw instanceof TypeError, `setTravel with ${what} throws TypeError (got ${threw})`);
+        check(sameJson(reader.readTravel(), bothTravel), `setTravel with ${what} writes nothing`);
+    }
 
     // Coalesced alert-state writes.
     writer.readAlertState();
@@ -138,6 +153,10 @@ async function main() {
     settings.set_int64('health-provider-at', 6);
     await sleep(100);
     check(changes.length === 0, `no onChange for internal keys (saw ${changes.length})`);
+    writer.setTravel({ kind: 'meeting', key: 'series:c' }, 10);
+    await sleep(100);
+    check(changes.length === 1, `onChange for meeting-travel-times (saw ${changes.length})`);
+    changes.length = 0;
     settings.set_boolean('sound-enabled', false);
     await sleep(100);
     check(changes.length === 1, `onChange for sound-enabled (saw ${changes.length})`);

@@ -23,12 +23,13 @@ const MAX_NAMED_CALENDARS = 3;
 /**
  * @typedef {{key: string, label: string, detail: string, reason: string, isMust: boolean, overridden: boolean,
  *   recurring: boolean, mode: 'online'|'in-person', otherMode: 'online'|'in-person', modeSwitchLabel: string,
- *   travel: null|{placeKey: string|null, minutes: number, header: string, choices: number[]}}} MeetingRow
+ *   travel: null|{target: import('../core/types.js').TravelTarget|null, minutes: number, header: string, choices: number[]}}} MeetingRow
  */
 /**
  * @typedef {{key: string, isTest: boolean, step: 1|2|3|4, presentation: 'card'|'takeover',
  *   headline: string, title: string, timeLine: string, countdown: string, countdownCaption: string, reason: string,
- *   travel: null|{placeKey: string|null, minutes: number, text: string, choices: number[], choicesOpen: boolean},
+ *   travel: null|{target: import('../core/types.js').TravelTarget|null, minutes: number, text: string, choices: number[],
+ *     choicesOpen: boolean},
  *   also: string[], canJoin: boolean, offerSeries: boolean}} AlertView
  */
 /**
@@ -37,8 +38,8 @@ const MAX_NAMED_CALENDARS = 3;
  *   alert: AlertView|null}} View
  */
 
-// A meeting switched to in person with no place has nowhere to store a travel time.
-const travelChoices = j => (j.placeKey !== null ? TRAVEL_CHOICES_MIN : []);
+// Choices only where a pick has an entry to write; judge gives every in-person meeting one (ADR-0014).
+const travelChoices = j => (j.travelTarget !== null ? TRAVEL_CHOICES_MIN : []);
 const defaultMark = j => (j.travelIsDefault ? ' (default)' : '');
 // Core already writes an AI reason as "AI: <reason>" (verdict.js), so it is shown as it is.
 const reasonLine = j => (j.reasonCode === 'ai-must' || j.reasonCode === 'ai-ignore' ? j.reason : `Why: ${j.reason}`);
@@ -52,7 +53,7 @@ function buildAlert(chosenPlan, j, isTest, judgedByKey, now, openTravelChoices) 
     const choices = travelChoices(j);
     const travel = j.mode === 'in-person' && c.step <= 2
         ? {
-            placeKey: j.placeKey,
+            target: j.travelTarget,
             minutes: j.travelMinutes,
             text: `Travel: ${j.travelMinutes} min${defaultMark(j)}`,
             choices,
@@ -108,7 +109,7 @@ function buildRow(j) {
         modeSwitchLabel: otherMode === 'online' ? 'Switch to online' : 'Switch to in person',
         travel: j.mode === 'in-person'
             ? {
-                placeKey: j.placeKey,
+                target: j.travelTarget,
                 minutes: j.travelMinutes,
                 header: `Travel time: ${j.travelMinutes} min${defaultMark(j)}`,
                 choices: travelChoices(j),
@@ -145,9 +146,12 @@ function statusLine(health, rowCount, now) {
     return rowCount === 0 ? 'No more meetings today' : null;
 }
 
+// Each row's click handlers capture its travel target, so a changed target must rebuild the menu.
 function signatureOf(rows) {
+    const targetOf = r => (r.travel?.target ? `${r.travel.target.kind}:${r.travel.target.key}` : '');
     return rows
-        .map(r => [r.key, r.label, r.detail, r.reason, r.overridden, r.recurring, r.mode, r.travel?.minutes ?? ''].join('|'))
+        .map(r => [r.key, r.label, r.detail, r.reason, r.overridden, r.recurring, r.mode, r.travel?.minutes ?? '',
+            targetOf(r)].join('|'))
         .join('\n');
 }
 

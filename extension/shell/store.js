@@ -12,6 +12,9 @@ import { parseAiAnswers, serializeAiAnswers } from '../core/aiAnswers.js';
 import { isExpiredOccurrenceKey } from '../core/keys.js';
 import { SETTINGS_KEYS, INTERNAL_KEYS } from './settingsKeys.js';
 
+// Which settings key holds each kind of travel target (data.md, ADR-0014).
+const TRAVEL_KEYS = Object.freeze({ place: 'travel-times', meeting: 'meeting-travel-times' });
+
 // A burst of writes to one key is one write (data.md).
 const FLUSH_DELAY_MS = 500;
 
@@ -62,8 +65,8 @@ export class StoreReader {
     /** @returns {import('../core/types.js').TravelTimes} */
     readTravel() {
         return {
-            byPlace: readDict(this.#settings, 'travel-times'),
-            byMeeting: readDict(this.#settings, 'meeting-travel-times'),
+            byPlace: readDict(this.#settings, TRAVEL_KEYS.place),
+            byMeeting: readDict(this.#settings, TRAVEL_KEYS.meeting),
         };
     }
 
@@ -177,11 +180,16 @@ export class StoreWriter {
     }
 
     /**
-     * @param {string} placeKey
+     * Store the travel time of the meeting's judged travel target.
+     *
+     * @param {import('../core/types.js').TravelTarget} target as judge named it
      * @param {number} minutes
+     * @throws {TypeError} when target is not {kind: 'place'|'meeting', key: non-empty string}; nothing is written
      */
-    setTravel(placeKey, minutes) {
-        this.#setDictEntry('travel-times', 'a{si}', placeKey, minutes);
+    setTravel(target, minutes) {
+        if (!Object.hasOwn(TRAVEL_KEYS, target?.kind) || typeof target.key !== 'string' || target.key === '')
+            throw new TypeError('setTravel: target must be {kind: "place"|"meeting", key}');
+        this.#setDictEntry(TRAVEL_KEYS[target.kind], 'a{si}', target.key, minutes);
     }
 
     /**
