@@ -145,7 +145,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - "Clear travel times" clears both kinds;
     - README "How it decides" / "First five minutes" say this; the owner checks it in `npm run sample`.
 
-- **PG-15 — The menu stays open after a change in a meeting's row (M: one behaviour, all in the UI layer, a new row file and three smoke checks; plan docs/plans/PG-15.md).** Refines R-6 and R-14; PRD §5.
+- **PG-15 — The menu stays open after a change in a meeting's row (M: one behaviour, all in the UI layer, a new row file and three smoke checks; plan docs/plans/PG-15.md).** Built (38ae593). Review round 1: the code is right; one test gap (a travel pick after an in-place redraw must use the meeting's current target) is being closed. Deviation recorded: the plan asked for one commit per step; the product manager committed the engineer's finished working tree as one commit (38ae593), so the behaviour-preserving move was not checked green on its own. The reviewer's mutations stand in for that proof. History is not rewritten. Refines R-6 and R-14; PRD §5.
   - **What changes for the owner:** clicking Switch to in person / online, a travel time, Apply to whole series, Back to automatic, or the Must attend switch no longer closes the menu. The menu stays open, the same meeting stays expanded, and it shows the new state.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner, after trying PG-14 in the sample: "why does clicking on switching to in person / online make the menu disappear. Can it just be refreshed / redrawn instead?" Switching to in person and then picking a travel time takes two trips into the menu today.
@@ -218,6 +218,9 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 ## Housekeeping (engineering)
 
+- `mustWait` in the smoke stage helper builds its failure message before waiting, so a message with live state shows the state at the start of the wait, not at the timeout (PG-15).
+- Plan sketches with an unused parameter fail the project lint; plans should match the lint (PG-15).
+- PG-15: dragging the Must attend switch handle is not exercised by any test (a click is).
 - PG-14 review preferences: the no-place view fixture pairs `series:j1` with `seriesKey` `series:p1`; the smoke "Site visit" card now carries a meeting target, which reads oddly.
 - The unit test "digits split by spaces: under 200 ms" (invite tests) measures wall-clock time and failed once at 210 ms on a busy machine (PG-13 build). For the senior engineer: make it not depend on machine load.
 - PG-13 review preferences: build checks run after both zips are written, so a failed build leaves bad zips in `dist/`; the controller test repeats the hand-built dependency list of the AI controller test; one uninstall-check line uses a loose match where the line above checks strictly.
