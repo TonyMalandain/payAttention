@@ -601,3 +601,10 @@ Append only. Newest at the bottom.
 - **Why:** owner: "I want travel time to be smart and figure out the right time based on context … if I'm working from home or the office, it should draw from that".
 - **Source:** owner, 2026-10-01.
 - **Touches:** problem.md (only if the pain is widened), solution.md R-11 and "What the solution is not", PRD §4
+
+## 2026-10-02 — A meeting with no place cannot get a travel time
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** Travel time is stored per place, so a meeting whose place field is empty shows no travel choices, even after the owner switches it to in person; it always uses the default. A meeting with a video link, no place, or a place like "Zoom" counts as online and shows no travel at all until switched. The owner hit one of these on two afternoon meetings and could not set a travel time. This is a hole in "set it from the alert and it is remembered" (R-11) for personal tasks with no address, such as a pick-up.
+- **Source:** owner report 2026-10-02; behaviour confirmed by reading the menu and alert rules.
+- **Touches:** solution.md R-11, PRD §4
