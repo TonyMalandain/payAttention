@@ -153,6 +153,12 @@ describe('view: the alert', () => {
         assert.ok(Object.isFrozen(TRAVEL_CHOICES_MIN));
     });
 
+    test('an in-person card with a link offers travel and Join (D-040)', () => {
+        const a = view(LEAVE - 10 * MIN, [{ ...IN_PERSON, joinUrl: 'https://meet.google.com/abc-defg-hij' }]).alert;
+        assert.equal(a.canJoin, true);
+        assert.notEqual(a.travel, null);
+    });
+
     test('Join only with a link', () => {
         assert.equal(view(T0 - 25 * MIN, [ONLINE]).alert.canJoin, true);
         assert.equal(view(T0 - 25 * MIN, [judged()]).alert.canJoin, false);

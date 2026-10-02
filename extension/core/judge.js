@@ -114,7 +114,7 @@ function judgeEvent(event, config, overrides, travel, identity, ctx) {
         verdictOverridden: ov !== null,
         mode,
         modeOverridden: mo !== null,
-        joinUrl: mode === 'online' ? att.link : null,
+        joinUrl: att.link,   // whatever the mode (D-040)
         placeText: att.placeText,
         placeKey: pKey,
         travelMinutes,

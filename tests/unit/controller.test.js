@@ -139,6 +139,19 @@ describe('controller: join', () => {
         assert.equal(lastItem(h.store, KEY).done, 'ack');
     });
 
+    test('Join on an in-person card opens the link and acknowledges (D-040)', () => {
+        const h = setup();
+        h.deliverAt(T0 - 35 * MIN, snapshot([meeting({ location: 'HQ' })], [WORK]));
+        assert.equal(h.ui.last.alert.step, 2);
+        h.dispatch({ type: 'join', key: KEY });
+        assert.equal(h.launches.length, 1);
+        assert.equal(h.launches[0].uri, JOIN);
+        assert.equal(lastItem(h.store, KEY)?.done ?? null, null);
+        h.launches[0].onDone(true);
+        assert.equal(lastItem(h.store, KEY).done, 'ack');
+        assert.equal(h.ui.last.alert, null);
+    });
+
     test('no link: join does nothing', () => {
         const h = setup();
         const noLink = meeting({ conferenceUris: [], location: '' });

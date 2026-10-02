@@ -140,6 +140,7 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
     test('a place with a link is in person (D-038)', () => {
         const r = judgeOne(event({ location: 'HQ, Room 2', description: MEET }));
         assert.equal(r.mode, 'in-person');
+        assert.equal(r.joinUrl, MEET);
         assert.equal(r.modeOverridden, false);
         assert.equal(r.placeKey, 'hq, room 2');
         assert.equal(r.travelMinutes, 30);
@@ -158,9 +159,14 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
         const r = judgeOne(event({ description: MEET }), modes({ [oKey]: 'in-person' }));
         assert.equal(r.mode, 'in-person');
         assert.equal(r.modeOverridden, true);
-        assert.equal(r.joinUrl, null);
+        assert.equal(r.joinUrl, MEET);
         assert.equal(r.travelMinutes, 30);
         assert.equal(r.deadline, T0 - 30 * MIN);
+    });
+
+    test('a meeting with no link has no Join in either mode (D-040)', () => {
+        assert.equal(judgeOne(event({ location: '1 Main St' })).joinUrl, null);
+        assert.equal(judgeOne(event({ location: '1 Main St' }), modes({ [sKey]: 'online' })).joinUrl, null);
     });
 
     test('a series mode override to online applies to an instance', () => {

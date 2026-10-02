@@ -350,7 +350,7 @@
       "verdictOverridden": false,
       "mode": "in-person",
       "modeOverridden": true,
-      "joinUrl": null,
+      "joinUrl": "https://meet.google.com/abc-defg-hij",
       "placeText": "",
       "placeKey": null,
       "travelMinutes": 30,
