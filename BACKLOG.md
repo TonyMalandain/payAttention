@@ -130,7 +130,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - README "First five minutes" no longer mentions Test alert; the Development section says how to get it.
     - README "The alert ladder" shows a screenshot of each step (heads-up, nudge, insist, takeover), from the existing files in docs/screenshots/, because D-037 says the README now shows the ladder in place of Test alert. Size set: **M** (plan docs/plans/PG-13.md).
 
-- **PG-14 — A place means in person; every in-person meeting can get a travel time (L: three behaviours, a new stored key, contracts across every layer; plan docs/plans/PG-14.md).** D-038 (supersedes D-007), D-039. Refines R-10 and R-11.
+- **PG-14 — A place means in person; every in-person meeting can get a travel time (L: three behaviours, a new stored key, contracts across every layer; plan docs/plans/PG-14.md).** **BUILT 2026-10-02**, accepted in review round 1 (c198414..9b3723a), no defects. Closes after the owner looks at "Client workshop" in `npm run sample`. D-038 (supersedes D-007), D-039. Refines R-10 and R-11.
   - **What changes for the owner:** a meeting with a physical place counts as in person even with a video link. Every in-person meeting shows travel choices in the menu and "Change time" on its alert, with or without a place.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner: "if location -> set to in person. then UI should be: if 'in person', then let user change travel time. Travel time shouldn't be tied to a location set. sometimes the user will know the location and won't need it written down". Two real afternoon meetings switched to in person could not get a travel time.
@@ -207,6 +207,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 ## Housekeeping (engineering)
 
+- PG-14 review preferences: the no-place view fixture pairs `series:j1` with `seriesKey` `series:p1`; the smoke "Site visit" card now carries a meeting target, which reads oddly.
 - The unit test "digits split by spaces: under 200 ms" (invite tests) measures wall-clock time and failed once at 210 ms on a busy machine (PG-13 build). For the senior engineer: make it not depend on machine load.
 - PG-13 review preferences: build checks run after both zips are written, so a failed build leaves bad zips in `dist/`; the controller test repeats the hand-built dependency list of the AI controller test; one uninstall-check line uses a loose match where the line above checks strictly.
 - The plans in `docs/plans/` do not show the deviations accepted in review (the PG-1b start-up sync order, the PG-1c takeover panel layout, the menu idle rebuild, the compact takeover). Update them if the plans are reused.
