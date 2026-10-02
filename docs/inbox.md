@@ -21,3 +21,7 @@ Agents append findings here, tagged `for-product` or `for-architecture`. The own
 
 ## 2026-10-02 — for-architecture — a 200 ms invite budget test fails under a loaded full run (seen during PG-14)
 - `tests/unit/invite.test.js` "buildInvite: no catastrophic backtracking on 1 000 000 characters" › "digits split by spaces: under 200 ms" failed in 2 of 5 full `npm test` runs on the author's machine (228 ms before any PG-14 change, 285 ms after); it passes when run alone and in the other full runs. Its input is in the description only, so PG-14's place-text rule does not touch it. The budget or the way it is measured (single wall-clock run while the other test files run in parallel) is a `testing-and-build.md` decision, so it was not changed. If nobody acts, `npm test` fails at random and people learn to rerun it.
+
+## 2026-10-02 — for-architecture: PG-15 notes
+- Which meeting row is open in the menu is GNOME widget state in `ui/`, like whether the menu is open; unlike the card's travel choices, the controller does not hold it. Consider one line in `interfaces.md` §3 or `overview.md` "UI layer" so nobody moves it into the controller by analogy.
+- The PG-15 plan has the engineer update the smoke list in `testing-and-build.md` (item 2 "the menu closed" becomes wrong; new `6e-menu-rows`), as in PG-11 Part C. Please check the wording afterwards.

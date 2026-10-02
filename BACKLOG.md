@@ -145,7 +145,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - "Clear travel times" clears both kinds;
     - README "How it decides" / "First five minutes" say this; the owner checks it in `npm run sample`.
 
-- **PG-15 — The menu stays open after a change in a meeting's row (size set by the senior engineer).** Refines R-6 and R-14; PRD §5.
+- **PG-15 — The menu stays open after a change in a meeting's row (M: one behaviour, all in the UI layer, a new row file and three smoke checks; plan docs/plans/PG-15.md).** Refines R-6 and R-14; PRD §5.
   - **What changes for the owner:** clicking Switch to in person / online, a travel time, Apply to whole series, Back to automatic, or the Must attend switch no longer closes the menu. The menu stays open, the same meeting stays expanded, and it shows the new state.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner, after trying PG-14 in the sample: "why does clicking on switching to in person / online make the menu disappear. Can it just be refreshed / redrawn instead?" Switching to in person and then picking a travel time takes two trips into the menu today.
