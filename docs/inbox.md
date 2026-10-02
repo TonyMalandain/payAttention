@@ -18,3 +18,6 @@ Agents append findings here, tagged `for-product` or `for-architecture`. The own
 - `testing-and-build.md` says the sample has one fixture meeting; after PG-14 it has two, and the smoke fixture has three all-day events.
 - `interfaces.md` §2 lists the video-call vocabulary with "…"; the exact list is fixed in `docs/plans/PG-14.md` (no bare `microsoft`, `google`, `slack`, `goto`).
 - A location with no letters or digits (for example "+") now reads as no place.
+
+## 2026-10-02 — for-architecture — a 200 ms invite budget test fails under a loaded full run (seen during PG-14)
+- `tests/unit/invite.test.js` "buildInvite: no catastrophic backtracking on 1 000 000 characters" › "digits split by spaces: under 200 ms" failed in 2 of 5 full `npm test` runs on the author's machine (228 ms before any PG-14 change, 285 ms after); it passes when run alone and in the other full runs. Its input is in the description only, so PG-14's place-text rule does not touch it. The budget or the way it is measured (single wall-clock run while the other test files run in parallel) is a `testing-and-build.md` decision, so it was not changed. If nobody acts, `npm test` fails at random and people learn to rerun it.
