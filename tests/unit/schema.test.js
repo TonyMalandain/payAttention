@@ -35,6 +35,7 @@ const OTHER_KEYS = {
     'verdict-overrides': ['a{ss}', '{}'],
     'mode-overrides': ['a{ss}', '{}'],
     'travel-times': ['a{si}', '{}'],
+    'meeting-travel-times': ['a{si}', '{}'],
     'alert-state': ['s', "''"],
     'health-data-at': ['x', '0'],
     'health-provider-at': ['x', '0'],

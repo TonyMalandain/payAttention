@@ -118,6 +118,10 @@
       <default>{}</default>
       <summary>Place key to travel minutes, set from the menu and alerts</summary>
     </key>
+    <key name="meeting-travel-times" type="a{si}">
+      <default>{}</default>
+      <summary>Series key to travel minutes, for in-person meetings with no place; set from the menu and alerts</summary>
+    </key>
     <key name="alert-state" type="s">
       <default>''</default>
       <summary>Recorded alert actions per meeting (JSON; internal)</summary>
