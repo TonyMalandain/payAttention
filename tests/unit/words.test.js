@@ -4,7 +4,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    BUILTIN_IGNORE_WORDS, BUILTIN_IMPORTANT_WORDS, NOT_A_PLACE_WORDS, compileWords, findWord,
+    BUILTIN_IGNORE_WORDS, BUILTIN_IMPORTANT_WORDS, NOT_A_PLACE_WORDS, VIDEO_CALL_WORDS, compileWords, findWord,
+    isMadeOfWords,
 } from '../../extension/core/words.js';
 
 describe('ignore words', () => {
@@ -99,5 +100,47 @@ describe('matcher and lists', () => {
         assert.ok(Object.isFrozen(BUILTIN_IGNORE_WORDS));
         assert.ok(Object.isFrozen(BUILTIN_IMPORTANT_WORDS));
         assert.ok(Object.isFrozen(NOT_A_PLACE_WORDS));
+    });
+});
+
+// PG-14, interfaces.md §2 place-text rule 2: a location made only of video-call
+// wording names no place.
+describe('made of words', () => {
+    const m = compileWords(VIDEO_CALL_WORDS, []);
+
+    for (const text of ['Join Zoom Meeting', 'Teams-Besprechung', 'Microsoft Teams Meeting', 'Google Meet – join',
+        'Microsoft Teams-Besprechung beitreten', 'zoom  CALL', '+ / –', '']) {
+        test(`"${text}" is made only of video-call words`, () => {
+            assert.equal(isMadeOfWords(m, text), true);
+        });
+    }
+
+    for (const text of ['Board room + Zoom', 'Room 4.12 / Teams', 'Meet at reception', 'Remote office, 3rd floor',
+        'Zoom 2', 'Microsoft', 'Google', 'Zoomlion Tower', 'Besprechungsraum 3']) {
+        test(`"${text}" is not made only of video-call words`, () => {
+            assert.equal(isMadeOfWords(m, text), false);
+        });
+    }
+
+    test('only a compiled matcher is accepted', () => {
+        assert.throws(() => isMadeOfWords({}, 'x'), TypeError);
+    });
+
+    test('an empty list matches no word', () => {
+        const none = compileWords([], []);
+        assert.equal(isMadeOfWords(none, 'Room'), false);
+        assert.equal(isMadeOfWords(none, '–'), true);
+    });
+
+    test('the same matcher gives the same answer twice in a row', () => {
+        assert.equal(isMadeOfWords(m, 'Join Zoom Meeting'), true);
+        assert.equal(isMadeOfWords(m, 'Join Zoom Meeting'), true);
+    });
+
+    test('the video-call words are the interfaces.md §2 list, and frozen', () => {
+        assert.deepEqual(VIDEO_CALL_WORDS, ['zoom', 'microsoft teams', 'teams', 'google meet', 'meet', 'webex',
+            'google hangouts', 'hangouts', 'hangout', 'whereby', 'jitsi', 'goto meeting', 'gotomeeting', 'slack huddle',
+            'huddle', 'join', 'meeting', 'call', 'online', 'video', 'besprechung', 'beitreten']);
+        assert.ok(Object.isFrozen(VIDEO_CALL_WORDS));
     });
 });

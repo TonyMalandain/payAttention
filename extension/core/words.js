@@ -19,6 +19,11 @@ export const NOT_A_PLACE_WORDS = Object.freeze(['online', 'virtual', 'remote', '
     'microsoft teams meeting', 'google meet', 'meet', 'webex', 'hangout', 'google hangouts', 'whereby', 'jitsi',
     'goto meeting', 'gotomeeting', 'slack', 'slack huddle', 'huddle']);
 
+/** Words a location can be made of and still name no place (PRD §2, interfaces.md §2 rule 2). */
+export const VIDEO_CALL_WORDS = Object.freeze(['zoom', 'microsoft teams', 'teams', 'google meet', 'meet', 'webex',
+    'google hangouts', 'hangouts', 'hangout', 'whereby', 'jitsi', 'goto meeting', 'gotomeeting', 'slack huddle',
+    'huddle', 'join', 'meeting', 'call', 'online', 'video', 'besprechung', 'beitreten']);
+
 // Marks a real matcher, so findWord cannot be handed an uncompiled list.
 const COMPILED = Symbol('compiled word matcher');
 
@@ -30,8 +35,18 @@ function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// One list word as a pattern: whitespace inside a phrase matches any whitespace run.
+function wordPattern(word) {
+    return escapeRegex(word).replace(/ /g, '\\s+');
+}
+
+function checkMatcher(matcher, caller) {
+    if (typeof matcher !== 'object' || matcher === null || matcher[COMPILED] !== true)
+        throw new TypeError(`${caller}: matcher must come from compileWords()`);
+}
+
 /**
- * Compile a word list once, for use with findWord(). Words are normalised
+ * Compile a word list once, for use with findWord() and isMadeOfWords(). Words are normalised
  * (trimmed, whitespace collapsed, lowercased), empty ones and duplicates are
  * dropped, and longer phrases are tried first so the most specific one wins.
  *
@@ -51,9 +66,13 @@ export function compileWords(builtin, extra) {
         .toSorted((a, b) => b.length - a.length)
         .map(word => Object.freeze({
             word,
-            regex: new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(word).replace(/ /g, '\\s+')}(?![\\p{L}\\p{N}])`, 'iu'),
+            regex: new RegExp(`(?<![\\p{L}\\p{N}])${wordPattern(word)}(?![\\p{L}\\p{N}])`, 'iu'),
         }));
-    return Object.freeze({ [COMPILED]: true, entries: Object.freeze(entries) });
+    // Not frozen: replace() with a global regex writes its lastIndex.
+    const anyWord = entries.length === 0
+        ? /(?!)/gu
+        : new RegExp(`(?<![\\p{L}\\p{N}])(?:${entries.map(e => wordPattern(e.word)).join('|')})(?![\\p{L}\\p{N}])`, 'giu');
+    return Object.freeze({ [COMPILED]: true, entries: Object.freeze(entries), anyWord });
 }
 
 /**
@@ -65,11 +84,25 @@ export function compileWords(builtin, extra) {
  * @throws {TypeError} when `matcher` did not come from compileWords()
  */
 export function findWord(matcher, text) {
-    if (typeof matcher !== 'object' || matcher === null || matcher[COMPILED] !== true)
-        throw new TypeError('findWord: matcher must come from compileWords()');
+    checkMatcher(matcher, 'findWord');
     for (const { word, regex } of matcher.entries) {
         if (regex.test(text))
             return word;
     }
     return null;
+}
+
+/**
+ * Whether `text` is made only of list words: once every whole-word occurrence of
+ * every list word (longest first) is taken out, no letter or digit is left.
+ * Also true for text that has no letter or digit at all.
+ *
+ * @param {import('./types.js').WordMatcher} matcher from compileWords()
+ * @param {string} text
+ * @returns {boolean}
+ * @throws {TypeError} when `matcher` did not come from compileWords()
+ */
+export function isMadeOfWords(matcher, text) {
+    checkMatcher(matcher, 'isMadeOfWords');
+    return !/[\p{L}\p{N}]/u.test(text.replace(matcher.anyWord, ' '));
 }
