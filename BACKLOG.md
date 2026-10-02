@@ -130,7 +130,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - README "First five minutes" no longer mentions Test alert; the Development section says how to get it.
     - README "The alert ladder" shows a screenshot of each step (heads-up, nudge, insist, takeover), from the existing files in docs/screenshots/, because D-037 says the README now shows the ladder in place of Test alert. Size set: **M** (plan docs/plans/PG-13.md).
 
-- **PG-14 — A place means in person; every in-person meeting can get a travel time (size set by the senior engineer).** D-038 (supersedes D-007), D-039. Refines R-10 and R-11.
+- **PG-14 — A place means in person; every in-person meeting can get a travel time (L: three behaviours, a new stored key, contracts across every layer; plan docs/plans/PG-14.md).** D-038 (supersedes D-007), D-039. Refines R-10 and R-11.
   - **What changes for the owner:** a meeting with a physical place counts as in person even with a video link. Every in-person meeting shows travel choices in the menu and "Change time" on its alert, with or without a place.
   - **Who it is for:** Calendar owner.
   - **Why:** the owner: "if location -> set to in person. then UI should be: if 'in person', then let user change travel time. Travel time shouldn't be tied to a location set. sometimes the user will know the location and won't need it written down". Two real afternoon meetings switched to in person could not get a travel time.

@@ -13,3 +13,8 @@ Agents append findings here, tagged `for-product` or `for-architecture`. The own
 
 ## 2026-10-01 — for-architecture — testing-and-build.md step 4 says the build "can also" make the developer bundle (PG-13)
 - Since PG-13, `scripts/build.sh` always makes both bundles, with no option (plan seam 6), and packs from a `DIRS` array instead of the one-line `gnome-extensions pack …` command the table still quotes. The row reads as if the developer bundle were optional. The PG-13 plan reserves `testing-and-build.md` to its owner, so it was not edited. If nobody acts, a reader may look for a flag that does not exist.
+
+## 2026-10-02 — for-architecture: PG-14 doc follow-ups
+- `testing-and-build.md` says the sample has one fixture meeting; after PG-14 it has two, and the smoke fixture has three all-day events.
+- `interfaces.md` §2 lists the video-call vocabulary with "…"; the exact list is fixed in `docs/plans/PG-14.md` (no bare `microsoft`, `google`, `slack`, `goto`).
+- A location with no letters or digits (for example "+") now reads as no place.
