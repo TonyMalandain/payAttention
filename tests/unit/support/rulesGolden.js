@@ -58,13 +58,13 @@ export function rulesModeCases() {
                 },
                 mode: { [`occ:mode-override|${T0 + 14 * 30 * MIN}`]: 'in-person' },
             },
-            travel: { '1 main st': 15 },
+            travel: { byPlace: { '1 main st': 15 }, byMeeting: {} },
         },
         {
             name: 'ownerUnknown',
             snapshot: snapshot([event({ uid: 'small' })], [{ ...SOURCE, ownerEmail: null }]),
             overrides: { verdict: {}, mode: {} },
-            travel: {},
+            travel: { byPlace: {}, byMeeting: {} },
         },
     ];
 }

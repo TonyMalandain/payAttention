@@ -183,7 +183,8 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
     });
 
     test('a stored travel time is used for the same place written differently', () => {
-        const r = judgeOne(event({ location: '  1  Main St,  Springfield ' }), { travel: { '1 main st, springfield': 45 } });
+        const r = judgeOne(event({ location: '  1  Main St,  Springfield ' }),
+            { travel: { byPlace: { '1 main st, springfield': 45 }, byMeeting: {} } });
         assert.equal(r.travelMinutes, 45);
         assert.equal(r.travelIsDefault, false);
         assert.equal(r.deadline, T0 - 45 * MIN);
@@ -191,7 +192,7 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
 
     for (const stored of [0, -5, 1441, 'x', 2.5]) {
         test(`an invalid stored travel time (${JSON.stringify(stored)}) falls back to the default`, () => {
-            const r = judgeOne(event({ location: '1 Main St' }), { travel: { '1 main st': stored } });
+            const r = judgeOne(event({ location: '1 Main St' }), { travel: { byPlace: { '1 main st': stored }, byMeeting: {} } });
             assert.equal(r.travelMinutes, 30);
             assert.equal(r.travelIsDefault, true);
         });
@@ -205,8 +206,68 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
     test('in person with no place uses the default travel time', () => {
         const r = judgeOne(event(), modes({ [oKey]: 'in-person' }));
         assert.equal(r.placeKey, null);
+        assert.deepEqual(r.travelTarget, { kind: 'meeting', key: sKey });
         assert.equal(r.travelMinutes, 30);
         assert.equal(r.travelIsDefault, true);
         assert.equal(r.deadline, T0 - 30 * MIN);
     });
+});
+
+describe('travel target (D-039, ADR-0014)', () => {
+    const travel = (byPlace, byMeeting) => ({ travel: { byPlace, byMeeting } });
+    const inPersonNoPlace = (over = {}) => ({ ...modes({ [oKey]: 'in-person' }), ...over });
+
+    test('a meeting with a place reads and writes the place entry', () => {
+        const r = judgeOne(event({ location: '1 Main St, Springfield' }), travel({ '1 main st, springfield': 45 }, {}));
+        assert.deepEqual(r.travelTarget, { kind: 'place', key: '1 main st, springfield' });
+        assert.ok(Object.isFrozen(r.travelTarget));
+        assert.equal(r.travelMinutes, 45);
+        assert.equal(r.travelIsDefault, false);
+    });
+
+    test('a meeting with no place switched to in person reads its series entry', () => {
+        const r = judgeOne(event(), inPersonNoPlace(travel({}, { [sKey]: 45 })));
+        assert.deepEqual(r.travelTarget, { kind: 'meeting', key: sKey });
+        assert.ok(Object.isFrozen(r.travelTarget));
+        assert.equal(r.travelMinutes, 45);
+        assert.equal(r.travelIsDefault, false);
+        assert.equal(r.deadline, T0 - 45 * MIN);
+    });
+
+    test('a one-off meeting is keyed by its series key, not its occurrence key', () => {
+        const r = judgeOne(event(), inPersonNoPlace(travel({}, { [oKey]: 45 })));
+        assert.equal(r.travelMinutes, 30);
+        assert.equal(r.travelIsDefault, true);
+    });
+
+    test('a repeating instance switched to in person for the series is keyed by the series', () => {
+        const r = judgeOne(event({ recurring: true, recurrenceId: T0 }), modes({ [sKey]: 'in-person' }));
+        assert.deepEqual(r.travelTarget, { kind: 'meeting', key: sKey });
+    });
+
+    test('a place meeting never reads the meeting entry', () => {
+        const r = judgeOne(event({ location: '1 Main St' }), travel({}, { [sKey]: 45 }));
+        assert.equal(r.travelMinutes, 30);
+        assert.equal(r.travelIsDefault, true);
+    });
+
+    test('a meeting with no place never reads a place entry', () => {
+        const r = judgeOne(event(), inPersonNoPlace(travel({ [sKey]: 45 }, {})));
+        assert.equal(r.travelMinutes, 30);
+        assert.equal(r.travelIsDefault, true);
+    });
+
+    test('an online meeting has no target and no travel, whatever is stored', () => {
+        const r = judgeOne(event({ description: MEET }), travel({ '1 main st': 45 }, { [sKey]: 45 }));
+        assert.equal(r.travelTarget, null);
+        assert.equal(r.travelMinutes, null);
+    });
+
+    for (const stored of [0, -5, 1441, 'x', 2.5]) {
+        test(`an invalid stored meeting travel time (${JSON.stringify(stored)}) falls back to the default`, () => {
+            const r = judgeOne(event(), inPersonNoPlace(travel({}, { [sKey]: stored })));
+            assert.equal(r.travelMinutes, 30);
+            assert.equal(r.travelIsDefault, true);
+        });
+    }
 });

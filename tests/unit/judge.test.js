@@ -5,16 +5,16 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { judge } from '../../extension/core/judge.js';
 import {
-    T0, HOUR, OWNER, SOURCE, CONFIG, NO_OVERRIDES, att, event, snapshot, deepFreeze,
+    T0, HOUR, OWNER, SOURCE, CONFIG, NO_OVERRIDES, NO_TRAVEL, att, event, snapshot, deepFreeze,
 } from './support/builders.js';
 
 const SRC2 = { uid: 'src-2', name: 'Shared', backend: 'caldav', ownerEmail: null, ok: true, error: null };
 
 const JUDGED_KEYS = ['key', 'seriesKey', 'recurring', 'title', 'start', 'end', 'allDay', 'verdict', 'reason',
     'reasonCode', 'verdictOverridden', 'mode', 'modeOverridden', 'joinUrl', 'placeText', 'placeKey',
-    'travelMinutes', 'travelIsDefault', 'deadline'];
+    'travelMinutes', 'travelIsDefault', 'travelTarget', 'deadline'];
 
-const run = (events, sources = [SOURCE]) => judge(snapshot(events, sources), CONFIG, NO_OVERRIDES, {});
+const run = (events, sources = [SOURCE]) => judge(snapshot(events, sources), CONFIG, NO_OVERRIDES, NO_TRAVEL);
 
 describe('judge: result shape', () => {
     test('each result has exactly the JudgedOccurrence fields, and everything is frozen', () => {
@@ -72,29 +72,36 @@ describe('judge: inputs', () => {
     test('inputs are not mutated', () => {
         const snap = deepFreeze(snapshot([event({ location: '1 Main St' }), event({ uid: 'x', summary: 'Lunch' })]));
         const overrides = deepFreeze({ verdict: { 'series:x': 'must' }, mode: {} });
-        assert.doesNotThrow(() => judge(snap, CONFIG, overrides, deepFreeze({ '1 main st': 15 })));
+        assert.doesNotThrow(() => judge(snap, CONFIG, overrides, deepFreeze({ byPlace: { '1 main st': 15 }, byMeeting: {} })));
     });
 
     test('a missing large-meeting size is refused', () => {
         const config = { ...CONFIG };
         delete config.largeMeetingSize;
-        assert.throws(() => judge(snapshot([event()]), config, NO_OVERRIDES, {}), { name: 'TypeError', message: /largeMeetingSize/ });
+        assert.throws(() => judge(snapshot([event()]), config, NO_OVERRIDES, NO_TRAVEL), { name: 'TypeError', message: /largeMeetingSize/ });
     });
 
     test('a non-string ignore word is refused', () => {
-        assert.throws(() => judge(snapshot([event()]), { ...CONFIG, extraIgnoreWords: [1] }, NO_OVERRIDES, {}),
+        assert.throws(() => judge(snapshot([event()]), { ...CONFIG, extraIgnoreWords: [1] }, NO_OVERRIDES, NO_TRAVEL),
             { name: 'TypeError', message: /extraIgnoreWords/ });
     });
 
     test('missing overrides are refused', () => {
-        assert.throws(() => judge(snapshot([event()]), CONFIG, undefined, {}), { name: 'TypeError', message: /overrides/ });
+        assert.throws(() => judge(snapshot([event()]), CONFIG, undefined, NO_TRAVEL), { name: 'TypeError', message: /overrides/ });
     });
 
     test('missing travel times are refused', () => {
         assert.throws(() => judge(snapshot([event()]), CONFIG, NO_OVERRIDES, undefined), { name: 'TypeError', message: /travel/ });
     });
 
+    test('an old flat travel map is refused', () => {
+        assert.throws(() => judge(snapshot([event()]), CONFIG, NO_OVERRIDES, { hq: 45 }),
+            { name: 'TypeError', message: /travel\.byPlace/ });
+        assert.throws(() => judge(snapshot([event()]), CONFIG, NO_OVERRIDES, { byPlace: {}, byMeeting: null }),
+            { name: 'TypeError', message: /travel\.byPlace/ });
+    });
+
     test('a snapshot without events is refused', () => {
-        assert.throws(() => judge({ sources: [] }, CONFIG, NO_OVERRIDES, {}), { name: 'TypeError', message: /events/ });
+        assert.throws(() => judge({ sources: [] }, CONFIG, NO_OVERRIDES, NO_TRAVEL), { name: 'TypeError', message: /events/ });
     });
 });

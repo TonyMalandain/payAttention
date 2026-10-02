@@ -37,7 +37,7 @@ export function makeStore(h) {
         onChange: null,
         settings: { ...DEFAULT_SETTINGS, ...h.settings },
         overrides: { verdict: {}, mode: {} },
-        travel: {},
+        travel: { byPlace: {}, byMeeting: {} },
         seeds: h.seeds ?? { dataAt: null, providerAt: null },
         alertWrites: [],
         aiAnswers: h.aiAnswers ?? emptyAiAnswers(),
@@ -51,7 +51,7 @@ export function makeStore(h) {
     store.reader = {
         readSettings: () => ({ ...store.settings }),
         readOverrides: () => ({ verdict: { ...store.overrides.verdict }, mode: { ...store.overrides.mode } }),
-        readTravel: () => ({ ...store.travel }),
+        readTravel: () => ({ byPlace: { ...store.travel.byPlace }, byMeeting: { ...store.travel.byMeeting } }),
         readAiAnswers: () => store.aiAnswers,
         destroy: () => h.log.push('reader.destroy'),
     };
@@ -83,7 +83,7 @@ export function makeStore(h) {
         },
         setTravel: (placeKey, minutes) => {
             store.travelCalls.push([placeKey, minutes]);
-            store.travel[placeKey] = minutes;
+            store.travel.byPlace[placeKey] = minutes;
         },
         pruneOccurrenceOverrides: now => store.prunes.push(now),
         destroy: () => h.log.push('store.destroy'),

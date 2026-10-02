@@ -7,14 +7,14 @@ import assert from 'node:assert/strict';
 import { judge } from '../../extension/core/judge.js';
 import { plan, actionFor } from '../../extension/core/plan.js';
 import { emptyAlertState, reduce } from '../../extension/core/alertState.js';
-import { T0, MIN, CONFIG, NO_OVERRIDES, ENV, TIMING, att, event, snapshot } from './support/builders.js';
+import { T0, MIN, CONFIG, NO_OVERRIDES, NO_TRAVEL, ENV, TIMING, att, event, snapshot } from './support/builders.js';
 
 const S = T0;
 const E = emptyAlertState();
 const MEET = 'https://meet.google.com/abc-defg-hij';
 const PARIS = '12 Rue Exemple, Paris';
 
-function pipeline(events, { overrides = NO_OVERRIDES, travel = {} } = {}) {
+function pipeline(events, { overrides = NO_OVERRIDES, travel = NO_TRAVEL } = {}) {
     const judged = judge(snapshot(events), CONFIG, overrides, travel);
     const at = (now, state = E) => plan(now, judged, state, TIMING, ENV);
     const stepAt = (now, state) => at(now, state).primary?.step ?? 'none';
@@ -23,7 +23,7 @@ function pipeline(events, { overrides = NO_OVERRIDES, travel = {} } = {}) {
 
 const online = () => event({ description: `Join: ${MEET}` });
 const inPerson = () => event({ location: PARIS });
-const PARIS_TRAVEL = { travel: { '12 rue exemple, paris': 45 } };
+const PARIS_TRAVEL = { travel: { byPlace: { '12 rue exemple, paris': 45 }, byMeeting: {} } };
 
 describe('end to end', () => {
     test('online: steps at 30, 10, 3 and 1 min before, and Join ends it', () => {

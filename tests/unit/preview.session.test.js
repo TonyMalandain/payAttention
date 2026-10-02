@@ -12,7 +12,7 @@ const { startPreview, SNAPSHOT_WAIT_MS, AI_WAIT_MS, NO_CALENDAR_TEXT } = await i
 const { formatPreview } = await import('../../extension/preview/report.js');
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
-const { T0, MIN, HOUR, snapshot } = await import('./support/builders.js');
+const { T0, MIN, HOUR, NO_TRAVEL, snapshot } = await import('./support/builders.js');
 const { EN, SNAP, WORK, MEETING, meeting } = await import('./support/controllerHarness.js');
 const { setupPreview } = await import('./support/previewHarness.js');
 
@@ -91,7 +91,7 @@ describe('preview session: rules mode', () => {
         deliver(h, EN + 5000);
         h.at(EN + 6000);
         assert.equal(h.outcomes.length, 1);
-        const judged = judge(SNAP, { ...DEFAULT_SETTINGS, ai: null }, { verdict: {}, mode: {} }, {}, {});
+        const judged = judge(SNAP, { ...DEFAULT_SETTINGS, ai: null }, { verdict: {}, mode: {} }, NO_TRAVEL, {});
         const expected = formatPreview({
             now: EN + 6000, settings: { ...DEFAULT_SETTINGS }, judged, sources: SNAP.sources,
             aiStatus: 'off', aiProgress: { pending: 0, byRules: 0 },

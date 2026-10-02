@@ -37,7 +37,8 @@
  *   guestsTotal:number}} Invite */
 
 /** @typedef {{verdict:Record<string,string>,mode:Record<string,string>}} Overrides   keys: 'occ:…' or 'series:…'; values 'must'|'ignore' / 'online'|'in-person' (others ignored) */
-/** @typedef {Record<string,number>} TravelTimes   place key -> minutes */
+/** @typedef {{kind:'place'|'meeting', key:string}} TravelTarget   the one travel entry an in-person meeting reads and a pick writes (ADR-0014) */
+/** @typedef {{byPlace:Record<string,number>, byMeeting:Record<string,number>}} TravelTimes   travel-times / meeting-travel-times: key -> minutes */
 
 /** @typedef {'override-must'|'override-ignore'|'cancelled'|'declined'|'not-invited'|'all-day'|'free'|'ignore-word'|
  *   'important-word'|'organizer'|'external'|'no-guests'|'large'|'small'|'maybe'|'insufficient-data'|'test'|
@@ -47,7 +48,7 @@
  *   verdict:'must'|'ignore',reason:string,reasonCode:ReasonCode,verdictOverridden:boolean,
  *   mode:'online'|'in-person',modeOverridden:boolean,joinUrl:string|null,
  *   placeText:string,placeKey:string|null,travelMinutes:number|null,travelIsDefault:boolean,
- *   deadline:number|null,ruleReason?:string,aiStale?:true,aiAsk?:{fp:string,invite:Invite}}} JudgedOccurrence
+ *   travelTarget:TravelTarget|null,deadline:number|null,ruleReason?:string,aiStale?:true,aiAsk?:{fp:string,invite:Invite}}} JudgedOccurrence
  *   ruleReason only when an AI answer applies; aiStale only as true; aiAsk only when the meeting should be asked */
 
 /** @typedef {{headsUpMs:number,nudgeMs:number,insistMs:number,takeoverMs:number}} StepOffsets   ms BEFORE the deadline */

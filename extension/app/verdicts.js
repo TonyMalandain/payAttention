@@ -280,6 +280,6 @@ function freezeInputs(settings, timing, overrides, travel) {
         settings: Object.freeze(settings),
         timing,
         overrides: Object.freeze({ verdict: Object.freeze(overrides.verdict), mode: Object.freeze(overrides.mode) }),
-        travel: Object.freeze(travel),
+        travel: Object.freeze({ byPlace: Object.freeze(travel.byPlace), byMeeting: Object.freeze(travel.byMeeting) }),
     });
 }

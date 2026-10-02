@@ -11,7 +11,7 @@ import { buildInvite } from '../../extension/core/invite.js';
 import { fingerprint } from '../../extension/core/fingerprint.js';
 import { ownerIdentity } from '../../extension/core/owner.js';
 import { validateInvite } from '../../extension/core/aiProtocol.js';
-import { T0, OWNER, SOURCE, CONFIG, NO_OVERRIDES, att, event, snapshot, deepFreeze } from './support/builders.js';
+import { T0, OWNER, SOURCE, CONFIG, NO_OVERRIDES, NO_TRAVEL, att, event, snapshot, deepFreeze } from './support/builders.js';
 import { rulesModeCases } from './support/rulesGolden.js';
 
 const TAG = 'http://127.0.0.1:11434/v1|m';
@@ -22,12 +22,12 @@ const KEY = 'occ:evt-1|' + T0;
 const SERIES = 'series:evt-1';
 const SMALL_2 = 'small meeting (2 guests): absence noticed';
 
-function run(events, { answers = {}, overrides = NO_OVERRIDES, travel = {}, sources = [SOURCE], config = AI } = {}) {
+function run(events, { answers = {}, overrides = NO_OVERRIDES, travel = NO_TRAVEL, sources = [SOURCE], config = AI } = {}) {
     return judge(snapshot(events, sources), config, overrides, travel, answers);
 }
 const one = (ev, opts) => run([ev], opts)[0];
 const rulesOnly = (ev, opts = {}) => judge(snapshot([ev], opts.sources ?? [SOURCE]), CONFIG,
-    opts.overrides ?? NO_OVERRIDES, opts.travel ?? {})[0];
+    opts.overrides ?? NO_OVERRIDES, opts.travel ?? NO_TRAVEL)[0];
 const currentFp = (ev, calendar = 'Work') => fingerprint(TAG, buildInvite(ev, IDENT, calendar, -240));
 const answer = (fp, verdict, reason = 'r') => ({ fp, verdict, reason });
 
@@ -78,7 +78,7 @@ describe('judge in AI mode: stored answers', () => {
     test('an answer changes only the verdict and its reason', () => {
         const online = event({ uid: 'on', description: 'Join https://meet.google.com/abc-defg-hij' });
         const inPerson = event({ uid: 'in', start: T0 + 3600000, end: T0 + 5400000, location: '1 Main St' });
-        const travel = { '1 main st': 15 };
+        const travel = { byPlace: { '1 main st': 15 }, byMeeting: {} };
         const bare = run([online, inPerson], { travel });
         const answers = Object.fromEntries(bare.map(r => [r.key, answer(r.aiAsk.fp, 'ignore')]));
         const answered = run([online, inPerson], { travel, answers });
@@ -102,7 +102,7 @@ describe('judge in AI mode: stored answers', () => {
         const r = one(ev, { answers: { [KEY]: { fp, verdict: 'ignore', reason: 'r', joinUrl: 'https://evil.example.test',
             mode: 'in-person', deadline: 0, travelMinutes: 999 } } });
         assert.equal(r.reasonCode, 'ai-ignore');
-        for (const k of ['joinUrl', 'mode', 'deadline', 'travelMinutes'])
+        for (const k of ['joinUrl', 'mode', 'deadline', 'travelMinutes', 'travelTarget'])
             assert.deepEqual(r[k], rules[k], k);
     });
 });
@@ -247,13 +247,13 @@ describe('judge in AI mode: input checks', () => {
 
     for (const [name, answers] of [['undefined', undefined], ['null', null], ['an array', []]]) {
         test(`aiVerdicts ${name} in AI mode throws`, () => {
-            assert.throws(() => judge(snapshot([event()]), AI, NO_OVERRIDES, {}, answers),
+            assert.throws(() => judge(snapshot([event()]), AI, NO_OVERRIDES, NO_TRAVEL, answers),
                 { name: 'TypeError', message: /aiVerdicts/ });
         });
     }
 
     test('ai null with no aiVerdicts is rules mode and does not throw', () => {
-        const r = judge(snapshot([event()]), { ...CONFIG, ai: null }, NO_OVERRIDES, {})[0];
+        const r = judge(snapshot([event()]), { ...CONFIG, ai: null }, NO_OVERRIDES, NO_TRAVEL)[0];
         assert.ok(!Object.hasOwn(r, 'aiAsk'));
     });
 });
@@ -264,7 +264,7 @@ describe('judge in AI mode: frozen, and inputs untouched', () => {
         const snap = deepFreeze(snapshot([ev, event({ uid: 'b', summary: 'Lunch' })]));
         const overrides = deepFreeze({ verdict: {}, mode: {} });
         const answers = deepFreeze({ [KEY]: answer('stale', 'ignore') });
-        const out = judge(snap, AI, overrides, deepFreeze({}), answers);
+        const out = judge(snap, AI, overrides, deepFreeze({ byPlace: {}, byMeeting: {} }), answers);
         assert.ok(Object.isFrozen(out));
         for (const r of out) {
             assert.ok(Object.isFrozen(r));

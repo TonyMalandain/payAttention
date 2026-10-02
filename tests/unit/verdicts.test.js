@@ -12,7 +12,7 @@ const { Verdicts } = await import('../../extension/app/verdicts.js');
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
-const { T0, MIN, HOUR, snapshot } = await import('./support/builders.js');
+const { T0, MIN, HOUR, NO_TRAVEL, snapshot } = await import('./support/builders.js');
 const {
     EN, KEY, SNAP, WORK, MEETING, meeting, makeStore, makeFeed, makeAiClient,
 } = await import('./support/controllerHarness.js');
@@ -26,7 +26,7 @@ const stored = items => parseAiAnswers(JSON.stringify({ v: 1, items }));
 const STALE = () => stored({ [KEY]: { fp: '00000000000000', verdict: 'ignore', reason: 'optional sync', at: EN - HOUR } });
 
 /** The rules-mode judged list for SNAP with nothing stored. */
-const rulesOracle = () => judge(SNAP, { ...DEFAULT_SETTINGS, ai: null }, { verdict: {}, mode: {} }, {}, {});
+const rulesOracle = () => judge(SNAP, { ...DEFAULT_SETTINGS, ai: null }, { verdict: {}, mode: {} }, NO_TRAVEL, {});
 
 let errors;
 let warns;
@@ -125,14 +125,15 @@ describe('verdicts: construction', () => {
 describe('verdicts: inputs', () => {
     test('2. the inputs are the store values, frozen, and follow a store change', () => {
         const h = setup();
-        h.store.travel.hq = 45;
+        h.store.travel.byPlace.hq = 45;
         h.store.onChange();
         const { inputs } = h.verdicts;
         assert.deepEqual(inputs.settings, { ...DEFAULT_SETTINGS });
         assert.deepEqual(inputs.overrides, { verdict: {}, mode: {} });
-        assert.deepEqual(inputs.travel, { hq: 45 });
+        assert.deepEqual(inputs.travel, { byPlace: { hq: 45 }, byMeeting: {} });
         assert.equal(typeof inputs.timing.cutoffMs, 'number');
-        for (const o of [inputs, inputs.settings, inputs.overrides, inputs.overrides.verdict, inputs.overrides.mode, inputs.travel])
+        for (const o of [inputs, inputs.settings, inputs.overrides, inputs.overrides.verdict, inputs.overrides.mode, inputs.travel,
+            inputs.travel.byPlace, inputs.travel.byMeeting])
             assert.ok(Object.isFrozen(o));
 
         h.store.settings.soundEnabled = false;

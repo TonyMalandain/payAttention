@@ -12,7 +12,7 @@ process.env.TZ = 'UTC';
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
-const { T0, MIN, HOUR, snapshot } = await import('./support/builders.js');
+const { T0, MIN, HOUR, NO_TRAVEL, snapshot } = await import('./support/builders.js');
 const { EN, WORK, JOIN, MEETING, KEY, meeting, setup } = await import('./support/controllerHarness.js');
 const { setupPreview } = await import('./support/previewHarness.js');
 
@@ -38,12 +38,12 @@ afterEach(() => {
 
 /** The rules-mode judged list, to learn keys, series keys and place keys. */
 const rulesOf = (snap, overrides = { verdict: {}, mode: {} }) =>
-    judge(snap, { ...DEFAULT_SETTINGS, ai: null }, overrides, {}, {});
+    judge(snap, { ...DEFAULT_SETTINGS, ai: null }, overrides, NO_TRAVEL, {});
 
 /** The fingerprint judge gives this occurrence for TAG (as controller.ai.test.js fpOf). */
 function fpOf(snap, key) {
     const out = judge(snap, { ...DEFAULT_SETTINGS, ...AI, ai: { engineTag: TAG, utcOffsetMinutes: 0 } },
-        { verdict: {}, mode: {} }, {}, {});
+        { verdict: {}, mode: {} }, NO_TRAVEL, {});
     return out.find(j => j.key === key).aiAsk.fp;
 }
 
@@ -55,7 +55,8 @@ function pair({ settings = {}, aiAnswers = null, overrides = { verdict: {}, mode
     const fill = store => {
         Object.assign(store.overrides.verdict, overrides.verdict);
         Object.assign(store.overrides.mode, overrides.mode);
-        Object.assign(store.travel, travel);
+        Object.assign(store.travel.byPlace, travel.byPlace ?? {});
+        Object.assign(store.travel.byMeeting, travel.byMeeting ?? {});
     };
     const c = setup({ settings, aiAnswers });
     fill(c.store);
@@ -112,9 +113,9 @@ describe('preview parity with the alert controller', () => {
         const snap = snapshot([MEETING, weekly, visit], [WORK]);
         const [, w, v] = rulesOf(snap);
         const overrides = { verdict: { [KEY]: 'ignore', [w.seriesKey]: 'ignore' }, mode: { [v.key]: 'in-person' } };
-        const placeKey = rulesOf(snap, overrides).find(j => j.key === v.key).placeKey;
-        assert.ok(placeKey);
-        const x = pair({ overrides, travel: { [placeKey]: 45 }, snap });
+        const target = rulesOf(snap, overrides).find(j => j.key === v.key).travelTarget;
+        assert.equal(target.kind, 'place');
+        const x = pair({ overrides, travel: { byPlace: { [target.key]: 45 } }, snap });
         x.step(EN + S);
         const json = assertParity(x);
         const byKey = new Map(json.meetings.map(m => [m.key, m]));

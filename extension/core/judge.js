@@ -50,8 +50,8 @@ function checkInputs(snapshot, config, overrides, travel, aiVerdicts) {
         throw new TypeError('judge: config.defaultTravelMinutes must be a finite number >= 0');
     if (!isPlainObject(overrides) || !isPlainObject(overrides.verdict) || !isPlainObject(overrides.mode))
         throw new TypeError('judge: overrides.verdict and overrides.mode must be objects');
-    if (!isPlainObject(travel))
-        throw new TypeError('judge: travel must be an object');
+    if (!isPlainObject(travel) || !isPlainObject(travel.byPlace) || !isPlainObject(travel.byMeeting))
+        throw new TypeError('judge: travel.byPlace and travel.byMeeting must be objects');
     checkAi(config, aiVerdicts);
 }
 
@@ -73,6 +73,13 @@ function isValidTravel(t) {
     return Number.isInteger(t) && t >= 1 && t <= 1440;
 }
 
+/** The one travel entry an in-person meeting reads and a pick writes (ADR-0014); null when online. */
+function travelTargetOf(mode, pKey, sKey) {
+    if (mode !== 'in-person')
+        return null;
+    return pKey !== null ? Object.freeze({ kind: 'place', key: pKey }) : Object.freeze({ kind: 'meeting', key: sKey });
+}
+
 /** One copy of an occurrence: its result, and the DTO and owner facts it came from (facts null when overridden). */
 function judgeEvent(event, config, overrides, travel, identity, ctx) {
     const key = occurrenceKey(event);
@@ -86,11 +93,13 @@ function judgeEvent(event, config, overrides, travel, identity, ctx) {
     const mo = lookupOverride(overrides.mode, key, sKey, MODE_VALUES);
     const mode = mo ?? att.detected;
     const pKey = placeKey(att.placeText);
+    const travelTarget = travelTargetOf(mode, pKey, sKey);
 
     let travelMinutes = null;
     let travelIsDefault = false;
-    if (mode === 'in-person') {
-        const t = own(travel, pKey);
+    if (travelTarget !== null) {
+        // That entry only: no fallback between the maps (ADR-0014).
+        const t = own(travelTarget.kind === 'place' ? travel.byPlace : travel.byMeeting, travelTarget.key);
         travelIsDefault = !isValidTravel(t);
         travelMinutes = travelIsDefault ? config.defaultTravelMinutes : t;
     }
@@ -119,6 +128,7 @@ function judgeEvent(event, config, overrides, travel, identity, ctx) {
         placeKey: pKey,
         travelMinutes,
         travelIsDefault,
+        travelTarget,
         deadline,
     });
     return { judged, event, facts };

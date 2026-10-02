@@ -46,6 +46,7 @@ export function testAlert(now) {
         placeKey: null,
         travelMinutes: null,
         travelIsDefault: false,
+        travelTarget: null,
         deadline: start,
     });
     return Object.freeze({ judged: Object.freeze([judged]), timing: TEST_ALERT_TIMING });

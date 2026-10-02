@@ -37,9 +37,10 @@ export function snapshot(events, sources = [SOURCE]) {
 
 export const CONFIG = DEFAULT_SETTINGS;
 export const NO_OVERRIDES = { verdict: {}, mode: {} };
+export const NO_TRAVEL = Object.freeze({ byPlace: Object.freeze({}), byMeeting: Object.freeze({}) });
 
 /** Judge one event and return its single result. */
-export function judgeOne(ev, { config = CONFIG, overrides = NO_OVERRIDES, travel = {}, sources = [SOURCE] } = {}) {
+export function judgeOne(ev, { config = CONFIG, overrides = NO_OVERRIDES, travel = NO_TRAVEL, sources = [SOURCE] } = {}) {
     return judge(snapshot([ev], sources), config, overrides, travel)[0];
 }
 
@@ -50,7 +51,7 @@ export function judged(over = {}) {
         start: T0, end: T0 + 30 * MIN, allDay: false,
         verdict: 'must', reason: 'x', reasonCode: 'small', verdictOverridden: false,
         mode: 'online', modeOverridden: false, joinUrl: null,
-        placeText: '', placeKey: null, travelMinutes: null, travelIsDefault: false,
+        placeText: '', placeKey: null, travelMinutes: null, travelIsDefault: false, travelTarget: null,
         deadline: T0,
     }, over);
 }

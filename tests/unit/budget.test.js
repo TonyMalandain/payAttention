@@ -8,7 +8,7 @@ import { performance } from 'node:perf_hooks';
 import { judge } from '../../extension/core/judge.js';
 import { plan } from '../../extension/core/plan.js';
 import { emptyAlertState, reduce } from '../../extension/core/alertState.js';
-import { T0, MIN, HOUR, CONFIG, NO_OVERRIDES, TIMING, ENV, OWNER, att, event, snapshot, judged } from './support/builders.js';
+import { T0, MIN, HOUR, CONFIG, NO_OVERRIDES, NO_TRAVEL, TIMING, ENV, OWNER, att, event, snapshot, judged } from './support/builders.js';
 
 const S = T0;
 
@@ -66,7 +66,7 @@ function twoThousandEvents() {
 
 test('judge over 2 000 events takes under 20 ms at its fastest', () => {
     const snap = twoThousandEvents();
-    const fastest = fastestMs(() => judge(snap, CONFIG, NO_OVERRIDES, {}), 10, 2);
+    const fastest = fastestMs(() => judge(snap, CONFIG, NO_OVERRIDES, NO_TRAVEL), 10, 2);
     assert.ok(fastest < 20, `judge fastest ${fastest.toFixed(3)} ms`);
 });
 
@@ -75,8 +75,8 @@ test('judge over 2 000 events takes under 20 ms at its fastest', () => {
 test('judge in AI mode over 2 000 events takes under 200 ms at its fastest', () => {
     const snap = twoThousandEvents();
     const config = { ...CONFIG, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
-    const out = judge(snap, config, NO_OVERRIDES, {}, {});
+    const out = judge(snap, config, NO_OVERRIDES, NO_TRAVEL, {});
     assert.ok(out.filter(r => r.aiAsk).length > 1000, 'most events are asked');
-    const fastest = fastestMs(() => judge(snap, config, NO_OVERRIDES, {}, {}), 10, 2);
+    const fastest = fastestMs(() => judge(snap, config, NO_OVERRIDES, NO_TRAVEL, {}), 10, 2);
     assert.ok(fastest < 200, `judge (AI mode) fastest ${fastest.toFixed(3)} ms`);
 });

@@ -61,7 +61,10 @@ export class StoreReader {
 
     /** @returns {import('../core/types.js').TravelTimes} */
     readTravel() {
-        return readDict(this.#settings, 'travel-times');
+        return {
+            byPlace: readDict(this.#settings, 'travel-times'),
+            byMeeting: readDict(this.#settings, 'meeting-travel-times'),
+        };
     }
 
     /**

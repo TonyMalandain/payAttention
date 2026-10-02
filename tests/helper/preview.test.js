@@ -199,7 +199,7 @@ describe('the preview, installed from the zip', { skip: SKIP }, () => {
             assert.equal(byTitle(json.meetings, 'Holiday').reasonCode, 'all-day');
             assert.equal(byTitle(json.meetings, 'Out of range'), undefined);
 
-            const expected = judge(snapshot, { ...DEFAULT_SETTINGS, ai: null }, { verdict: { [coffeeKey]: 'must' }, mode: {} }, {}, {})
+            const expected = judge(snapshot, { ...DEFAULT_SETTINGS, ai: null }, { verdict: { [coffeeKey]: 'must' }, mode: {} }, { byPlace: {}, byMeeting: {} }, {})
                 .filter(j => j.end === null || j.end > json.generatedAt);
             const pick = x => ({ key: x.key, verdict: x.verdict, reasonCode: x.reasonCode, mode: x.mode });
             assert.deepEqual(json.meetings.map(pick), expected.map(pick));

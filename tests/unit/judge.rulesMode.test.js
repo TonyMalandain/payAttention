@@ -3,6 +3,7 @@
 
 // "Rules mode behaves exactly as today" (PG-4a): judge() output pinned by a golden
 // record generated once, before AI mode was added. Never regenerate it to make a test pass.
+// Edited by hand for PG-14 (D-038–D-040, ADR-0014): travelTarget added, and Join kept on the in-person mode-override meeting; nothing else changed.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

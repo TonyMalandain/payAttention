@@ -51,7 +51,7 @@ try {
     check(parsed.ok, 'snapshot parses');
     check(BUILTIN_IGNORE_WORDS.length > 0 && isConferenceUrl('https://zoom.us/j/1'), 'words and links');
 
-    const judged = judge(parsed.message, DEFAULT_SETTINGS, { verdict: {}, mode: {} }, {});
+    const judged = judge(parsed.message, DEFAULT_SETTINGS, { verdict: {}, mode: {} }, { byPlace: {}, byMeeting: {} });
     check(judged.length === 1 && judged[0].verdict === 'must', 'judge: must-attend');
     check(judged[0].key === occurrenceKey(snap.events[0]), 'judge: key');
     check(judged[0].joinUrl === 'https://meet.google.com/abc-defg-hij', 'judge: join link');
@@ -76,7 +76,7 @@ try {
     check(aiEngine({ ...DEFAULT_SETTINGS, verdictSource: 'ai', aiModel: 'm' }) !== null, 'aiEngine');
     check(probeInput('http://127.0.0.1:11434/v1', 'm').ok, 'aiSetup');
     const ai = { ...DEFAULT_SETTINGS, ai: { engineTag: 'http://127.0.0.1:11434/v1|m', utcOffsetMinutes: -240 } };
-    const aiJudged = judge(parsed.message, ai, { verdict: {}, mode: {} }, {}, {});
+    const aiJudged = judge(parsed.message, ai, { verdict: {}, mode: {} }, { byPlace: {}, byMeeting: {} }, {});
     check(aiJudged[0].aiAsk !== undefined && validateInvite(aiJudged[0].aiAsk.invite).ok, 'judge: aiAsk with a valid invite');
     check(typeof buildInvite === 'function', 'invite module');
     check(hash53('payAttention') === '13284f83f114ec', 'hash53');

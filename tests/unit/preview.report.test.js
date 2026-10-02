@@ -12,7 +12,7 @@ const { previewJson, previewText, formatPreview } = await import('../../extensio
 const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { formatClock } = await import('../../extension/core/display.js');
-const { T0, MIN, HOUR, SOURCE, event, snapshot } = await import('./support/builders.js');
+const { T0, MIN, HOUR, SOURCE, NO_TRAVEL, event, snapshot } = await import('./support/builders.js');
 
 const DAY_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 const NOW = T0 - HOUR;
@@ -28,7 +28,7 @@ const ALL_DAY = event({ uid: 'holiday', summary: 'Holiday', start: NEXT_DAY, end
 const TOMORROW = event({ uid: 'tomorrow', summary: 'Tomorrow sync', start: NEXT_DAY + 9 * HOUR, end: NEXT_DAY + 10 * HOUR });
 
 /** The judged list of events, in judge order. */
-function judgedOf(events, { settings = DEFAULT_SETTINGS, overrides = { verdict: {}, mode: {} }, travel = {}, sources = [SOURCE] } = {}) {
+function judgedOf(events, { settings = DEFAULT_SETTINGS, overrides = { verdict: {}, mode: {} }, travel = NO_TRAVEL, sources = [SOURCE] } = {}) {
     return judge(snapshot(events, sources), { ...settings, ai: null }, overrides, travel, {});
 }
 

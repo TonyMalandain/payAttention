@@ -14,7 +14,7 @@ const { judge } = await import('../../extension/core/judge.js');
 const { DEFAULT_SETTINGS } = await import('../../extension/core/defaults.js');
 const { occurrenceKey } = await import('../../extension/core/keys.js');
 const { parseAiAnswers } = await import('../../extension/core/aiAnswers.js');
-const { T0, MIN, HOUR, OWNER, att, snapshot } = await import('./support/builders.js');
+const { T0, MIN, HOUR, OWNER, NO_TRAVEL, att, snapshot } = await import('./support/builders.js');
 const {
     EN, WORK, meeting, MEETING, KEY, SNAP, setup, makeAiClient, makeStore, makeFeed,
 } = await import('./support/controllerHarness.js');
@@ -31,7 +31,7 @@ const verdict = (v, reason) => ({ type: 'verdict', verdict: v, reason });
 /** The fingerprint judge gives this occurrence for TAG. */
 function fpOf(snap, key) {
     const out = judge(snap, { ...DEFAULT_SETTINGS, ...AI, ai: { engineTag: TAG, utcOffsetMinutes: 0 } },
-        { verdict: {}, mode: {} }, {}, {});
+        { verdict: {}, mode: {} }, NO_TRAVEL, {});
     return out.find(j => j.key === key).aiAsk.fp;
 }
 
