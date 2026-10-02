@@ -138,11 +138,40 @@ Three pure functions. The names are indicative; the shapes are the contract.
   decided in core and nowhere else; `app/` and `ui/` only carry them.
   - *Mode:* the mode override (occurrence, then series) wins. Without one, a
     meeting whose place text is not empty is `'in-person'`, and every other
-    meeting is `'online'`. A video link no longer decides the mode; it decides
-    only whether an online meeting has a `joinUrl` (an in-person one never
-    has). "Place text" is the one computed in `core/attendance.js`: the
-    location with links removed, empty when what is left is a no-place word
-    (`NOT_A_PLACE_WORDS`) (`data.md`, key formats).
+    meeting is `'online'`. A video link does not decide the mode.
+  - *Join (D-040):* `joinUrl` is the allowlisted https link core found, or
+    null, **whatever the mode**: online or in person, detected or switched by
+    the owner. Mode and Join are independent facts about a meeting; nothing
+    in `app/` or `ui/` may gate Join on the mode (`app/view.js` offers Join
+    exactly when `joinUrl` is not null, as before).
+  - *Place text:* computed once, in `core/attendance.js`, and nowhere else.
+    It is the location with links removed, and it is empty when either
+    1. what is left, as a whole, is a no-place word (`NOT_A_PLACE_WORDS`:
+       "online", "TBD", "phone call", "Zoom", …), or
+    2. what is left names a video-call service **anywhere**, as a whole word
+       (PRD §2, D-040): "Join Zoom Meeting", "Teams-Besprechung",
+       "Microsoft Teams-Besprechung beitreten".
+
+    Rule 2 uses its own list of **service names only** (Zoom, Teams, Google
+    Meet, Webex, …), never the generic words of rule 1. A generic word found
+    anywhere ("call", "meet", "phone", "remote", "none") would empty real
+    places ("Meet at reception", "Remote office, 3rd floor"), and a real
+    place read as no place is the late direction: no travel time, alerts at
+    the start instead of at leave-by. Matching is whole-word with Unicode
+    letter/digit edges, so a hyphen or a following word in another language
+    still ends the name ("Teams-Besprechung" matches, "Zoomlion Tower" does
+    not); the existing word matcher in `core/words.js` (`compileWords` /
+    `findWord`) already does exactly this and is the one to use. The list is
+    compiled once per module, not per meeting (`judge` budget,
+    `testing-and-build.md`). It is a constant in core, like the conferencing
+    host allowlist, and stays separate from it: hosts are what Join may open,
+    names are what a location says; they change for different reasons.
+
+    Accepted consequence (PRD §2 wording): a location that names a real
+    place **and** a service ("Board room + Zoom") has no place text, so the
+    meeting is online and gets no travel time unless the owner switches it.
+    The same place text drives the travel target, so the mode and "has a
+    place" still cannot disagree (`data.md`, key formats).
   - *Travel input:* `travel` is `{byPlace, byMeeting}`, two maps of key →
     minutes, read from `travel-times` and `meeting-travel-times` (`data.md`).
   - *Travel target:* for an in-person meeting, `{kind: 'place', key: <place
@@ -255,7 +284,8 @@ the writer's final flush.
 - The controller builds a display model (`View`) with the pure `app/view.js`
   from the Plan, the judged list, data health and `Verdicts.ai.status`, and
   calls `ui.render(view)`. Everything about *what* to show is resolved there
-  (travel only at steps 1–2, Join only with a link, never "no meetings" while
+  (travel only at steps 1–2, Join whenever there is a link, in either mode,
+  D-040, never "no meetings" while
   stale, Test alert in the menu only in a developer build, ADR-0013), so `ui/` only draws. `render` is idempotent: the same View twice
   changes nothing on screen.
 - The UI reports every user action through one `dispatch(action)`:
@@ -306,7 +336,8 @@ the writer's final flush.
   A `setTravel` pick does not close the choices. Visibility is still decided
   only in `plan`: the UI never keeps a card up that the View says is gone.
 - `join` is handled by the controller: it opens the core-approved `joinUrl` and
-  then dispatches `ack`.
+  then dispatches `ack`. It is the same on an in-person card (D-040): an
+  in-person card can carry both the travel line and Join.
 - Text formatting shared by `app/view.js` and `prefs.js` is pure code in
   `core/display.js`.
 

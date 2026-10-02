@@ -39,7 +39,7 @@ When calendar data is missing (for example, the owner's own address is unknown, 
 
 - **Online:** the location, description, or conference field holds a video-call link (Google Meet, Zoom, Microsoft Teams, Webex, Whereby, Jitsi, GoTo, Slack huddle, or any https link to one of those services).
 - **In person:** the location is not empty, is not a link, and is not a word or phrase that means "no physical place": online, virtual, remote, TBD, TBA, n/a, none, phone, phone call, call, video call, zoom, zoom meeting, teams, teams meeting, microsoft teams, microsoft teams meeting, google meet, meet, webex, hangout, google hangouts, whereby, jitsi, goto meeting, gotomeeting, slack, slack huddle, huddle.
-- A location that names a video-call service anywhere in its text (for example "Join Zoom Meeting" or "Teams-Besprechung") is not a physical place either. A wrong flip to in person only costs early alerts, but it must not happen to ordinary video-call wording.
+- A location made only of video-call wording is not a physical place either: service names, links, and words like "join", "meeting" or "call", in any mix (for example "Join Zoom Meeting" or "Teams-Besprechung"). If anything else is left, it is a place, so "Board room + Zoom" is in person. When in doubt the rule picks in person, because a wrong in-person costs only an early alert and a wrong online can make the owner late.
 - **Unknown:** there is no link and no location. Treat it as online (short lead time).
 - Both a link and a place: in person (D-038). The owner can switch any meeting in the menu.
 

@@ -154,7 +154,9 @@ written once per `disable()`, never per tick. See `interfaces.md`, addendum
   it warns rather than stays silent.
 - **Place key:** the place text, trimmed, whitespace runs collapsed to one space,
   lowercased (PRD §4). The place text is the location with links removed, and
-  empty when what is left is a no-place word ("Zoom", "online", "TBD", …). It
+  empty when what is left is a no-place word ("Zoom", "online", "TBD", …) or
+  names a video-call service anywhere ("Join Zoom Meeting",
+  "Teams-Besprechung"; the full rule is in `interfaces.md` §2). It
   is computed once, in `core/attendance.js`, and the same value decides both
   the mode (a place means in person, D-038) and which travel entry is used
   (D-039). Place keys and series keys live in different settings keys, so a

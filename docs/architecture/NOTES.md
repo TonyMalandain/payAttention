@@ -1072,3 +1072,31 @@ Append only. Newest at the bottom.
 - **Why:** The inbox note (2026-10-01, PG-13) found the row read as if the developer bundle were optional. Inbox entry left for the owner to remove, as `docs/inbox.md` says.
 - **Source:** scripts/build.sh; docs/inbox.md.
 - **Touches:** testing-and-build.md step 4 — folded.
+
+## 2026-10-02 — "Hybrid meetings lose Join" question closed by D-040
+- **Kind:** decision
+- **Fact:** `joinUrl` is the allowlisted link whatever the mode, detected or overridden; the 2026-10-02 question entry "Hybrid meetings lose Join by default" is closed, and the behaviour it described (`extension/core/judge.js:116`, `mode === 'online' ? att.link : null`) is now the loser.
+- **Why:** D-040: taking Join off a room-plus-link meeting removes the one-click way to join it and to stop its alerts (R-9). Mode and Join are independent facts, so no layer may gate one on the other.
+- **Source:** docs/product/decisions.md D-040; docs/prd/meeting-guardian.md §3.
+- **Touches:** interfaces.md §2, §3; testing-and-build.md core tests — folded.
+
+## 2026-10-02 — Service names anywhere in a location mean no place (closes the 2026-10-02 for-product entry)
+- **Kind:** boundary
+- **Fact:** Place text is also empty when the location, links removed, names a video-call service anywhere as a whole word; this uses a separate list of service names only, matched with the existing `compileWords`/`findWord` in `core/words.js`, compiled once.
+- **Why:** PRD §2 (D-040 round): "Join Zoom Meeting" and "Teams-Besprechung" must stay online. Generic words ("call", "meet", "remote") are kept whole-location only, because matching them anywhere would empty real places, which is the late direction (no travel time). Kept apart from the host allowlist in `core/links.js`: hosts gate what Join opens, names classify text; they change for different reasons.
+- **Source:** docs/prd/meeting-guardian.md §2; extension/core/attendance.js:31, extension/core/words.js:17 (whole-location match only today).
+- **Touches:** interfaces.md §2, data.md key formats, testing-and-build.md — folded.
+
+## 2026-10-02 — A real place plus a service name reads as online
+- **Kind:** for-product
+- **Fact:** Under the "names a service anywhere" rule, "Board room + Zoom" or "Room 4.12 / Teams" has no place text, so the meeting is online with no travel time unless the owner switches it.
+- **Why:** This is the late direction (alert at the start, not at leave-by), the opposite of the early-only failure the PRD §2 bullet weighs. Designed to the PRD as written; the owner's per-series switch is the recovery. Product may want to know it is the trade the wording makes.
+- **Source:** docs/prd/meeting-guardian.md §2 (new bullet); assumed frequency.
+- **Touches:** interfaces.md §2 "Accepted consequence" — folded.
+
+## 2026-10-02 — "Clear travel times" clears both keys (assumption confirmed by D-040)
+- **Kind:** data
+- **Fact:** The prefs "Clear travel times" button resets `travel-times` and `meeting-travel-times`; today it resets only the first (`extension/prefs.js:522`), which is the loser.
+- **Why:** D-040: one "clear" that leaves half the times behind would surprise the owner.
+- **Source:** docs/product/decisions.md D-040; extension/prefs.js:522.
+- **Touches:** data.md (already said so), boundaries.md (already said so), testing-and-build.md travel target — folded.

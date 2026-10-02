@@ -170,6 +170,15 @@ The PRD's "Done when" list maps onto core tests:
 - **Online / in-person:** each named conferencing service, links in location vs
   description vs conference property, a place with a link is in person (D-038, which superseded D-007's "link wins"), placeholder words
   ("online", "TBD"), the mode override, and the https-plus-allowlist rule for Join.
+  From PG-14 (D-040): a location naming a service anywhere ("Join Zoom
+  Meeting", "Teams-Besprechung", "Microsoft Teams Meeting – Room link below")
+  is online; a generic word inside a real place ("Meet at reception", "Remote
+  office, 3rd floor") stays in person; a service name inside a longer word
+  ("Zoomlion Tower") is not a match; "Board room + Zoom" is online (the
+  accepted consequence in `interfaces.md` §2). Join: an in-person meeting with
+  a link has a `joinUrl`, also when switched to in person by the owner; a
+  meeting without a link never has one, in either mode. In `app/view.js`, an
+  in-person card with a link offers both the travel line and Join.
 - **Timing:** deadline for online and in person; each step boundary; clamping of
   out-of-order offsets; snooze limited by the next step (not at step 4); return
   after being away (jump straight to the right step); overlapping meetings
@@ -179,7 +188,8 @@ The PRD's "Done when" list maps onto core tests:
   person with no place → series entry, also for a one-off meeting; online →
   none; no fallback between the two maps; the value shown is the value a pick
   writes; `--purge` erases `meeting-travel-times` and a plain uninstall keeps it
-  (uninstall check).
+  (uninstall check). "Clear travel times" resets both `travel-times` and
+  `meeting-travel-times` (prefs tests, PG-4d harness; D-040).
 - **Stored format:** occurrence, series and place keys; pruning; a corrupt
   `alert-state` string yielding empty state.
 - **Budget:** `plan` over 500 occurrences under 1 ms, `judge` over 2 000 under

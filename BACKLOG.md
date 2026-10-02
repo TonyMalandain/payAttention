@@ -141,7 +141,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - a meeting with a place still remembers its time for the place, as before;
     - `npm run uninstall:local -- --purge` erases the new saved times; a plain uninstall keeps them;
     - Join stays on every meeting with a video link, also when it is in person (D-040);
-    - a location that names a video-call service anywhere ("Join Zoom Meeting", "Teams-Besprechung") stays online;
+    - a location made only of video-call wording ("Join Zoom Meeting", "Teams-Besprechung") stays online; one that also names a place ("Board room + Zoom") is in person;
     - "Clear travel times" clears both kinds;
     - README "How it decides" / "First five minutes" say this; the owner checks it in `npm run sample`.
 

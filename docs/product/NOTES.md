@@ -616,3 +616,11 @@ Append only. Newest at the bottom.
 - **Why:** owner: "sometimes the user will know the location and won't need it written down".
 - **Source:** owner, 2026-10-02; per-series storage is the product manager's choice.
 - **Touches:** decisions.md, solution.md R-10 R-11, PRD §2 §4, BACKLOG PG-14
+
+## 2026-10-02 — Mixed place and video wording counts as in person
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** A location is not a place only when it is made entirely of video-call wording; "Board room + Zoom" is in person. The architect's first design made it online, which fails late (no travel time).
+- **Why:** a wrong in-person costs an early alert; a wrong online can make the owner late, which is the problem the product exists to solve.
+- **Source:** product manager, from the architect's PG-14 finding.
+- **Touches:** PRD §2, BACKLOG PG-14
