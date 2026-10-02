@@ -57,6 +57,13 @@ async function runChecks() {
         check(ext.metadata['payattention-developer'] === true, '3b-test-alert', 'the sample is not running the developer bundle');
         const testAlert = findByName(indicator.menu.actor, 'payattention-menu-test-alert');
         check(testAlert?.visible && testAlert.label.text === 'Test alert', '3b-test-alert', 'the sample menu does not offer Test alert');
+
+        // 3c. The meeting with no place is in the menu, online, and can be switched to in person (PG-14).
+        const workshop = findAll(indicator.menu.actor, a => a instanceof PopupMenu.PopupSubMenuMenuItem &&
+            a.label.text.endsWith('Client workshop'))[0];
+        check(workshop, '3c-placeless', 'no menu row for "Client workshop"');
+        check(findAll(workshop.menu.actor, a => a instanceof PopupMenu.PopupMenuItem &&
+            a.label?.text === 'Switch to in person').length === 1, '3c-placeless', 'the "Client workshop" row offers no "Switch to in person"');
     } finally {
         indicator.menu.close(false);
     }

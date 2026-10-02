@@ -82,10 +82,14 @@ mkdir -p "$T/home"
 #    important word; a place and no link make it in person). With the default
 #    30 min travel, leave-by is S - 30 = now + 9 min, so the heads-up (10 min
 #    before leave-by) is due at start and the nudge (5 min before) comes about
-#    4 minutes later.
+#    4 minutes later. A second meeting, "Client workshop", 20 min after the visit,
+#    has no place, so it is online until the owner switches it; switched, its
+#    leave-by is 30 min before its start, so its heads-up is due about 19 minutes in.
 S=$(( $(date +%s) / 60 * 60 + 39 * 60 ))
 DTSTART=$(date -u -d "@$S" +%Y%m%dT%H%M%SZ)
 DTEND=$(date -u -d "@$(( S + 1800 ))" +%Y%m%dT%H%M%SZ)
+WORKSHOP_START=$(date -u -d "@$(( S + 1200 ))" +%Y%m%dT%H%M%SZ)
+WORKSHOP_END=$(date -u -d "@$(( S + 3000 ))" +%Y%m%dT%H%M%SZ)
 printf '%s\r\n' \
     'BEGIN:VCALENDAR' 'VERSION:2.0' 'PRODID:-//payAttention//sample//EN' \
     'BEGIN:VEVENT' \
@@ -93,6 +97,14 @@ printf '%s\r\n' \
     "DTSTART:$DTSTART" "DTEND:$DTEND" \
     'SUMMARY:Client site visit' \
     'LOCATION:Client office\, 1 Example Street' \
+    'ORGANIZER:mailto:owner@sample.test' \
+    'ATTENDEE;PARTSTAT=ACCEPTED:mailto:owner@sample.test' \
+    'ATTENDEE;PARTSTAT=ACCEPTED:mailto:guest@external.test' \
+    'END:VEVENT' \
+    'BEGIN:VEVENT' \
+    'UID:sample-workshop@sample.test' 'DTSTAMP:20260101T000000Z' \
+    "DTSTART:$WORKSHOP_START" "DTEND:$WORKSHOP_END" \
+    'SUMMARY:Client workshop' \
     'ORGANIZER:mailto:owner@sample.test' \
     'ATTENDEE;PARTSTAT=ACCEPTED:mailto:owner@sample.test' \
     'ATTENDEE;PARTSTAT=ACCEPTED:mailto:guest@external.test' \
@@ -132,6 +144,7 @@ sample: a separate GNOME Shell opens in a window, with one test calendar; your o
   - Within about a minute, the heads-up for "Client site visit" shows "Travel: 30 min (default)".
   - Its "Change time" link shows the travel choices as one row of minutes.
   - The alarm icon in the window's top bar opens the menu; the "Client site visit" row expands to the travel choices.
+  - "Client workshop" has no place, so it is online. In its menu row, use "Switch to in person": the travel choices appear, and a pick is saved for that meeting. About 20 minutes in, its heads-up shows "Change time" too.
   - The menu also offers "Test alert" (this is the developer copy): it runs all four steps in about 30 seconds.
   - The heads-up stays 120 s here instead of 15 s, so there is time to look.
   - To stop: close the window, or press Ctrl+C here.
