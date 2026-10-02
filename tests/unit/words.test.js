@@ -116,7 +116,7 @@ describe('made of words', () => {
     }
 
     for (const text of ['Board room + Zoom', 'Room 4.12 / Teams', 'Meet at reception', 'Remote office, 3rd floor',
-        'Zoom 2', 'Microsoft', 'Google', 'Zoomlion Tower', 'Besprechungsraum 3']) {
+        'Zoom 2', 'Microsoft', 'Google', 'Zoomlion Tower', 'Besprechungsraum 3', 'Zoommeeting', 'Videocall']) {
         test(`"${text}" is not made only of video-call words`, () => {
             assert.equal(isMadeOfWords(m, text), false);
         });

@@ -104,7 +104,7 @@ describe('in person: a place and travel (PRD §2, §4)', () => {
     }
 
     for (const location of ['Board room + Zoom', 'Room 4.12 / Teams', 'Meet at reception', 'Remote office, 3rd floor',
-        'Zoom 2', 'Microsoft', 'Zoomlion Tower']) {
+        'Zoom 2', 'Microsoft', 'Zoomlion Tower', 'Zoommeeting', 'Videocall']) {
         test(`the location '${location}' names a place: in person`, () => {
             const r = judgeOne(event({ location }));
             assert.equal(r.mode, 'in-person');
