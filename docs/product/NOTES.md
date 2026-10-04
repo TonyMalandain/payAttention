@@ -631,3 +631,10 @@ Append only. Newest at the bottom.
 - **Fact:** Every change made from a meeting's row in the menu keeps the menu open and the row expanded, showing the new state. Today each action closes the menu, so switching to in person and picking a travel time needs two trips. Opened PG-15.
 - **Source:** owner, 2026-10-02, after trying PG-14 in the sample.
 - **Touches:** PRD §5, BACKLOG PG-15
+
+## 2026-10-04 — Automatic travel time: owner chooses estimation
+- **Kind:** question
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner asked to spec automatic travel-time estimates ("let's go back to automatically estimating travel time"), i.e. option B (a map service), which needs the exclusion "No live traffic or map routing" lifted. Product-manager defaults, open to the owner: home and office addresses set once in Settings; the start is the day's working place from the calendar, else the previous in-person meeting if it ends shortly before, else home; when the service fails, the owner's times or the default apply and the card says so. Open with the owner: which kind of service, how the working place is marked in the calendar, and whether the owner's own times beat the estimate.
+- **Source:** owner, 2026-10-04.
+- **Touches:** solution.md R-11 and exclusions, a new PRD addendum
