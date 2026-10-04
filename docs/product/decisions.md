@@ -285,3 +285,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner: "When the appointment is detected, so we can set a rough reminder time. And when the reminder time sets off, so we can get proper estimate based on live traffic."
 **Costs accepted:** If live traffic is much worse than the first estimate, the leave-by time can move earlier than the heads-up itself, and the next steps come quickly or at once.
 **Source:** the owner, 2026-10-04.
+
+### D-048 — The first estimate is the slow end of the traffic range plus 30 minutes — 2026-10-04
+**Decision:** We chose that the first, rough estimate (when the meeting is found) uses the slow end of the drive time Google predicts for that departure, plus 30 minutes. The live estimate at the heads-up uses the current drive time with no extra 30 minutes, and replaces it.
+**Why:** The owner: "that's why the 1st estimate is rough … If the API gives you the same time range, then take the upper bound + 30mins." A rough time that errs early is safe; one that errs late is the problem the product exists to solve.
+**Costs accepted:** Until the heads-up, alert times sit well before the real need, so the first alert can come early. If Google gives no range, the single predicted time plus 30 minutes is used.
+**Source:** the owner, 2026-10-04; the fallback when no range is given is the product manager's choice.

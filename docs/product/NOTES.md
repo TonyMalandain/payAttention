@@ -672,3 +672,9 @@ Append only. Newest at the bottom.
 - **Fact:** The owner reviewed the architect's PG-16 proposal: no carry-over of the saved AI key (D-046); estimates asked when the meeting is found and again at its heads-up (D-047), replacing the architect's "within 12 hours, then 90 minutes before"; and asked why the Google part is a separate program rather than a component (answered from the record: the shell process is the whole desktop on Wayland, so network code and keys stay out of it, ADR-0008/ADR-0010). Not yet approved.
 - **Source:** owner, 2026-10-04.
 - **Touches:** decisions.md, PRD addendum 2026-10-04, architecture (PG-16 proposal)
+
+## 2026-10-04 — Owner rejects a separate program; wants a component design
+- **Kind:** handoff
+- **Fact:** The owner did not get the design they asked for: they want components and classes, each with "Responsible for / Depends on / Used by". On the separate maps program, verbatim: "don't understand why it would run as an independent program. Makes no sense. Don't we already have independent programs decoupled from the UI? then that component should be called from those independent programs." The owner also asked where the first estimate is saved. The rough-estimate rule is D-048.
+- **Source:** owner, 2026-10-04.
+- **Touches:** architecture (PG-16 proposal)
