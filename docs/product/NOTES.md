@@ -652,3 +652,9 @@ Append only. Newest at the bottom.
 - **Fact:** The owner chose Google's map service (D-041), the ranking own time > estimate > default (D-042), and Home/Work settings with Work on weekdays, Home at weekends, Home when no Work (D-043). Spec in the PRD addendum of 2026-10-04; R-21 added; the "no routing" exclusion replaced. The owner wants to approve the architect's high-level design before building (PG-16). Supersedes my defaults of earlier today (start from the calendar's working place or the meeting before).
 - **Source:** owner, 2026-10-04.
 - **Touches:** decisions.md, solution.md R-3 R-11 R-21 and exclusions, PRD addendum, BACKLOG PG-16
+
+## 2026-10-04 — Owner: key storage behind an abstraction
+- **Kind:** handoff
+- **Fact:** The owner asked that key storage be abstracted, so that the core software has no direct dependency on GNOME. Verbatim: "key storage should be abstracted, so that their is no direct dependency between core software and Gnome." For the architect's PG-16 design.
+- **Source:** owner, 2026-10-04.
+- **Touches:** architecture (ADR-0009 and the PG-16 design)
