@@ -261,3 +261,15 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner chose this rule. The calendar on the desktop holds no reliable "where I work today" signal (architect check, 2026-10-04).
 **Costs accepted:** A weekday spent at home, or a trip that starts from another meeting, gets an estimate from the wrong place; the owner's own time fixes it for that place or series.
 **Source:** the owner, 2026-10-04.
+
+### D-044 — A trip can start from the meeting before — 2026-10-04
+**Decision:** We chose that when the owner has a must-attend, in-person meeting with a place that ends no more than 2 hours before the next in-person meeting starts, on the same day, the estimate for the next one starts from that meeting's place instead of Home or Work.
+**Why:** The owner: "'start from the meeting before' is a good idea to implement." A trip between two meetings rarely starts at the office.
+**Costs accepted:** The rule guesses that the owner goes straight from one meeting to the next. If they go back to the office in between, the estimate starts from the wrong place; the owner's own time fixes it. The 2-hour window is assumed.
+**Source:** the owner, 2026-10-04; the 2-hour window and "must-attend only" are the product manager's choice.
+
+### D-045 — A buffer is added to every in-person trip — 2026-10-04
+**Decision:** We added one setting, "Buffer", 10 minutes by default, added to the travel time of every in-person meeting, whatever its source (own, estimated or default). The card and menu show it apart: "Travel: 25 min (estimated) + 10 min buffer". The leave-by time includes it.
+**Why:** The owner: "a buffer time too in between meetings, e.g. time to say goodbye, walk to the car, or park the car on the other side." A drive time alone makes the owner arrive late. One visible rule beats a hidden one per source.
+**Costs accepted:** Every in-person alert moves 10 minutes earlier once this is built. An owner whose own times already include parking counts it twice, unless they set the buffer to 0. The 10-minute default is assumed.
+**Source:** the owner, 2026-10-04; one buffer for all sources and its default are the product manager's choice.

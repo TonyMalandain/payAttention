@@ -658,3 +658,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner asked that key storage be abstracted, so that the core software has no direct dependency on GNOME. Verbatim: "key storage should be abstracted, so that their is no direct dependency between core software and Gnome." For the architect's PG-16 design.
 - **Source:** owner, 2026-10-04.
 - **Touches:** architecture (ADR-0009 and the PG-16 design)
+
+## 2026-10-04 — Start from the meeting before; buffer between meetings
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The owner wants trips to start from the meeting before (D-044, PG-17, after PG-16) and a buffer added to every in-person trip (D-045, R-22, PG-18). Driving only is confirmed. My choices: must-attend in-person meetings only, a 2-hour window, one 10-minute buffer for all sources shown apart.
+- **Source:** owner, 2026-10-04.
+- **Touches:** decisions.md, solution.md R-21 R-22 and exclusions, BACKLOG PG-17 PG-18

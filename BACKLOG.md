@@ -158,6 +158,9 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 
 - **PG-16 — Estimated travel time with Google (XL, to be split by the architect's design).** R-21, D-041, D-042, D-043; spec: PRD "Addendum 2026-10-04 — Estimated travel time". **Waits for the owner to approve the architect's high-level design.**
 
+- **PG-17 — Estimates start from the meeting before (follow-up to PG-16).** D-044, R-21. A must-attend in-person meeting with a place that ends no more than 2 hours before the next in-person meeting, same day, is the start of that trip. Owner: "'start from the meeting before' is a good idea to implement. It can be done as phase 2." Needs PG-16.
+- **PG-18 — A buffer on every in-person trip (follow-up to PG-16).** D-045, R-22. One "Buffer" setting, 10 min by default, added to own, estimated and default travel times, shown apart ("+ 10 min buffer"); the leave-by time includes it. Owner: "a buffer time too in between meetings, e.g. time to say goodbye, walk to the car, or park the car on the other side." Does not need PG-16; it can be built before it.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
