@@ -224,7 +224,7 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
 - **The rough estimate (D-048):** the slow end of Google's predicted range for that departure, plus 30 minutes; with no range, the predicted time plus 30 minutes. The live estimate at the heads-up has no extra 30 minutes.
 - An AI engine key saved before key storage changed is not carried over; the owner enters it again (D-046).
 - Meetings with no place, online meetings and meetings with the owner's own time are never sent.
-- Uninstall keeps Home, Work and the switch; `--purge` erases them, the stored estimates and the key.
+- Uninstall keeps Home, Work, the switch and the key; `--purge` erases them. Estimates are never stored, so there is nothing else to erase.
 
 **Who it lands on:** Calendar owner (helps: right leave-by times without setting each place). Installer (costs: a Google account with billing, a key, and two addresses, once).
 
