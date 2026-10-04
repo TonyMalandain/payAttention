@@ -34,10 +34,10 @@ Environment requirements come first.
 - **State:** real
 - **Evidence:** demoed
 
-### R-3 — Calendar contents never leave the machine unless the owner chooses a cloud AI engine
+### R-3 — Calendar contents never leave the machine unless the owner chooses a cloud AI engine or the map service
 - **Serves:** calendars hold sensitive business information. The warning must also work when the network is unreliable.
 - **Who it serves:** Calendar owner.
-- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere, unless they turn on a cloud AI engine. Then the whole invite is sent to the engine they chose (D-020).
+- **What they get:** verdicts and alerts work offline. Nothing about their meetings is sent anywhere, unless they turn on a cloud AI engine or the map service. With a cloud AI engine the whole invite is sent to the engine they chose (D-020). With the map service, only the start address and each in-person meeting's place and time are sent to Google (D-041).
 - **State:** real
 - **Evidence:** verified in code
 
@@ -93,7 +93,7 @@ Environment requirements come first.
 ### R-11 — In-person meetings count down to the leave-by time
 - **Serves:** "the right moment to warn someone depends on whether they must travel".
 - **Who it serves:** Calendar owner.
-- **What they get:** alerts timed to when they must leave. The travel time comes from what they set for that place, or from a default travel time. They can set it from the alert or the menu for any in-person meeting. It is remembered for that place, or for the meeting's series when it has no place.
+- **What they get:** alerts timed to when they must leave. The travel time comes from what they set for that place, or from a default travel time. They can set it from the alert or the menu for any in-person meeting. It is remembered for that place, or for the meeting's series when it has no place. A time they set always wins over an estimate (D-042).
 - **State:** real
 - **Evidence:** verified in code
 
@@ -160,12 +160,20 @@ Environment requirements come first.
 - **State:** real
 - **Evidence:** demoed
 
+### R-21 — In-person travel time can be estimated from where the owner starts
+- **Serves:** "the right moment to warn someone depends on whether they must travel". A fixed default is wrong for most places, and setting each place by hand is the crafting the owner wants to stop.
+- **Who it serves:** Calendar owner, Installer.
+- **What they get:** they enter a Home and a Work address once and turn the map service on with their own key. Each in-person meeting without a time of their own then gets a drive time with traffic, from Work on weekdays and from Home at weekends (Home when no Work is set), marked "estimated". When the service cannot answer, the default applies, and an alert never waits for it.
+- **State:** intended
+- **Evidence:** none
+
 ## What the solution is not
 
 - **Not a calendar.** It never creates, edits, or accepts meetings. The owner's calendar stays the one source of truth.
 - **Not a general notification filter.** It does nothing to other apps' notifications. Its job is to be the one alert that is worth reading, not to clean up the rest.
 - **No AI unless the owner turns it on.** Out of the box, verdicts come from the rules alone. The AI never overrides an owner's choice (D-019).
-- **No live traffic or map routing.** Travel time is what the owner sets per place, or the default. This would be reconsidered if fixed travel times led to late arrivals in practice.
+- **No map service unless the owner turns it on.** Out of the box, travel time is what the owner sets, or the default. The estimate never overrides the owner's own time (D-042).
+- **No start place guessed from the calendar or from other meetings.** The trip starts at Work or Home by weekday (D-043). This would be reconsidered if a reliable "where I work today" signal reached the desktop.
 - **Does not detect presence in a meeting.** It does not watch the camera, microphone, or call apps to decide that you joined. Acknowledging is the only signal, because it is reliable and costs one click.
 - **Nothing over the lock screen, and no phone.** If the desktop is locked or the owner is away from the computer, the alert waits for their return.
 - **GNOME only.** Other desktops are out of scope. One tested desktop is what keeps the product small enough to trust.

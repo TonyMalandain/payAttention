@@ -202,3 +202,46 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
   - the key never appears in settings, logs, or the pipe to the shell.
 
 **Open questions:** none for product. Which cloud service to check by hand depends on which key the owner has; a local engine alone is enough to accept the build.
+
+## Addendum 2026-10-04 — Estimated travel time (R-21, R-3, R-11, D-041, D-042, D-043)
+
+**Problem:** from `problem.md`: "It is too late for a meeting across town, because you should already be on the road. The right moment to warn someone depends on whether they must travel." A default of 30 minutes is wrong for most places, and the owner does not want to set every place by hand.
+
+**What changes:**
+- **Settings, a "Travel" section:**
+  - **Home** and **Work**: one address each, typed once. Both can be empty.
+  - **Estimate travel time with Google Maps:** off by default. Turning it on needs a Google key, kept in the desktop's password store, never in plain settings, with a "Test connection" button that gives a clear yes or no.
+  - A plain warning: "When this is on, your Home or Work address and the place and time of each in-person meeting are sent to Google. Titles, descriptions and guests are not."
+- **Where the trip starts:** Monday to Friday from Work, Saturday and Sunday from Home. With no Work set, from Home. With neither set, no estimate is made.
+- **Which travel time is used, first match wins (D-042):**
+  1. a time the owner set, for the place or for the series;
+  2. the estimate: the drive time with traffic from the start place to the meeting's place, for the time the owner must leave;
+  3. the default travel time.
+- **What the owner sees:** the card and the menu say where the time comes from: "Travel: 25 min (estimated)", "(default)", or no mark for the owner's own time. "Change time" works as before, and a pick makes it the owner's own time.
+- **When the service cannot help** (off, no network, bad key, a place it cannot find, no Home or Work): the default applies, as today. The menu says once, in one line, that estimates are not working and why, the same way it says "AI unavailable — using rules".
+- An alert never waits for the map service. A new estimate can move the alert times of a meeting, the same way a travel pick does today.
+- Meetings with no place, online meetings and meetings with the owner's own time are never sent.
+- Uninstall keeps Home, Work and the switch; `--purge` erases them, the stored estimates and the key.
+
+**Who it lands on:** Calendar owner (helps: right leave-by times without setting each place). Installer (costs: a Google account with billing, a key, and two addresses, once).
+
+**Already exists?** Extends R-11 (travel time) and R-3 (what leaves the machine); adds R-21. Replaces the exclusion "No live traffic or map routing".
+
+**Out of scope:**
+- Guessing the start place from the calendar, a "working location", or the meeting before (D-043).
+- Public transport, walking or cycling times: driving only.
+- Other map services.
+- A start place per day of the week beyond weekday / weekend.
+- Changing a time the owner set.
+
+**Smallest useful version:** Home and Work, the Google switch with its key and test, estimates ranked under the owner's times, and the "(estimated)" mark. That is enough to stop the 30-minute guess for most real meetings.
+
+**Done when:**
+- with the switch off, nothing is sent and travel times are exactly as before;
+- with it on, an in-person meeting with a place and no time of the owner's shows "(estimated)" with a plausible drive time, and its leave-by time follows it;
+- a weekday meeting is estimated from Work, a weekend one from Home, and from Home on a weekday when Work is empty;
+- an owner's pick replaces the estimate at once and stays;
+- with a bad key or no network, the default applies, the menu says so in one line, and every alert still arrives on time;
+- the owner checks it on their real calendar.
+
+**Open questions:** none on the product side. The design (which process talks to Google, how often estimates are refreshed, where the addresses are stored) is the architect's, and the owner approves it before work starts.

@@ -243,3 +243,21 @@ Closed product decisions only. Newest at the bottom.
 **Why:** After D-038 a room-plus-link meeting is in person; taking Join away would remove the one-click way to join it and stop the alerts (R-9). One "clear" that leaves half the times behind would surprise the owner.
 **Costs accepted:** An in-person card can show Join beside the travel line, so the card holds one more button.
 **Source:** product manager, from the architect's PG-14 findings, 2026-10-02.
+
+### D-041 — Travel time can be estimated by Google's map service, when the owner turns it on — 2026-10-04
+**Decision:** We chose Google's map service to estimate the drive time of in-person meetings, with traffic. It is off until the owner turns it on and gives their own key. When it is on, the start address and the meeting's place text and time are sent to Google; titles, descriptions and guests are not.
+**Why:** The owner asked twice for travel time that "figures out the right time based on context", and chose Google for its traffic-aware times.
+**Costs accepted:** A second way calendar facts leave the machine, after a cloud AI engine (R-3). It needs the network, a Google account with billing, and a key. Places that are room or business names will often not be found and fall back.
+**Source:** the owner, 2026-10-04 ("let's use Google service").
+
+### D-042 — Travel time comes from the owner's choice, then the estimate, then the default — 2026-10-04
+**Decision:** We ranked travel times: a time the owner set (for the place, or for the series) always wins; otherwise the map estimate; otherwise the default travel time.
+**Why:** The owner: "priorities for time estimates should be: user defined, calculated, default value." The owner knows things a map does not, such as parking or a habit of arriving early.
+**Costs accepted:** A time the owner set once for a place is used from every start place, even where an estimate would be closer.
+**Source:** the owner, 2026-10-04.
+
+### D-043 — The trip starts at Work on weekdays and Home at weekends — 2026-10-04
+**Decision:** We added two settings, Home and Work. A trip on Monday to Friday starts at Work, and on Saturday and Sunday at Home. With no Work set, it starts at Home. With neither set, there is no estimate.
+**Why:** The owner chose this rule. The calendar on the desktop holds no reliable "where I work today" signal (architect check, 2026-10-04).
+**Costs accepted:** A weekday spent at home, or a trip that starts from another meeting, gets an estimate from the wrong place; the owner's own time fixes it for that place or series.
+**Source:** the owner, 2026-10-04.

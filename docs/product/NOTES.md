@@ -645,3 +645,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner's calendar data on the desktop holds no Google "working location" entries and no all-day "where I work" events. Either Google does not send working locations to the desktop, or the owner has never set one; a 10-minute test (set one, wait for a sync) tells which. An all-day event the owner creates works with any calendar provider and keeps everything on the machine. Calendar places are often room or business names, so a map lookup will miss some; those fall back to the owner's times or the default.
 - **Source:** architect feasibility check, 2026-10-04 (read-only; no personal data copied).
 - **Touches:** the automatic travel time PRD addendum
+
+## 2026-10-04 — Estimated travel time decided
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner chose Google's map service (D-041), the ranking own time > estimate > default (D-042), and Home/Work settings with Work on weekdays, Home at weekends, Home when no Work (D-043). Spec in the PRD addendum of 2026-10-04; R-21 added; the "no routing" exclusion replaced. The owner wants to approve the architect's high-level design before building (PG-16). Supersedes my defaults of earlier today (start from the calendar's working place or the meeting before).
+- **Source:** owner, 2026-10-04.
+- **Touches:** decisions.md, solution.md R-3 R-11 R-21 and exclusions, PRD addendum, BACKLOG PG-16

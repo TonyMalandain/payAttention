@@ -156,6 +156,8 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - when the calendar refreshes while the menu is open, the expanded row stays expanded if that meeting is still listed;
     - the smoke checks at least Switch to in person followed by a travel pick without reopening the menu; the owner checks it in `npm run sample`.
 
+- **PG-16 — Estimated travel time with Google (XL, to be split by the architect's design).** R-21, D-041, D-042, D-043; spec: PRD "Addendum 2026-10-04 — Estimated travel time". **Waits for the owner to approve the architect's high-level design.**
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
