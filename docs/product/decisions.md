@@ -273,3 +273,15 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner: "a buffer time too in between meetings, e.g. time to say goodbye, walk to the car, or park the car on the other side." A drive time alone makes the owner arrive late. One visible rule beats a hidden one per source.
 **Costs accepted:** Every in-person alert moves 10 minutes earlier once this is built. An owner whose own times already include parking counts it twice, unless they set the buffer to 0. The 10-minute default is assumed.
 **Source:** the owner, 2026-10-04; one buffer for all sources and its default are the product manager's choice.
+
+### D-046 — A saved AI key is not carried over when key storage changes — 2026-10-04
+**Decision:** We chose not to carry an existing AI engine key over when keys move behind the new key-storage layer. The owner types the key again in Settings.
+**Why:** The owner: "Don't plan any upgrade scenario for the AI API key. Expect users to re-enter it manually." There is one user today; a one-time re-entry costs less than migration code kept forever.
+**Costs accepted:** After that update, AI mode says it has no key until the owner enters it again; the rules decide meanwhile. The old key may stay in the password store until a `--purge` or until the owner removes it.
+**Source:** the owner, 2026-10-04.
+
+### D-047 — The travel estimate is asked twice: when the meeting is found, and at its first alert — 2026-10-04
+**Decision:** We chose to ask for an estimate when an in-person meeting is first seen, to set rough alert times, and again when its first alert (the heads-up) fires, to use live traffic. The second answer replaces the first and can move the later alert times. Changes to the meeting's place, time, or the start place ask again.
+**Why:** The owner: "When the appointment is detected, so we can set a rough reminder time. And when the reminder time sets off, so we can get proper estimate based on live traffic."
+**Costs accepted:** If live traffic is much worse than the first estimate, the leave-by time can move earlier than the heads-up itself, and the next steps come quickly or at once.
+**Source:** the owner, 2026-10-04.

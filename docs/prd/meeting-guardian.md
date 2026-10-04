@@ -220,6 +220,8 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
 - **What the owner sees:** the card and the menu say where the time comes from: "Travel: 25 min (estimated)", "(default)", or no mark for the owner's own time. "Change time" works as before, and a pick makes it the owner's own time.
 - **When the service cannot help** (off, no network, bad key, a place it cannot find, no Home or Work): the default applies, as today. The menu says once, in one line, that estimates are not working and why, the same way it says "AI unavailable — using rules".
 - An alert never waits for the map service. A new estimate can move the alert times of a meeting, the same way a travel pick does today.
+- **When it asks (D-047):** once when an in-person meeting is first seen, to set rough alert times, and again when its heads-up fires, to use live traffic. The second answer replaces the first. A change to the meeting's place or time, or to Home or Work, asks again.
+- An AI engine key saved before key storage changed is not carried over; the owner enters it again (D-046).
 - Meetings with no place, online meetings and meetings with the owner's own time are never sent.
 - Uninstall keeps Home, Work and the switch; `--purge` erases them, the stored estimates and the key.
 

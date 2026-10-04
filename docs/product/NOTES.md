@@ -665,3 +665,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner wants trips to start from the meeting before (D-044, PG-17, after PG-16) and a buffer added to every in-person trip (D-045, R-22, PG-18). Driving only is confirmed. My choices: must-attend in-person meetings only, a 2-hour window, one 10-minute buffer for all sources shown apart.
 - **Source:** owner, 2026-10-04.
 - **Touches:** decisions.md, solution.md R-21 R-22 and exclusions, BACKLOG PG-17 PG-18
+
+## 2026-10-04 — PG-16 design feedback from the owner
+- **Kind:** decision
+- **Profiles:** Calendar owner, Installer
+- **Fact:** The owner reviewed the architect's PG-16 proposal: no carry-over of the saved AI key (D-046); estimates asked when the meeting is found and again at its heads-up (D-047), replacing the architect's "within 12 hours, then 90 minutes before"; and asked why the Google part is a separate program rather than a component (answered from the record: the shell process is the whole desktop on Wayland, so network code and keys stay out of it, ADR-0008/ADR-0010). Not yet approved.
+- **Source:** owner, 2026-10-04.
+- **Touches:** decisions.md, PRD addendum 2026-10-04, architecture (PG-16 proposal)
