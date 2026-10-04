@@ -638,3 +638,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner asked to spec automatic travel-time estimates ("let's go back to automatically estimating travel time"), i.e. option B (a map service), which needs the exclusion "No live traffic or map routing" lifted. Product-manager defaults, open to the owner: home and office addresses set once in Settings; the start is the day's working place from the calendar, else the previous in-person meeting if it ends shortly before, else home; when the service fails, the owner's times or the default apply and the card says so. Open with the owner: which kind of service, how the working place is marked in the calendar, and whether the owner's own times beat the estimate.
 - **Source:** owner, 2026-10-04.
 - **Touches:** solution.md R-11 and exclusions, a new PRD addendum
+
+## 2026-10-04 — Where the day's start place can come from
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** The owner's calendar data on the desktop holds no Google "working location" entries and no all-day "where I work" events. Either Google does not send working locations to the desktop, or the owner has never set one; a 10-minute test (set one, wait for a sync) tells which. An all-day event the owner creates works with any calendar provider and keeps everything on the machine. Calendar places are often room or business names, so a map lookup will miss some; those fall back to the owner's times or the default.
+- **Source:** architect feasibility check, 2026-10-04 (read-only; no personal data copied).
+- **Touches:** the automatic travel time PRD addendum
