@@ -14,7 +14,7 @@ authority; none of them may add or change an ADR.
 | `testing-and-build.md` | The validation sequence, the four test layers, build/install commands, pitfalls found |
 | `NOTES.md` | Append-only architect working log |
 | `adr/` | Decision records, `ADR-NNNN-<slug>.md` |
-| `proposals/PG-16-travel-estimates.md` | PG-16 estimated travel time with Google: components A–J, tickets K1–K5 — proposed, awaiting owner approval (not authoritative; do not build from it) |
+| `proposals/PG-16-travel-estimates/` | PG-16 estimated travel time with Google: `proposal.md` (components A–J, tickets K1–K5) and `resulting-design.md` (the whole product after PG-16: component and estimate-flow diagrams, every component, folder tree, external systems) — proposed, awaiting owner approval (not authoritative; do not build from it) |
 
 ## Decisions
 

@@ -221,6 +221,8 @@ This replaces the "AI second opinion" addendum of 2026-09-26. The owner chose a 
 - **When the service cannot help** (off, no network, bad key, a place it cannot find, no Home or Work): the default applies, as today. The menu says once, in one line, that estimates are not working and why, the same way it says "AI unavailable — using rules".
 - An alert never waits for the map service. A new estimate can move the alert times of a meeting, the same way a travel pick does today.
 - **When it asks (D-047):** once when an in-person meeting is first seen, to set rough alert times, and again when its heads-up fires, to use live traffic. The second answer replaces the first. A change to the meeting's place or time, or to Home or Work, asks again.
+- **If the live estimate fails,** the rough estimate already held stays in force; the default applies only when there is no estimate at all. The rough one errs early, which is the safe side.
+- **The terminal preview** shows estimated travel times too: with the switch on, it asks Google the same way the extension does, as it already asks the AI engine in AI mode (R-20). It saves nothing.
 - **The rough estimate (D-048):** the slow end of Google's predicted range for that departure, plus 30 minutes; with no range, the predicted time plus 30 minutes. The live estimate at the heads-up has no extra 30 minutes.
 - An AI engine key saved before key storage changed is not carried over; the owner enters it again (D-046).
 - Meetings with no place, online meetings and meetings with the owner's own time are never sent.

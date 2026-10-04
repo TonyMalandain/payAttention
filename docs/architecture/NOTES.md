@@ -1114,3 +1114,10 @@ Append only. Newest at the bottom.
 - **Why:** The PRD lists "join" as a generic word and gives "Besprechung" for German Teams invitations; "beitreten" is the same word in the same invitations. Leaving it out would make that text in person, the early direction, so the cost of getting it wrong either way is small.
 - **Source:** assumed (reading of PRD §2 "words like join"); product may strike it.
 - **Touches:** interfaces.md §2 — folded.
+
+## 2026-10-04 — PG-16 proposal moved into a folder; resulting whole-system design drawn
+- **Kind:** question
+- **Fact:** The PG-16 proposal now lives at `proposals/PG-16-travel-estimates/proposal.md`, beside `resulting-design.md`, which draws the whole product after PG-16 (component and estimate-flow diagrams, every component, folder tree, outside systems); both are proposed, not authoritative.
+- **Why:** The owner asked for the full resulting component picture at that path. Drawing it surfaced points the proposal leaves open: who builds TravelEstimates (verdict component or controller), whether the preview asks for estimates, whether a failed live ask keeps the rough estimate or returns to the default, where the old EngineKey schema name lives for `--purge`, and the name of the Settings window's travel-decisions module.
+- **Source:** the owner's request, 2026-10-04; `resulting-design.md` §7.
+- **Touches:** the PG-16 ADRs after approval; `boundaries.md`, `interfaces.md` only after approval.
