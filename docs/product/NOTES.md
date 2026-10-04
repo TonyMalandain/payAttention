@@ -678,3 +678,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner did not get the design they asked for: they want components and classes, each with "Responsible for / Depends on / Used by". On the separate maps program, verbatim: "don't understand why it would run as an independent program. Makes no sense. Don't we already have independent programs decoupled from the UI? then that component should be called from those independent programs." The owner also asked where the first estimate is saved. The rough-estimate rule is D-048.
 - **Source:** owner, 2026-10-04.
 - **Touches:** architecture (PG-16 proposal)
+
+## 2026-10-04 — "GNOME is a wrapper around the core" recorded as a product decision
+- **Kind:** decision
+- **Profiles:** Calendar owner (as the developer)
+- **Fact:** The owner's 2026-09-27 principle lived only in ADR-0011 and this log, not in the product decisions, so the PG-16 proposal was not checked against it. Recorded as D-049. Check of the PG-16 proposal: mostly honoured (pure travel rules, key storage behind an interface, the estimate component reaches Google only through an interface), but it does not say that the Google request and reply logic is GNOME-free, and it does not label each part as logic or GNOME part. Sent back to the architect.
+- **Source:** owner, 2026-10-04; product manager check of the proposal.
+- **Touches:** decisions.md; architecture (PG-16 proposal)

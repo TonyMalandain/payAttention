@@ -291,3 +291,9 @@ Closed product decisions only. Newest at the bottom.
 **Why:** The owner: "that's why the 1st estimate is rough … If the API gives you the same time range, then take the upper bound + 30mins." A rough time that errs early is safe; one that errs late is the problem the product exists to solve.
 **Costs accepted:** Until the heads-up, alert times sit well before the real need, so the first alert can come early. If Google gives no range, the single predicted time plus 30 minutes is used.
 **Source:** the owner, 2026-10-04; the fallback when no range is given is the product manager's choice.
+
+### D-049 — The GNOME extension is one front end around reusable core logic — 2026-10-04
+**Decision:** We made it a product rule that the judgment, timing, travel and calendar logic do not depend on GNOME. The GNOME extension, its menu, alerts, settings window and password store are one front end and a set of replaceable parts around that logic. Another calendar source, password store or front end can be added without changing the logic. The product still ships for GNOME only.
+**Why:** The owner, 2026-09-27: "the gnome-extension should be a shell and the core capabilities should be reusable … There's no reason for the core logic to be dependent on gnome." It was recorded as an architecture principle (ADR-0011) and in the working log, but never as a product decision, so new features were not checked against it.
+**Costs accepted:** Every feature pays for a boundary between logic and GNOME parts, even where only GNOME uses it.
+**Source:** the owner, 2026-09-27, restated 2026-10-04 ("the gnome extension is supposed to be a wrapper around the core logic").
