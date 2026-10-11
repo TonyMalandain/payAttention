@@ -692,3 +692,52 @@ Append only. Newest at the bottom.
 - **Fact:** A real one-to-one video call on the owner's own secondary Google calendar was not alerted. The invite lists that calendar's own address as organiser and attendee, not the owner's email. payAttention knows only the account address and the "extra owner addresses" setting, so it judged the owner "not invited: someone else's meeting". In AI mode the engine also sees the owner absent from the guest list. Workaround: add the calendar's address to "extra owner addresses". The product promise is that every meeting on a calendar the owner owns counts as the owner's (R-2, R-4); only calendars of others that the owner merely displays are excluded.
 - **Source:** product manager, from the owner's report and a read-only look at the local calendar cache (no personal data recorded here).
 - **Touches:** solution.md R-4 and "Only meetings the owner is invited to"; BACKLOG PG-19
+
+## 2026-10-10 — Travel estimates parked
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** The owner parked estimated travel time (PG-16) and "start from the meeting before" (PG-17). The buffer (PG-18) and the own-calendars fix (PG-19) are not parked. Decisions D-041 to D-048 and R-21 stay as written; parking changes when, not what.
+- **Why:** the owner wants the architecture overhauled first (PG-20).
+- **Source:** owner, 2026-10-10: "park the travel time estimates feature for now."
+- **Touches:** BACKLOG.md
+
+## 2026-10-10 — Architecture overhaul for future front ends and calendar services
+- **Kind:** solution
+- **Profiles:** Calendar owner (as the developer), Installer
+- **Fact:** The owner asked the architect for a revised architecture that covers all requirements so far and leaves room for: a KDE or web front end by rebuilding only the UI and the platform integration; native mobile apps on a web API; injected integrations (IoC) between the core and the platform; Google and Microsoft 365 calendars read directly. None of these is a product commitment.
+- **Why:** owner: "a good architecture and design should enable these as future iterations without bending over backward or ending up with an architecture for platform A partly decided b/c of platform B."
+- **Source:** owner, 2026-10-10.
+- **Touches:** BACKLOG PG-20; architecture (proposal). If any of these futures is chosen, it changes "GNOME only" and "no phone" in the exclusions, and R-1, R-2 and R-3 in solution.md.
+
+## 2026-10-10 — PG-20 proposal received
+- **Kind:** handoff
+- **Fact:** The architect proposed keeping today's shape and making the core strictly platform-free, with GNOME as one "platform pack", in seven small migration slices. No visible change and no new program for the owner. Awaiting the owner's approval and one owner choice: move the GNOME parts into one folder now or later.
+- **Source:** architect report, 2026-10-10; docs/architecture/proposals/PG-20-versatile-architecture/.
+- **Touches:** BACKLOG PG-20
+
+## 2026-10-10 — The two helper programs stay apart
+- **Kind:** decision
+- **Profiles:** Calendar owner
+- **Fact:** Product answer to the architect: keep the calendar program and the network program apart. A network fault then never stops calendar updates (R-16), and "nothing is sent in rules mode" stays provable (R-3).
+- **Source:** product manager, from R-3 and R-16; the architect recommended the same.
+- **Touches:** architecture (PG-20 proposal)
+
+## 2026-10-10 — D-046 stands; it does not fire under PG-20
+- **Kind:** decision
+- **Fact:** D-046 (no carry-over of the AI key when key storage changes) stays. PG-20 keeps the stored key format, so there is nothing to carry over and the owner re-enters nothing.
+- **Source:** architect for-product finding; product manager answer.
+- **Touches:** decisions.md (no change)
+
+## 2026-10-10 — D-050's AI part replaced by D-051
+- **Kind:** decision
+- **Fact:** The AI engine is told the owner's name and which guests are the owner, never the owner's other addresses. The title rule is unchanged.
+- **Why:** sending all addresses broke R-3 with a cloud engine and the accepted AI contract.
+- **Source:** architect for-product finding; product manager choice.
+- **Touches:** decisions.md, BACKLOG PG-19
+
+## 2026-10-10 — Microsoft 365 on GNOME needs evolution-ews
+- **Kind:** user
+- **Profiles:** Installer
+- **Fact:** Microsoft 365 calendars reach the desktop through Online Accounts only when evolution-ews is installed. The README should say so (PG-21).
+- **Source:** architect report, with public forum and university guides.
+- **Touches:** README (via PG-21)

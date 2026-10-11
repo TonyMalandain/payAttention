@@ -298,8 +298,14 @@ Closed product decisions only. Newest at the bottom.
 **Costs accepted:** Every feature pays for a boundary between logic and GNOME parts, even where only GNOME uses it.
 **Source:** the owner, 2026-09-27, restated 2026-10-04 ("the gnome extension is supposed to be a wrapper around the core logic").
 
-### D-050 — The owner's full name in a meeting's title means the meeting is theirs — 2026-10-10
+### D-050 — The owner's full name in a meeting's title means the meeting is theirs  [SUPERSEDED by D-051 on 2026-10-10]
 **Decision:** We chose that a meeting whose title contains the owner's full name is never judged "not invited", whatever its guest list says. The full name is detected from the computer's user account and can be edited in Settings. In AI mode the engine is told the owner's name and addresses, so it can see the same thing.
 **Why:** The owner, after a missed one-to-one whose title was "<guest> and <owner's full name>": "there was another hint: my full name was on the subject line." Booking tools write titles this way, and the invite may not list the owner's address.
 **Costs accepted:** A meeting of someone else that names the owner in full, on a calendar the owner displays, gets judged like the owner's own, so it may alert. A first name alone does not count, to keep that rare.
 **Source:** the owner, 2026-10-10; "full name only" and the AI part are the product manager's choice.
+
+### D-051 — The owner's full name in a title means the meeting is theirs; the AI engine learns who the owner is, not the owner's addresses — 2026-10-10
+**Decision:** We chose that a meeting whose title contains the owner's full name is never judged "not invited", whatever its guest list says. The full name is detected from the computer's user account and can be edited in Settings. In AI mode the engine is told the owner's full name and which guests in the invite are the owner. It is never sent the owner's own addresses that are not already in the invite. Settings say that the owner's name is sent to the engine.
+**Why:** The title rule is unchanged from D-050. The AI part changed because D-050 sent all the owner's addresses to the engine, which with a cloud engine takes them off the machine (R-3), and the accepted AI contract never sends them. The engine only needs to know which guest is the owner to judge as the rules do.
+**Costs accepted:** A meeting of someone else that names the owner in full, on a calendar the owner displays, gets judged like the owner's own, so it may alert. A first name alone does not count. With a cloud engine, the owner's full name leaves the machine.
+**Source:** the owner, 2026-10-10 (title rule); the AI part is the product manager's choice, revised after the architect found the conflict with the AI contract.

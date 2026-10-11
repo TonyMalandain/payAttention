@@ -156,9 +156,9 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
     - when the calendar refreshes while the menu is open, the expanded row stays expanded if that meeting is still listed;
     - the smoke checks at least Switch to in person followed by a travel pick without reopening the menu; the owner checks it in `npm run sample`.
 
-- **PG-16 — Estimated travel time with Google (XL, to be split by the architect's design).** R-21, D-041, D-042, D-043; spec: PRD "Addendum 2026-10-04 — Estimated travel time". **Waits for the owner to approve the architect's high-level design.**
+- **PG-16 — Estimated travel time with Google (XL, to be split by the architect's design).** R-21, D-041, D-042, D-043; spec: PRD "Addendum 2026-10-04 — Estimated travel time". **PARKED by the owner on 2026-10-10** ("park the travel time estimates feature for now"). The design proposal stays on disk. Its capabilities must still fit the new architecture (PG-20).
 
-- **PG-17 — Estimates start from the meeting before (follow-up to PG-16).** D-044, R-21. A must-attend in-person meeting with a place that ends no more than 2 hours before the next in-person meeting, same day, is the start of that trip. Owner: "'start from the meeting before' is a good idea to implement. It can be done as phase 2." Needs PG-16.
+- **PG-17 — Estimates start from the meeting before (follow-up to PG-16).** D-044, R-21. A must-attend in-person meeting with a place that ends no more than 2 hours before the next in-person meeting, same day, is the start of that trip. Owner: "'start from the meeting before' is a good idea to implement. It can be done as phase 2." Needs PG-16. **PARKED with PG-16 on 2026-10-10.**
 - **PG-18 — A buffer on every in-person trip (follow-up to PG-16).** D-045, R-22. One "Buffer" setting, 10 min by default, added to own, estimated and default travel times, shown apart ("+ 10 min buffer"); the leave-by time includes it. Owner: "a buffer time too in between meetings, e.g. time to say goodbye, walk to the car, or park the car on the other side." Does not need PG-16; it can be built before it.
 
 - **PG-19 — Meetings on the owner's own secondary calendars count as the owner's (size set by the senior engineer, after the architect checks feasibility).** Refines R-4; keeps "Only meetings the owner is invited to" for calendars of others.
@@ -166,8 +166,16 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   - **Who it is for:** Calendar owner.
   - **Why:** a real one-to-one video call on the owner's own secondary calendar was judged "not invited: someone else's meeting" and never alerted (2026-10-09). Owner: "It was incorrectly classified as optional / not to be alerted about."
   - **Done when:** a meeting whose organiser or attendee is one of the owner's own calendars' addresses is judged with the owner as organiser or attendee; a shared calendar of another person is unchanged; the owner needs no setting for it; the preview shows the right verdict.
-  - **Also (D-050):** a title that contains the owner's full name (from the user account, editable in Settings) is never judged "not invited"; in AI mode the engine is told the owner's name and addresses.
+  - **Also (D-051, which replaces D-050):** a title that contains the owner's full name (from the user account, editable in Settings) is never judged "not invited"; in AI mode the engine is told the owner's name and which guests are the owner, never the owner's other addresses; the AI settings say the name is sent.
   - **Open for the architect:** whether the desktop can tell the owner's own calendars from calendars shared with them, and get each one's address.
+
+- **PG-20 — Architecture overhaul so the product can grow to other front ends and calendar services (XL, architect-led; design only).** No product behaviour changes. D-049 (the GNOME extension is one front end around reusable core logic).
+  - **What it is for:** a revised architecture and design that supports every requirement so far (R-1 to R-22, D-001 to D-050, PG-16 to PG-19) and makes these possible later without rework: a KDE or web front end by rebuilding only the UI and the platform integration; native mobile clients on top of a web API; the core reaching each platform through injected interfaces (IoC: the core receives its integrations, it never creates them); Google and Microsoft 365 calendars read directly.
+  - **Owner:** "none of these are settled decisions. in fact most may never happen. But a good architecture and design should enable these as future iterations without bending over backward or ending up with an architecture for platform A partly decided b/c of platform B."
+  - **Product limits:** the product still promises GNOME only, desktop calendars only, calendar data stays on the machine, no phone. Enabling a future platform must not cost the GNOME product today. Any of those futures becomes a product decision first.
+  - **Done when:** the owner approves a proposal saved under `docs/architecture/proposals/PG-20-versatile-architecture/`, with components and classes in the owner's format and a migration path split into tickets.
+
+- **PG-21 — README: Microsoft 365 calendars need `evolution-ews` (S, software engineer).** Microsoft 365 calendars reach GNOME through Online Accounts only when that package is installed. Done when the README install section says so in one line.
 
 ## Now — needs the owner (cannot be done unattended)
 

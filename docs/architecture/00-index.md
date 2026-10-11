@@ -15,6 +15,7 @@ authority; none of them may add or change an ADR.
 | `NOTES.md` | Append-only architect working log |
 | `adr/` | Decision records, `ADR-NNNN-<slug>.md` |
 | `proposals/PG-16-travel-estimates/` | PG-16 estimated travel time with Google: `proposal.md` (components A–J, tickets K1–K5) and `resulting-design.md` (the whole product after PG-16: component and estimate-flow diagrams, every component, folder tree, external systems) — proposed, awaiting owner approval (not authoritative; do not build from it) |
+| `proposals/PG-20-versatile-architecture/` | PG-20 a versatile architecture (platform-neutral kernel, GNOME as one platform pack): `proposal.md` (problems with evidence, principles, option A recommended, option B alternative, risks, owner questions), `resulting-design.md` (component and kernel/pack diagrams, folder tree, every component, composition, processes, change impact of KDE / web + mobile / Google / Microsoft 365, where PG-16 to PG-19 and AI mode sit), `migration.md` (seven slices), `adr-draft-platform-packs.md` — proposed, awaiting owner approval (not authoritative; do not build from it) |
 
 ## Decisions
 

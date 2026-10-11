@@ -1121,3 +1121,73 @@ Append only. Newest at the bottom.
 - **Why:** The owner asked for the full resulting component picture at that path. Drawing it surfaced points the proposal leaves open: who builds TravelEstimates (verdict component or controller), whether the preview asks for estimates, whether a failed live ask keeps the rough estimate or returns to the default, where the old EngineKey schema name lives for `--purge`, and the name of the Settings window's travel-decisions module.
 - **Source:** the owner's request, 2026-10-04; `resulting-design.md` §7.
 - **Touches:** the PG-16 ADRs after approval; `boundaries.md`, `interfaces.md` only after approval.
+
+## 2026-10-10 — Full sweep, run with PG-20 (first recorded sweep)
+- **Kind:** question
+- **Fact:** Full holistic and qualities sweep at HEAD `edbc7a0`; it is the PG-20 proposal (`proposals/PG-20-versatile-architecture/`). No earlier sweep is recorded, there are no merged pull requests, and 195 commits have landed on `master` (`git log --first-parent`). The next count measures from `edbc7a0`.
+- **Why:** PG-20 is sized XL, and the count since the last sweep (none) is over the threshold.
+- **Source:** `git log --first-parent --oneline | wc -l`; `gh pr list --state merged` (none).
+- **Touches:** this log only.
+
+## 2026-10-10 — PG-20 proposal saved, awaiting the owner
+- **Kind:** question
+- **Fact:** The PG-20 proposal recommends completing the platform-neutral kernel (`core/` + `app/`) and making GNOME one platform pack, in seven slices with no process, runtime, install step or visible change; the alternative (one local agent, every front end a client) is not recommended. Two questions wait for the owner: regroup the GNOME parts under `gnome/` now or later, and keep two helper programs or merge them.
+- **Why:** The owner asked for KDE, web, mobile and direct Google or Microsoft 365 calendars to be possible later without rework and without GNOME paying for them now. The code is already ports-and-adapters (ADR-0011); what blocks those futures is seven specific leaks, not the shape.
+- **Source:** owner, BACKLOG PG-20 (2026-10-10); code at `edbc7a0`.
+- **Touches:** on approval, a new ADR (draft in the proposal folder), `boundaries.md`, `interfaces.md`, `data.md`, `overview.md`, `testing-and-build.md`.
+
+## 2026-10-10 — GNOME names sit inside core
+- **Kind:** boundary
+- **Fact:** `core/aiEngine.js:12-14` holds the libsecret schema name and attribute of the AI key, and `core/protocol.js:16` holds `G_MESSAGES_DEBUG`, a GLib logging variable, as the spawn rule.
+- **Why:** Both were put in core so several GNOME parts could share one constant without a shared GNOME module to put them in. They are a platform's storage and process details, so any other platform importing core inherits them; the PG-20 slices move them to the key-store adapter and `gnome/common/spawnEnv.js`.
+- **Source:** `extension/core/aiEngine.js:12`, `extension/core/protocol.js:16`, `extension/shell/helperProcess.js:24`, `extension/prefs.js:209`.
+- **Touches:** `boundaries.md`, `interfaces.md` §1 "Environment" — after approval.
+
+## 2026-10-10 — Valid setting ranges are owned by GSettings, not by core
+- **Kind:** boundary
+- **Fact:** The valid range of each owner setting exists only as `<range>` in the GSettings schema (14 keys); `prefs.js:33` reads it back from the schema; core has defaults but no ranges, and only the step offsets are clamped (`plan`).
+- **Why:** On GNOME the schema stops a bad value before core sees it (`data.md`), so nothing else was needed. On any other store nothing would, so a product rule is held by one platform. PG-20 slice 4 declares the ranges in core and tests the schema against them.
+- **Source:** `extension/schemas/org.gnome.shell.extensions.payattention.gschema.xml`, `extension/prefs.js:33`, `extension/core/timing.js:4`.
+- **Touches:** `data.md` — after approval.
+
+## 2026-10-10 — Local time is the process's time zone
+- **Kind:** debt
+- **Fact:** `core/display.js:9-11` formats with `Intl.DateTimeFormat` in the default zone and locale; `app/view.js:122` and `app/aiQueue.js:145` read the process's offset.
+- **Why:** On a desktop and in a browser the process zone is the owner's, so this is correct for every pack we could build on a single-owner device. A server serving owners in several zones would format everyone's times in its own zone. Repaid by making `{timeZone, locale}` an input from the platform, only if a server pack is chosen.
+- **Source:** the three lines above.
+- **Touches:** `proposals/PG-20-versatile-architecture/resulting-design.md` §8; a debt list if one is created.
+
+## 2026-10-10 — TravelEstimates belongs inside the verdict component (proposed)
+- **Kind:** question
+- **Fact:** The PG-20 design places PG-16's `TravelEstimates` inside the verdict component, which builds it and passes its estimates into `judge`; the alert session tells the verdict component when a heads-up fires.
+- **Why:** The product decided the preview asks Google too (inbox 2026-10-04, answer 2), and estimates are an input of `judge`, whose only caller is the verdict component; only the verdict component is shared by both front ends. This closes the PG-16 open point "who builds TravelEstimates" once PG-20 is approved.
+- **Source:** `docs/inbox.md` 2026-10-04; `proposals/PG-16-travel-estimates/resulting-design.md` §7.
+- **Touches:** the PG-16 proposal, when unparked.
+
+## 2026-10-10 — D-046 may not be needed
+- **Kind:** for-product
+- **Fact:** The key-store port can keep today's keyring format for the AI key (schema `…EngineKey`, attribute `endpoint`), so the owner never re-enters it; D-046 accepted a re-entry that the PG-20 design no longer causes.
+- **Why:** Keeping the stored format makes the key-store slice an M with no stored-data change, instead of an L with a new schema; it also makes "no behaviour change" true for PG-20. New purposes (the maps key) get their own schema when built.
+- **Source:** `extension/ai/keyring.js:16`, `extension/prefs.js:63`; `docs/product/decisions.md` D-046.
+- **Touches:** product decision D-046; PG-16 ticket K1 when unparked.
+
+## 2026-10-10 — D-050 sends the owner's addresses to the AI engine, which the contract forbids
+- **Kind:** for-product
+- **Fact:** D-050 says the AI engine is told the owner's name and addresses; `interfaces.md` §6.2 and ADR-0010 list the owner's own addresses as never sent. With a cloud engine they would leave the machine.
+- **Why:** It is a product decision that reverses a privacy line of the accepted contract; the architecture can carry it (one invite field, one prompt-version bump, every meeting re-asked once), but the product should confirm it and the Settings warning would have to say so. ADR-0010 gets an amendment when PG-19 is designed.
+- **Source:** `docs/product/decisions.md` D-050; `docs/architecture/interfaces.md` §6.2 "Never sent".
+- **Touches:** ADR-0010, `interfaces.md` §6.2 — when PG-19 is designed.
+
+## 2026-10-10 — Microsoft 365 calendars reach GNOME only with evolution-ews
+- **Kind:** for-product
+- **Fact:** On GNOME 47 and later, GNOME Online Accounts delivers Microsoft 365 calendars to evolution-data-server, and so to payAttention with no code change, but only when the `evolution-ews` package is installed; it is not installed on the author's machine. Google calendars already arrive this way.
+- **Why:** It means "Microsoft 365 calendar" needs no direct reader on GNOME; a direct reader matters only where there is no desktop calendar service. The README could say so.
+- **Source:** `rpm -q evolution-ews` (not installed, 2026-10-10); GNOME and distribution documentation found by web search, 2026-10-10 (`assumed` for GNOME 50).
+- **Touches:** `stack.md` "Calendar access"; the product's README note, if wanted.
+
+## 2026-10-10 — Testability: a random unit-test failure has been open for eight days
+- **Kind:** question
+- **Fact:** The invite "under 200 ms" wall-clock test fails at random under a loaded full `npm test` run (inbox 2026-10-02; first seen in the PG-13 build, BACKLOG housekeeping); nothing has changed it.
+- **Why:** A red that is fixed by rerunning teaches everyone to rerun on red, which hides the next real failure. The budget and how it is measured are `testing-and-build.md` decisions, so they are the architect's; not acted on in this session, whose scope was the PG-20 design.
+- **Source:** `docs/inbox.md` 2026-10-02; `tests/unit/invite.test.js`.
+- **Touches:** `testing-and-build.md`.
