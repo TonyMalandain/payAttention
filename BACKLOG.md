@@ -166,6 +166,7 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
   - **Who it is for:** Calendar owner.
   - **Why:** a real one-to-one video call on the owner's own secondary calendar was judged "not invited: someone else's meeting" and never alerted (2026-10-09). Owner: "It was incorrectly classified as optional / not to be alerted about."
   - **Done when:** a meeting whose organiser or attendee is one of the owner's own calendars' addresses is judged with the owner as organiser or attendee; a shared calendar of another person is unchanged; the owner needs no setting for it; the preview shows the right verdict.
+  - **Also (D-050):** a title that contains the owner's full name (from the user account, editable in Settings) is never judged "not invited"; in AI mode the engine is told the owner's name and addresses.
   - **Open for the architect:** whether the desktop can tell the owner's own calendars from calendars shared with them, and get each one's address.
 
 ## Now — needs the owner (cannot be done unattended)
