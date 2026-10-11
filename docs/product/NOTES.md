@@ -685,3 +685,10 @@ Append only. Newest at the bottom.
 - **Fact:** The owner's 2026-09-27 principle lived only in ADR-0011 and this log, not in the product decisions, so the PG-16 proposal was not checked against it. Recorded as D-049. Check of the PG-16 proposal: mostly honoured (pure travel rules, key storage behind an interface, the estimate component reaches Google only through an interface), but it does not say that the Google request and reply logic is GNOME-free, and it does not label each part as logic or GNOME part. Sent back to the architect.
 - **Source:** owner, 2026-10-04; product manager check of the proposal.
 - **Touches:** decisions.md; architecture (PG-16 proposal)
+
+## 2026-10-10 — A meeting on the owner's own secondary calendar was judged "not invited"
+- **Kind:** solution
+- **Profiles:** Calendar owner
+- **Fact:** A real one-to-one video call on the owner's own secondary Google calendar was not alerted. The invite lists that calendar's own address as organiser and attendee, not the owner's email. payAttention knows only the account address and the "extra owner addresses" setting, so it judged the owner "not invited: someone else's meeting". In AI mode the engine also sees the owner absent from the guest list. Workaround: add the calendar's address to "extra owner addresses". The product promise is that every meeting on a calendar the owner owns counts as the owner's (R-2, R-4); only calendars of others that the owner merely displays are excluded.
+- **Source:** product manager, from the owner's report and a read-only look at the local calendar cache (no personal data recorded here).
+- **Touches:** solution.md R-4 and "Only meetings the owner is invited to"; BACKLOG PG-19

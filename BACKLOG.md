@@ -161,6 +161,13 @@ Architecture: `docs/architecture/` (ADR-0001…0006).
 - **PG-17 — Estimates start from the meeting before (follow-up to PG-16).** D-044, R-21. A must-attend in-person meeting with a place that ends no more than 2 hours before the next in-person meeting, same day, is the start of that trip. Owner: "'start from the meeting before' is a good idea to implement. It can be done as phase 2." Needs PG-16.
 - **PG-18 — A buffer on every in-person trip (follow-up to PG-16).** D-045, R-22. One "Buffer" setting, 10 min by default, added to own, estimated and default travel times, shown apart ("+ 10 min buffer"); the leave-by time includes it. Owner: "a buffer time too in between meetings, e.g. time to say goodbye, walk to the car, or park the car on the other side." Does not need PG-16; it can be built before it.
 
+- **PG-19 — Meetings on the owner's own secondary calendars count as the owner's (size set by the senior engineer, after the architect checks feasibility).** Refines R-4; keeps "Only meetings the owner is invited to" for calendars of others.
+  - **What changes for the owner:** a meeting on a calendar the owner owns (for example a second Google calendar for a side business) is judged as the owner's meeting, even when the invite lists that calendar's address instead of the owner's email. A calendar of someone else that the owner only displays still never alerts.
+  - **Who it is for:** Calendar owner.
+  - **Why:** a real one-to-one video call on the owner's own secondary calendar was judged "not invited: someone else's meeting" and never alerted (2026-10-09). Owner: "It was incorrectly classified as optional / not to be alerted about."
+  - **Done when:** a meeting whose organiser or attendee is one of the owner's own calendars' addresses is judged with the owner as organiser or attendee; a shared calendar of another person is unchanged; the owner needs no setting for it; the preview shows the right verdict.
+  - **Open for the architect:** whether the desktop can tell the owner's own calendars from calendars shared with them, and get each one's address.
+
 ## Now — needs the owner (cannot be done unattended)
 
 - **PG-2 — First real-session check (size S).** Log out and log back in. Then:
